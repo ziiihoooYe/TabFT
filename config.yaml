@@ -46,9 +46,9 @@ transform_list:
   - nan:
       policy: mean # mean, median
   - label: {}
-  # - num_binning:
-  #     policy: Q
-  # - num_bin: {}
+  - num_binning:
+      policy: Q
+  - num_bin: {}
   - cat_indice: {}
   - norm: 
       policy: standard # none, standard, minmax, robust, power, quantile, maxabs

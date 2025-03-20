@@ -26,6 +26,9 @@ def main():
     for recipe in recipes:
         args, default_para, opt_space = recipe
         loss_list, results_list, time_list = [], [], []
+        print("------------------------------------")
+        print(f"Dataset: {args.dataset}")
+        print(f"Model: {args.model_type}")
         
         train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
         if args.tune:
