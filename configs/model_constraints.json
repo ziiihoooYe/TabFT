@@ -1,0 +1,22 @@
+{
+    "tabpfn": {
+        "tune": [
+            false
+        ]
+    },
+    "PFN-v2": {
+        "tune": [
+            false
+        ]
+    },
+    "hyperfast": {
+        "tune": [
+            false
+        ]
+    },
+    "tabptm": {
+        "tune": [
+            false
+        ]
+    }
+}

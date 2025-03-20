@@ -1,0 +1,4211 @@
+using gpu: 7
+{'batch_size': 1024,
+ 'cat_min_frequency': 0.0,
+ 'cat_nan_policy': 'new',
+ 'cat_policy': 'ordinal',
+ 'config': {'general': {},
+            'model': {'activation': 'relu',
+                      'd': 192,
+                      'd_hidden_factor': 2.0,
+                      'hidden_dropout': 0.3,
+                      'n_layers': 2,
+                      'normalization': 'batchnorm',
+                      'residual_dropout': 0.0},
+            'training': {'lr': 0.0003, 'weight_decay': 1e-05}},
+ 'dataset': 'Bank_Customer_Churn_Dataset',
+ 'dataset_path': 'data',
+ 'evaluate_option': 'best-val',
+ 'gpu': '7',
+ 'max_epoch': 200,
+ 'model_path': 'results_model',
+ 'model_type': 'resnet',
+ 'n_bins': 2,
+ 'n_trials': 100,
+ 'normalization': 'standard',
+ 'num_nan_policy': 'mean',
+ 'num_policy': 'none',
+ 'retune': False,
+ 'save_path': 'results_model/Bank_Customer_Churn_Dataset-resnet/Epoch200BZ1024-Norm-standard-Nan-mean-new-Cat-ordinal',
+ 'seed': 0,
+ 'seed_num': 15,
+ 'tune': False,
+ 'use_float': False,
+ 'workers': 0}
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.6821 lr=0.0003
+epoch 0, train 7/7, loss=0.5167 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.5671 classification result=0.8013
+Epoch: 0, Time cost: 0.5770564079284668
+epoch 1, train 1/7, loss=0.5035 lr=0.0003
+epoch 1, train 7/7, loss=0.4469 lr=0.0003
+best epoch 0, best val res=0.8013
+epoch 1, val, loss=0.4816 classification result=0.8300
+Epoch: 1, Time cost: 0.10042428970336914
+epoch 2, train 1/7, loss=0.4407 lr=0.0003
+epoch 2, train 7/7, loss=0.4083 lr=0.0003
+best epoch 1, best val res=0.8300
+epoch 2, val, loss=0.4248 classification result=0.8544
+Epoch: 2, Time cost: 0.10213494300842285
+epoch 3, train 1/7, loss=0.3824 lr=0.0003
+epoch 3, train 7/7, loss=0.3514 lr=0.0003
+best epoch 2, best val res=0.8544
+epoch 3, val, loss=0.3911 classification result=0.8544
+Epoch: 3, Time cost: 0.17476606369018555
+epoch 4, train 1/7, loss=0.3759 lr=0.0003
+epoch 4, train 7/7, loss=0.3617 lr=0.0003
+best epoch 3, best val res=0.8544
+epoch 4, val, loss=0.3699 classification result=0.8538
+Epoch: 4, Time cost: 0.0934300422668457
+epoch 5, train 1/7, loss=0.3787 lr=0.0003
+epoch 5, train 7/7, loss=0.3038 lr=0.0003
+best epoch 3, best val res=0.8544
+epoch 5, val, loss=0.3617 classification result=0.8512
+Epoch: 5, Time cost: 0.09137177467346191
+epoch 6, train 1/7, loss=0.3453 lr=0.0003
+epoch 6, train 7/7, loss=0.3195 lr=0.0003
+best epoch 3, best val res=0.8544
+epoch 6, val, loss=0.3500 classification result=0.8538
+Epoch: 6, Time cost: 0.09200692176818848
+epoch 7, train 1/7, loss=0.3703 lr=0.0003
+epoch 7, train 7/7, loss=0.4055 lr=0.0003
+best epoch 3, best val res=0.8544
+epoch 7, val, loss=0.3446 classification result=0.8550
+Epoch: 7, Time cost: 0.10438370704650879
+epoch 8, train 1/7, loss=0.3848 lr=0.0003
+epoch 8, train 7/7, loss=0.3225 lr=0.0003
+best epoch 7, best val res=0.8550
+epoch 8, val, loss=0.3406 classification result=0.8575
+Epoch: 8, Time cost: 0.09901070594787598
+epoch 9, train 1/7, loss=0.3314 lr=0.0003
+epoch 9, train 7/7, loss=0.3470 lr=0.0003
+best epoch 8, best val res=0.8575
+epoch 9, val, loss=0.3359 classification result=0.8594
+Epoch: 9, Time cost: 0.09880661964416504
+epoch 10, train 1/7, loss=0.3706 lr=0.0003
+epoch 10, train 7/7, loss=0.2866 lr=0.0003
+best epoch 9, best val res=0.8594
+epoch 10, val, loss=0.3334 classification result=0.8544
+Epoch: 10, Time cost: 0.09705996513366699
+epoch 11, train 1/7, loss=0.3449 lr=0.0003
+epoch 11, train 7/7, loss=0.2965 lr=0.0003
+best epoch 9, best val res=0.8594
+epoch 11, val, loss=0.3345 classification result=0.8562
+Epoch: 11, Time cost: 0.09578776359558105
+epoch 12, train 1/7, loss=0.3195 lr=0.0003
+epoch 12, train 7/7, loss=0.4053 lr=0.0003
+best epoch 9, best val res=0.8594
+epoch 12, val, loss=0.3351 classification result=0.8556
+Epoch: 12, Time cost: 0.09537458419799805
+epoch 13, train 1/7, loss=0.3461 lr=0.0003
+epoch 13, train 7/7, loss=0.4035 lr=0.0003
+best epoch 9, best val res=0.8594
+epoch 13, val, loss=0.3324 classification result=0.8562
+Epoch: 13, Time cost: 0.09392857551574707
+epoch 14, train 1/7, loss=0.3428 lr=0.0003
+epoch 14, train 7/7, loss=0.3884 lr=0.0003
+best epoch 9, best val res=0.8594
+epoch 14, val, loss=0.3309 classification result=0.8575
+Epoch: 14, Time cost: 0.19582772254943848
+epoch 15, train 1/7, loss=0.3162 lr=0.0003
+epoch 15, train 7/7, loss=0.3917 lr=0.0003
+best epoch 9, best val res=0.8594
+epoch 15, val, loss=0.3304 classification result=0.8581
+Epoch: 15, Time cost: 0.09005951881408691
+epoch 16, train 1/7, loss=0.3326 lr=0.0003
+epoch 16, train 7/7, loss=0.2903 lr=0.0003
+best epoch 9, best val res=0.8594
+epoch 16, val, loss=0.3317 classification result=0.8575
+Epoch: 16, Time cost: 0.09731483459472656
+epoch 17, train 1/7, loss=0.3264 lr=0.0003
+epoch 17, train 7/7, loss=0.3311 lr=0.0003
+best epoch 9, best val res=0.8594
+epoch 17, val, loss=0.3306 classification result=0.8612
+Epoch: 17, Time cost: 0.10237336158752441
+epoch 18, train 1/7, loss=0.3269 lr=0.0003
+epoch 18, train 7/7, loss=0.4010 lr=0.0003
+best epoch 17, best val res=0.8612
+epoch 18, val, loss=0.3297 classification result=0.8625
+Epoch: 18, Time cost: 0.09908509254455566
+epoch 19, train 1/7, loss=0.3046 lr=0.0003
+epoch 19, train 7/7, loss=0.2823 lr=0.0003
+best epoch 18, best val res=0.8625
+epoch 19, val, loss=0.3296 classification result=0.8644
+Epoch: 19, Time cost: 0.10136866569519043
+epoch 20, train 1/7, loss=0.2996 lr=0.0003
+epoch 20, train 7/7, loss=0.3568 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 20, val, loss=0.3299 classification result=0.8638
+Epoch: 20, Time cost: 0.09146904945373535
+epoch 21, train 1/7, loss=0.2950 lr=0.0003
+epoch 21, train 7/7, loss=0.3227 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 21, val, loss=0.3317 classification result=0.8619
+Epoch: 21, Time cost: 0.09105277061462402
+epoch 22, train 1/7, loss=0.3276 lr=0.0003
+epoch 22, train 7/7, loss=0.3076 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 22, val, loss=0.3296 classification result=0.8625
+Epoch: 22, Time cost: 0.09300112724304199
+epoch 23, train 1/7, loss=0.3234 lr=0.0003
+epoch 23, train 7/7, loss=0.3114 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 23, val, loss=0.3312 classification result=0.8612
+Epoch: 23, Time cost: 0.0946648120880127
+epoch 24, train 1/7, loss=0.3367 lr=0.0003
+epoch 24, train 7/7, loss=0.3753 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 24, val, loss=0.3304 classification result=0.8612
+Epoch: 24, Time cost: 0.09384012222290039
+epoch 25, train 1/7, loss=0.2807 lr=0.0003
+epoch 25, train 7/7, loss=0.2815 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 25, val, loss=0.3292 classification result=0.8606
+Epoch: 25, Time cost: 0.1742091178894043
+epoch 26, train 1/7, loss=0.3185 lr=0.0003
+epoch 26, train 7/7, loss=0.3249 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 26, val, loss=0.3303 classification result=0.8631
+Epoch: 26, Time cost: 0.0926976203918457
+epoch 27, train 1/7, loss=0.3289 lr=0.0003
+epoch 27, train 7/7, loss=0.2705 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 27, val, loss=0.3323 classification result=0.8631
+Epoch: 27, Time cost: 0.09113049507141113
+epoch 28, train 1/7, loss=0.3745 lr=0.0003
+epoch 28, train 7/7, loss=0.3241 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 28, val, loss=0.3289 classification result=0.8594
+Epoch: 28, Time cost: 0.09351634979248047
+epoch 29, train 1/7, loss=0.3226 lr=0.0003
+epoch 29, train 7/7, loss=0.3638 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 29, val, loss=0.3294 classification result=0.8631
+Epoch: 29, Time cost: 0.0918879508972168
+epoch 30, train 1/7, loss=0.2892 lr=0.0003
+epoch 30, train 7/7, loss=0.3465 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 30, val, loss=0.3306 classification result=0.8619
+Epoch: 30, Time cost: 0.09454536437988281
+epoch 31, train 1/7, loss=0.3517 lr=0.0003
+epoch 31, train 7/7, loss=0.2811 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 31, val, loss=0.3305 classification result=0.8619
+Epoch: 31, Time cost: 0.09140753746032715
+epoch 32, train 1/7, loss=0.2784 lr=0.0003
+epoch 32, train 7/7, loss=0.2766 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 32, val, loss=0.3322 classification result=0.8619
+Epoch: 32, Time cost: 0.0952301025390625
+epoch 33, train 1/7, loss=0.3416 lr=0.0003
+epoch 33, train 7/7, loss=0.3484 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 33, val, loss=0.3320 classification result=0.8575
+Epoch: 33, Time cost: 0.09173202514648438
+epoch 34, train 1/7, loss=0.3036 lr=0.0003
+epoch 34, train 7/7, loss=0.3817 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 34, val, loss=0.3305 classification result=0.8612
+Epoch: 34, Time cost: 0.09033679962158203
+epoch 35, train 1/7, loss=0.3272 lr=0.0003
+epoch 35, train 7/7, loss=0.3001 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 35, val, loss=0.3333 classification result=0.8612
+Epoch: 35, Time cost: 0.09378647804260254
+epoch 36, train 1/7, loss=0.2731 lr=0.0003
+epoch 36, train 7/7, loss=0.3566 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 36, val, loss=0.3331 classification result=0.8606
+Epoch: 36, Time cost: 0.16923928260803223
+epoch 37, train 1/7, loss=0.3094 lr=0.0003
+epoch 37, train 7/7, loss=0.3174 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 37, val, loss=0.3344 classification result=0.8544
+Epoch: 37, Time cost: 0.09341144561767578
+epoch 38, train 1/7, loss=0.3179 lr=0.0003
+epoch 38, train 7/7, loss=0.2966 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 38, val, loss=0.3332 classification result=0.8594
+Epoch: 38, Time cost: 0.09511017799377441
+epoch 39, train 1/7, loss=0.2776 lr=0.0003
+epoch 39, train 7/7, loss=0.2664 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 39, val, loss=0.3336 classification result=0.8594
+Epoch: 39, Time cost: 0.09122586250305176
+epoch 40, train 1/7, loss=0.2877 lr=0.0003
+epoch 40, train 7/7, loss=0.2953 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 40, val, loss=0.3331 classification result=0.8638
+Epoch: 40, Time cost: 0.09109735488891602
+best epoch 19, best val res=0.8644
+Test: loss=0.3274
+[Accuracy]=0.8650
+[Avg_Recall]=0.7241
+[Avg_Precision]=0.8222
+[F1]=0.5946
+[LogLoss]=0.3274
+[AUC]=0.8703
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.6614 lr=0.0003
+epoch 0, train 7/7, loss=0.5226 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.5564 classification result=0.7887
+Epoch: 0, Time cost: 0.09724712371826172
+epoch 1, train 1/7, loss=0.4905 lr=0.0003
+epoch 1, train 7/7, loss=0.4462 lr=0.0003
+best epoch 0, best val res=0.7887
+epoch 1, val, loss=0.4731 classification result=0.8425
+Epoch: 1, Time cost: 0.09774208068847656
+epoch 2, train 1/7, loss=0.4400 lr=0.0003
+epoch 2, train 7/7, loss=0.4447 lr=0.0003
+best epoch 1, best val res=0.8425
+epoch 2, val, loss=0.4221 classification result=0.8488
+Epoch: 2, Time cost: 0.10513949394226074
+epoch 3, train 1/7, loss=0.3765 lr=0.0003
+epoch 3, train 7/7, loss=0.3558 lr=0.0003
+best epoch 2, best val res=0.8488
+epoch 3, val, loss=0.3944 classification result=0.8494
+Epoch: 3, Time cost: 0.10231900215148926
+epoch 4, train 1/7, loss=0.3837 lr=0.0003
+epoch 4, train 7/7, loss=0.3615 lr=0.0003
+best epoch 3, best val res=0.8494
+epoch 4, val, loss=0.3737 classification result=0.8512
+Epoch: 4, Time cost: 0.10135817527770996
+epoch 5, train 1/7, loss=0.3951 lr=0.0003
+epoch 5, train 7/7, loss=0.3373 lr=0.0003
+best epoch 4, best val res=0.8512
+epoch 5, val, loss=0.3611 classification result=0.8550
+Epoch: 5, Time cost: 0.188798189163208
+epoch 6, train 1/7, loss=0.3512 lr=0.0003
+epoch 6, train 7/7, loss=0.3705 lr=0.0003
+best epoch 5, best val res=0.8550
+epoch 6, val, loss=0.3504 classification result=0.8550
+Epoch: 6, Time cost: 0.09842848777770996
+epoch 7, train 1/7, loss=0.3822 lr=0.0003
+epoch 7, train 7/7, loss=0.3114 lr=0.0003
+best epoch 6, best val res=0.8550
+epoch 7, val, loss=0.3453 classification result=0.8562
+Epoch: 7, Time cost: 0.10205936431884766
+epoch 8, train 1/7, loss=0.3320 lr=0.0003
+epoch 8, train 7/7, loss=0.3236 lr=0.0003
+best epoch 7, best val res=0.8562
+epoch 8, val, loss=0.3407 classification result=0.8562
+Epoch: 8, Time cost: 0.10167622566223145
+epoch 9, train 1/7, loss=0.3573 lr=0.0003
+epoch 9, train 7/7, loss=0.3570 lr=0.0003
+best epoch 8, best val res=0.8562
+epoch 9, val, loss=0.3381 classification result=0.8550
+Epoch: 9, Time cost: 0.09313082695007324
+epoch 10, train 1/7, loss=0.3427 lr=0.0003
+epoch 10, train 7/7, loss=0.3522 lr=0.0003
+best epoch 8, best val res=0.8562
+epoch 10, val, loss=0.3348 classification result=0.8556
+Epoch: 10, Time cost: 0.09250164031982422
+epoch 11, train 1/7, loss=0.3466 lr=0.0003
+epoch 11, train 7/7, loss=0.3299 lr=0.0003
+best epoch 8, best val res=0.8562
+epoch 11, val, loss=0.3348 classification result=0.8544
+Epoch: 11, Time cost: 0.09267473220825195
+epoch 12, train 1/7, loss=0.3320 lr=0.0003
+epoch 12, train 7/7, loss=0.2941 lr=0.0003
+best epoch 8, best val res=0.8562
+epoch 12, val, loss=0.3344 classification result=0.8556
+Epoch: 12, Time cost: 0.09068703651428223
+epoch 13, train 1/7, loss=0.3327 lr=0.0003
+epoch 13, train 7/7, loss=0.3447 lr=0.0003
+best epoch 8, best val res=0.8562
+epoch 13, val, loss=0.3336 classification result=0.8581
+Epoch: 13, Time cost: 0.09817862510681152
+epoch 14, train 1/7, loss=0.3219 lr=0.0003
+epoch 14, train 7/7, loss=0.3015 lr=0.0003
+best epoch 13, best val res=0.8581
+epoch 14, val, loss=0.3356 classification result=0.8594
+Epoch: 14, Time cost: 0.10198068618774414
+epoch 15, train 1/7, loss=0.3210 lr=0.0003
+epoch 15, train 7/7, loss=0.4183 lr=0.0003
+best epoch 14, best val res=0.8594
+epoch 15, val, loss=0.3349 classification result=0.8581
+Epoch: 15, Time cost: 0.16962170600891113
+epoch 16, train 1/7, loss=0.3306 lr=0.0003
+epoch 16, train 7/7, loss=0.3501 lr=0.0003
+best epoch 14, best val res=0.8594
+epoch 16, val, loss=0.3308 classification result=0.8588
+Epoch: 16, Time cost: 0.09222722053527832
+epoch 17, train 1/7, loss=0.3826 lr=0.0003
+epoch 17, train 7/7, loss=0.3680 lr=0.0003
+best epoch 14, best val res=0.8594
+epoch 17, val, loss=0.3320 classification result=0.8588
+Epoch: 17, Time cost: 0.09212875366210938
+epoch 18, train 1/7, loss=0.3410 lr=0.0003
+epoch 18, train 7/7, loss=0.2929 lr=0.0003
+best epoch 14, best val res=0.8594
+epoch 18, val, loss=0.3313 classification result=0.8588
+Epoch: 18, Time cost: 0.09108304977416992
+epoch 19, train 1/7, loss=0.3070 lr=0.0003
+epoch 19, train 7/7, loss=0.3467 lr=0.0003
+best epoch 14, best val res=0.8594
+epoch 19, val, loss=0.3309 classification result=0.8606
+Epoch: 19, Time cost: 0.09790253639221191
+epoch 20, train 1/7, loss=0.3423 lr=0.0003
+epoch 20, train 7/7, loss=0.3374 lr=0.0003
+best epoch 19, best val res=0.8606
+epoch 20, val, loss=0.3317 classification result=0.8644
+Epoch: 20, Time cost: 0.10101675987243652
+epoch 21, train 1/7, loss=0.3463 lr=0.0003
+epoch 21, train 7/7, loss=0.4345 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 21, val, loss=0.3323 classification result=0.8631
+Epoch: 21, Time cost: 0.09672427177429199
+epoch 22, train 1/7, loss=0.3345 lr=0.0003
+epoch 22, train 7/7, loss=0.3194 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 22, val, loss=0.3309 classification result=0.8625
+Epoch: 22, Time cost: 0.09274101257324219
+epoch 23, train 1/7, loss=0.3091 lr=0.0003
+epoch 23, train 7/7, loss=0.3156 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 23, val, loss=0.3299 classification result=0.8638
+Epoch: 23, Time cost: 0.09487318992614746
+epoch 24, train 1/7, loss=0.3054 lr=0.0003
+epoch 24, train 7/7, loss=0.2774 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 24, val, loss=0.3323 classification result=0.8600
+Epoch: 24, Time cost: 0.09081220626831055
+epoch 25, train 1/7, loss=0.2930 lr=0.0003
+epoch 25, train 7/7, loss=0.3048 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 25, val, loss=0.3322 classification result=0.8650
+Epoch: 25, Time cost: 0.19104552268981934
+epoch 26, train 1/7, loss=0.3252 lr=0.0003
+epoch 26, train 7/7, loss=0.3246 lr=0.0003
+best epoch 25, best val res=0.8650
+epoch 26, val, loss=0.3318 classification result=0.8625
+Epoch: 26, Time cost: 0.09045100212097168
+epoch 27, train 1/7, loss=0.2957 lr=0.0003
+epoch 27, train 7/7, loss=0.3454 lr=0.0003
+best epoch 25, best val res=0.8650
+epoch 27, val, loss=0.3310 classification result=0.8650
+Epoch: 27, Time cost: 0.09730958938598633
+epoch 28, train 1/7, loss=0.3178 lr=0.0003
+epoch 28, train 7/7, loss=0.2875 lr=0.0003
+best epoch 27, best val res=0.8650
+epoch 28, val, loss=0.3296 classification result=0.8644
+Epoch: 28, Time cost: 0.09184408187866211
+epoch 29, train 1/7, loss=0.3146 lr=0.0003
+epoch 29, train 7/7, loss=0.2915 lr=0.0003
+best epoch 27, best val res=0.8650
+epoch 29, val, loss=0.3313 classification result=0.8656
+Epoch: 29, Time cost: 0.0997774600982666
+epoch 30, train 1/7, loss=0.3195 lr=0.0003
+epoch 30, train 7/7, loss=0.3384 lr=0.0003
+best epoch 29, best val res=0.8656
+epoch 30, val, loss=0.3314 classification result=0.8650
+Epoch: 30, Time cost: 0.0893857479095459
+epoch 31, train 1/7, loss=0.2962 lr=0.0003
+epoch 31, train 7/7, loss=0.2768 lr=0.0003
+best epoch 29, best val res=0.8656
+epoch 31, val, loss=0.3297 classification result=0.8625
+Epoch: 31, Time cost: 0.09043383598327637
+epoch 32, train 1/7, loss=0.3120 lr=0.0003
+epoch 32, train 7/7, loss=0.2959 lr=0.0003
+best epoch 29, best val res=0.8656
+epoch 32, val, loss=0.3316 classification result=0.8638
+Epoch: 32, Time cost: 0.09138679504394531
+epoch 33, train 1/7, loss=0.3072 lr=0.0003
+epoch 33, train 7/7, loss=0.3039 lr=0.0003
+best epoch 29, best val res=0.8656
+epoch 33, val, loss=0.3322 classification result=0.8662
+Epoch: 33, Time cost: 0.09931254386901855
+epoch 34, train 1/7, loss=0.3185 lr=0.0003
+epoch 34, train 7/7, loss=0.3005 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 34, val, loss=0.3337 classification result=0.8644
+Epoch: 34, Time cost: 0.09325790405273438
+epoch 35, train 1/7, loss=0.3125 lr=0.0003
+epoch 35, train 7/7, loss=0.3641 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 35, val, loss=0.3309 classification result=0.8612
+Epoch: 35, Time cost: 0.09476089477539062
+epoch 36, train 1/7, loss=0.3021 lr=0.0003
+epoch 36, train 7/7, loss=0.3491 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 36, val, loss=0.3310 classification result=0.8606
+Epoch: 36, Time cost: 0.16946625709533691
+epoch 37, train 1/7, loss=0.3142 lr=0.0003
+epoch 37, train 7/7, loss=0.3176 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 37, val, loss=0.3350 classification result=0.8638
+Epoch: 37, Time cost: 0.09132242202758789
+epoch 38, train 1/7, loss=0.3069 lr=0.0003
+epoch 38, train 7/7, loss=0.3458 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 38, val, loss=0.3341 classification result=0.8588
+Epoch: 38, Time cost: 0.09516191482543945
+epoch 39, train 1/7, loss=0.3043 lr=0.0003
+epoch 39, train 7/7, loss=0.3234 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 39, val, loss=0.3301 classification result=0.8619
+Epoch: 39, Time cost: 0.0915687084197998
+epoch 40, train 1/7, loss=0.3228 lr=0.0003
+epoch 40, train 7/7, loss=0.2741 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 40, val, loss=0.3314 classification result=0.8612
+Epoch: 40, Time cost: 0.09181427955627441
+epoch 41, train 1/7, loss=0.3585 lr=0.0003
+epoch 41, train 7/7, loss=0.3289 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 41, val, loss=0.3323 classification result=0.8631
+Epoch: 41, Time cost: 0.09473633766174316
+epoch 42, train 1/7, loss=0.3162 lr=0.0003
+epoch 42, train 7/7, loss=0.3109 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 42, val, loss=0.3339 classification result=0.8644
+Epoch: 42, Time cost: 0.09214568138122559
+epoch 43, train 1/7, loss=0.3223 lr=0.0003
+epoch 43, train 7/7, loss=0.3552 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 43, val, loss=0.3323 classification result=0.8606
+Epoch: 43, Time cost: 0.09379243850708008
+epoch 44, train 1/7, loss=0.2960 lr=0.0003
+epoch 44, train 7/7, loss=0.3387 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 44, val, loss=0.3378 classification result=0.8594
+Epoch: 44, Time cost: 0.0944054126739502
+epoch 45, train 1/7, loss=0.2928 lr=0.0003
+epoch 45, train 7/7, loss=0.2858 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 45, val, loss=0.3365 classification result=0.8594
+Epoch: 45, Time cost: 0.0918266773223877
+epoch 46, train 1/7, loss=0.3033 lr=0.0003
+epoch 46, train 7/7, loss=0.2462 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 46, val, loss=0.3363 classification result=0.8612
+Epoch: 46, Time cost: 0.09175705909729004
+epoch 47, train 1/7, loss=0.2934 lr=0.0003
+epoch 47, train 7/7, loss=0.3724 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 47, val, loss=0.3366 classification result=0.8638
+Epoch: 47, Time cost: 0.1670677661895752
+epoch 48, train 1/7, loss=0.3016 lr=0.0003
+epoch 48, train 7/7, loss=0.3185 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 48, val, loss=0.3355 classification result=0.8606
+Epoch: 48, Time cost: 0.09062075614929199
+epoch 49, train 1/7, loss=0.2939 lr=0.0003
+epoch 49, train 7/7, loss=0.2968 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 49, val, loss=0.3365 classification result=0.8606
+Epoch: 49, Time cost: 0.09031176567077637
+epoch 50, train 1/7, loss=0.2981 lr=0.0003
+epoch 50, train 7/7, loss=0.3252 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 50, val, loss=0.3390 classification result=0.8600
+Epoch: 50, Time cost: 0.09275341033935547
+epoch 51, train 1/7, loss=0.2897 lr=0.0003
+epoch 51, train 7/7, loss=0.2729 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 51, val, loss=0.3365 classification result=0.8581
+Epoch: 51, Time cost: 0.09163546562194824
+epoch 52, train 1/7, loss=0.3221 lr=0.0003
+epoch 52, train 7/7, loss=0.2927 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 52, val, loss=0.3359 classification result=0.8619
+Epoch: 52, Time cost: 0.09129810333251953
+epoch 53, train 1/7, loss=0.2710 lr=0.0003
+epoch 53, train 7/7, loss=0.2929 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 53, val, loss=0.3378 classification result=0.8619
+Epoch: 53, Time cost: 0.08946609497070312
+epoch 54, train 1/7, loss=0.3122 lr=0.0003
+epoch 54, train 7/7, loss=0.3110 lr=0.0003
+best epoch 33, best val res=0.8662
+epoch 54, val, loss=0.3386 classification result=0.8581
+Epoch: 54, Time cost: 0.09301066398620605
+best epoch 33, best val res=0.8662
+Test: loss=0.3255
+[Accuracy]=0.8675
+[Avg_Recall]=0.7312
+[Avg_Precision]=0.8249
+[F1]=0.6062
+[LogLoss]=0.3255
+[AUC]=0.8700
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.6402 lr=0.0003
+epoch 0, train 7/7, loss=0.4971 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.5332 classification result=0.8263
+Epoch: 0, Time cost: 0.09888076782226562
+epoch 1, train 1/7, loss=0.4641 lr=0.0003
+epoch 1, train 7/7, loss=0.3824 lr=0.0003
+best epoch 0, best val res=0.8263
+epoch 1, val, loss=0.4415 classification result=0.8456
+Epoch: 1, Time cost: 0.10132575035095215
+epoch 2, train 1/7, loss=0.4071 lr=0.0003
+epoch 2, train 7/7, loss=0.3887 lr=0.0003
+best epoch 1, best val res=0.8456
+epoch 2, val, loss=0.3970 classification result=0.8519
+Epoch: 2, Time cost: 0.17099952697753906
+epoch 3, train 1/7, loss=0.3980 lr=0.0003
+epoch 3, train 7/7, loss=0.3914 lr=0.0003
+best epoch 2, best val res=0.8519
+epoch 3, val, loss=0.3733 classification result=0.8550
+Epoch: 3, Time cost: 0.10063505172729492
+epoch 4, train 1/7, loss=0.3939 lr=0.0003
+epoch 4, train 7/7, loss=0.3526 lr=0.0003
+best epoch 3, best val res=0.8550
+epoch 4, val, loss=0.3612 classification result=0.8544
+Epoch: 4, Time cost: 0.09268832206726074
+epoch 5, train 1/7, loss=0.3732 lr=0.0003
+epoch 5, train 7/7, loss=0.3522 lr=0.0003
+best epoch 3, best val res=0.8550
+epoch 5, val, loss=0.3561 classification result=0.8531
+Epoch: 5, Time cost: 0.09365081787109375
+epoch 6, train 1/7, loss=0.3426 lr=0.0003
+epoch 6, train 7/7, loss=0.3415 lr=0.0003
+best epoch 3, best val res=0.8550
+epoch 6, val, loss=0.3505 classification result=0.8531
+Epoch: 6, Time cost: 0.09570050239562988
+epoch 7, train 1/7, loss=0.3546 lr=0.0003
+epoch 7, train 7/7, loss=0.2947 lr=0.0003
+best epoch 3, best val res=0.8550
+epoch 7, val, loss=0.3438 classification result=0.8550
+Epoch: 7, Time cost: 0.1016225814819336
+epoch 8, train 1/7, loss=0.3417 lr=0.0003
+epoch 8, train 7/7, loss=0.3480 lr=0.0003
+best epoch 7, best val res=0.8550
+epoch 8, val, loss=0.3400 classification result=0.8531
+Epoch: 8, Time cost: 0.09349846839904785
+epoch 9, train 1/7, loss=0.3785 lr=0.0003
+epoch 9, train 7/7, loss=0.2897 lr=0.0003
+best epoch 7, best val res=0.8550
+epoch 9, val, loss=0.3387 classification result=0.8538
+Epoch: 9, Time cost: 0.09035611152648926
+epoch 10, train 1/7, loss=0.3366 lr=0.0003
+epoch 10, train 7/7, loss=0.3365 lr=0.0003
+best epoch 7, best val res=0.8550
+epoch 10, val, loss=0.3382 classification result=0.8556
+Epoch: 10, Time cost: 0.10373854637145996
+epoch 11, train 1/7, loss=0.3364 lr=0.0003
+epoch 11, train 7/7, loss=0.4144 lr=0.0003
+best epoch 10, best val res=0.8556
+epoch 11, val, loss=0.3347 classification result=0.8569
+Epoch: 11, Time cost: 0.1781299114227295
+epoch 12, train 1/7, loss=0.3346 lr=0.0003
+epoch 12, train 7/7, loss=0.3266 lr=0.0003
+best epoch 11, best val res=0.8569
+epoch 12, val, loss=0.3321 classification result=0.8600
+Epoch: 12, Time cost: 0.10000872611999512
+epoch 13, train 1/7, loss=0.3061 lr=0.0003
+epoch 13, train 7/7, loss=0.3345 lr=0.0003
+best epoch 12, best val res=0.8600
+epoch 13, val, loss=0.3322 classification result=0.8600
+Epoch: 13, Time cost: 0.09929013252258301
+epoch 14, train 1/7, loss=0.3303 lr=0.0003
+epoch 14, train 7/7, loss=0.3497 lr=0.0003
+best epoch 13, best val res=0.8600
+epoch 14, val, loss=0.3330 classification result=0.8594
+Epoch: 14, Time cost: 0.09138202667236328
+epoch 15, train 1/7, loss=0.3301 lr=0.0003
+epoch 15, train 7/7, loss=0.3026 lr=0.0003
+best epoch 13, best val res=0.8600
+epoch 15, val, loss=0.3296 classification result=0.8631
+Epoch: 15, Time cost: 0.0991218090057373
+epoch 16, train 1/7, loss=0.3543 lr=0.0003
+epoch 16, train 7/7, loss=0.4277 lr=0.0003
+best epoch 15, best val res=0.8631
+epoch 16, val, loss=0.3304 classification result=0.8606
+Epoch: 16, Time cost: 0.09293961524963379
+epoch 17, train 1/7, loss=0.3372 lr=0.0003
+epoch 17, train 7/7, loss=0.3122 lr=0.0003
+best epoch 15, best val res=0.8631
+epoch 17, val, loss=0.3332 classification result=0.8625
+Epoch: 17, Time cost: 0.09067010879516602
+epoch 18, train 1/7, loss=0.3115 lr=0.0003
+epoch 18, train 7/7, loss=0.3343 lr=0.0003
+best epoch 15, best val res=0.8631
+epoch 18, val, loss=0.3335 classification result=0.8612
+Epoch: 18, Time cost: 0.0903933048248291
+epoch 19, train 1/7, loss=0.3177 lr=0.0003
+epoch 19, train 7/7, loss=0.3532 lr=0.0003
+best epoch 15, best val res=0.8631
+epoch 19, val, loss=0.3299 classification result=0.8600
+Epoch: 19, Time cost: 0.09444665908813477
+epoch 20, train 1/7, loss=0.3221 lr=0.0003
+epoch 20, train 7/7, loss=0.3285 lr=0.0003
+best epoch 15, best val res=0.8631
+epoch 20, val, loss=0.3289 classification result=0.8625
+Epoch: 20, Time cost: 0.09038925170898438
+epoch 21, train 1/7, loss=0.3291 lr=0.0003
+epoch 21, train 7/7, loss=0.2947 lr=0.0003
+best epoch 15, best val res=0.8631
+epoch 21, val, loss=0.3305 classification result=0.8638
+Epoch: 21, Time cost: 0.09727859497070312
+epoch 22, train 1/7, loss=0.3051 lr=0.0003
+epoch 22, train 7/7, loss=0.3567 lr=0.0003
+best epoch 21, best val res=0.8638
+epoch 22, val, loss=0.3292 classification result=0.8662
+Epoch: 22, Time cost: 0.16773438453674316
+epoch 23, train 1/7, loss=0.3355 lr=0.0003
+epoch 23, train 7/7, loss=0.3727 lr=0.0003
+best epoch 22, best val res=0.8662
+epoch 23, val, loss=0.3312 classification result=0.8656
+Epoch: 23, Time cost: 0.09023618698120117
+epoch 24, train 1/7, loss=0.3107 lr=0.0003
+epoch 24, train 7/7, loss=0.3387 lr=0.0003
+best epoch 22, best val res=0.8662
+epoch 24, val, loss=0.3302 classification result=0.8656
+Epoch: 24, Time cost: 0.09015321731567383
+epoch 25, train 1/7, loss=0.3446 lr=0.0003
+epoch 25, train 7/7, loss=0.3106 lr=0.0003
+best epoch 22, best val res=0.8662
+epoch 25, val, loss=0.3286 classification result=0.8688
+Epoch: 25, Time cost: 0.10219383239746094
+epoch 26, train 1/7, loss=0.3152 lr=0.0003
+epoch 26, train 7/7, loss=0.4193 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 26, val, loss=0.3283 classification result=0.8625
+Epoch: 26, Time cost: 0.0915517807006836
+epoch 27, train 1/7, loss=0.3214 lr=0.0003
+epoch 27, train 7/7, loss=0.2742 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 27, val, loss=0.3310 classification result=0.8619
+Epoch: 27, Time cost: 0.09096145629882812
+epoch 28, train 1/7, loss=0.3370 lr=0.0003
+epoch 28, train 7/7, loss=0.3244 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 28, val, loss=0.3325 classification result=0.8625
+Epoch: 28, Time cost: 0.09399056434631348
+epoch 29, train 1/7, loss=0.3170 lr=0.0003
+epoch 29, train 7/7, loss=0.3594 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 29, val, loss=0.3333 classification result=0.8619
+Epoch: 29, Time cost: 0.0918276309967041
+epoch 30, train 1/7, loss=0.3106 lr=0.0003
+epoch 30, train 7/7, loss=0.3565 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 30, val, loss=0.3327 classification result=0.8631
+Epoch: 30, Time cost: 0.09103703498840332
+epoch 31, train 1/7, loss=0.3336 lr=0.0003
+epoch 31, train 7/7, loss=0.2637 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 31, val, loss=0.3321 classification result=0.8606
+Epoch: 31, Time cost: 0.09185552597045898
+epoch 32, train 1/7, loss=0.3000 lr=0.0003
+epoch 32, train 7/7, loss=0.2724 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 32, val, loss=0.3292 classification result=0.8662
+Epoch: 32, Time cost: 0.09069013595581055
+epoch 33, train 1/7, loss=0.2988 lr=0.0003
+epoch 33, train 7/7, loss=0.3033 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 33, val, loss=0.3289 classification result=0.8669
+Epoch: 33, Time cost: 0.15676641464233398
+epoch 34, train 1/7, loss=0.3165 lr=0.0003
+epoch 34, train 7/7, loss=0.3060 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 34, val, loss=0.3309 classification result=0.8631
+Epoch: 34, Time cost: 0.09452390670776367
+epoch 35, train 1/7, loss=0.3298 lr=0.0003
+epoch 35, train 7/7, loss=0.3320 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 35, val, loss=0.3334 classification result=0.8638
+Epoch: 35, Time cost: 0.09130311012268066
+epoch 36, train 1/7, loss=0.3056 lr=0.0003
+epoch 36, train 7/7, loss=0.3209 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 36, val, loss=0.3337 classification result=0.8650
+Epoch: 36, Time cost: 0.09102487564086914
+epoch 37, train 1/7, loss=0.3183 lr=0.0003
+epoch 37, train 7/7, loss=0.3228 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 37, val, loss=0.3341 classification result=0.8631
+Epoch: 37, Time cost: 0.09401464462280273
+epoch 38, train 1/7, loss=0.3188 lr=0.0003
+epoch 38, train 7/7, loss=0.3744 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 38, val, loss=0.3360 classification result=0.8581
+Epoch: 38, Time cost: 0.09400200843811035
+epoch 39, train 1/7, loss=0.3171 lr=0.0003
+epoch 39, train 7/7, loss=0.3831 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 39, val, loss=0.3344 classification result=0.8619
+Epoch: 39, Time cost: 0.09324193000793457
+epoch 40, train 1/7, loss=0.3295 lr=0.0003
+epoch 40, train 7/7, loss=0.3044 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 40, val, loss=0.3339 classification result=0.8631
+Epoch: 40, Time cost: 0.09316682815551758
+epoch 41, train 1/7, loss=0.3207 lr=0.0003
+epoch 41, train 7/7, loss=0.2824 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 41, val, loss=0.3353 classification result=0.8650
+Epoch: 41, Time cost: 0.09671354293823242
+epoch 42, train 1/7, loss=0.3049 lr=0.0003
+epoch 42, train 7/7, loss=0.3088 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 42, val, loss=0.3374 classification result=0.8638
+Epoch: 42, Time cost: 0.09472084045410156
+epoch 43, train 1/7, loss=0.3065 lr=0.0003
+epoch 43, train 7/7, loss=0.3048 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 43, val, loss=0.3346 classification result=0.8662
+Epoch: 43, Time cost: 0.09203410148620605
+epoch 44, train 1/7, loss=0.3144 lr=0.0003
+epoch 44, train 7/7, loss=0.3285 lr=0.0003
+best epoch 25, best val res=0.8688
+epoch 44, val, loss=0.3329 classification result=0.8688
+Epoch: 44, Time cost: 0.176832914352417
+epoch 45, train 1/7, loss=0.3063 lr=0.0003
+epoch 45, train 7/7, loss=0.2874 lr=0.0003
+best epoch 44, best val res=0.8688
+epoch 45, val, loss=0.3346 classification result=0.8600
+Epoch: 45, Time cost: 0.09240007400512695
+epoch 46, train 1/7, loss=0.2897 lr=0.0003
+epoch 46, train 7/7, loss=0.2686 lr=0.0003
+best epoch 44, best val res=0.8688
+epoch 46, val, loss=0.3353 classification result=0.8662
+Epoch: 46, Time cost: 0.09311223030090332
+epoch 47, train 1/7, loss=0.3248 lr=0.0003
+epoch 47, train 7/7, loss=0.2741 lr=0.0003
+best epoch 44, best val res=0.8688
+epoch 47, val, loss=0.3343 classification result=0.8675
+Epoch: 47, Time cost: 0.09348678588867188
+epoch 48, train 1/7, loss=0.2908 lr=0.0003
+epoch 48, train 7/7, loss=0.2774 lr=0.0003
+best epoch 44, best val res=0.8688
+epoch 48, val, loss=0.3327 classification result=0.8675
+Epoch: 48, Time cost: 0.0963737964630127
+epoch 49, train 1/7, loss=0.3171 lr=0.0003
+epoch 49, train 7/7, loss=0.3264 lr=0.0003
+best epoch 44, best val res=0.8688
+epoch 49, val, loss=0.3330 classification result=0.8706
+Epoch: 49, Time cost: 0.09685516357421875
+epoch 50, train 1/7, loss=0.3071 lr=0.0003
+epoch 50, train 7/7, loss=0.3128 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 50, val, loss=0.3349 classification result=0.8681
+Epoch: 50, Time cost: 0.0941166877746582
+epoch 51, train 1/7, loss=0.3062 lr=0.0003
+epoch 51, train 7/7, loss=0.3583 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 51, val, loss=0.3366 classification result=0.8625
+Epoch: 51, Time cost: 0.09299325942993164
+epoch 52, train 1/7, loss=0.3063 lr=0.0003
+epoch 52, train 7/7, loss=0.3242 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 52, val, loss=0.3361 classification result=0.8644
+Epoch: 52, Time cost: 0.09212327003479004
+epoch 53, train 1/7, loss=0.3149 lr=0.0003
+epoch 53, train 7/7, loss=0.2910 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 53, val, loss=0.3343 classification result=0.8675
+Epoch: 53, Time cost: 0.09234070777893066
+epoch 54, train 1/7, loss=0.2955 lr=0.0003
+epoch 54, train 7/7, loss=0.2609 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 54, val, loss=0.3358 classification result=0.8694
+Epoch: 54, Time cost: 0.09139537811279297
+epoch 55, train 1/7, loss=0.2863 lr=0.0003
+epoch 55, train 7/7, loss=0.3600 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 55, val, loss=0.3356 classification result=0.8662
+Epoch: 55, Time cost: 0.1586284637451172
+epoch 56, train 1/7, loss=0.2881 lr=0.0003
+epoch 56, train 7/7, loss=0.2352 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 56, val, loss=0.3338 classification result=0.8675
+Epoch: 56, Time cost: 0.09490299224853516
+epoch 57, train 1/7, loss=0.2955 lr=0.0003
+epoch 57, train 7/7, loss=0.2858 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 57, val, loss=0.3344 classification result=0.8631
+Epoch: 57, Time cost: 0.0911407470703125
+epoch 58, train 1/7, loss=0.3006 lr=0.0003
+epoch 58, train 7/7, loss=0.2672 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 58, val, loss=0.3377 classification result=0.8594
+Epoch: 58, Time cost: 0.09204578399658203
+epoch 59, train 1/7, loss=0.2576 lr=0.0003
+epoch 59, train 7/7, loss=0.3373 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 59, val, loss=0.3370 classification result=0.8588
+Epoch: 59, Time cost: 0.09313678741455078
+epoch 60, train 1/7, loss=0.2669 lr=0.0003
+epoch 60, train 7/7, loss=0.2553 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 60, val, loss=0.3355 classification result=0.8669
+Epoch: 60, Time cost: 0.09178948402404785
+epoch 61, train 1/7, loss=0.2856 lr=0.0003
+epoch 61, train 7/7, loss=0.2429 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 61, val, loss=0.3372 classification result=0.8612
+Epoch: 61, Time cost: 0.09308290481567383
+epoch 62, train 1/7, loss=0.3141 lr=0.0003
+epoch 62, train 7/7, loss=0.3093 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 62, val, loss=0.3381 classification result=0.8619
+Epoch: 62, Time cost: 0.09114551544189453
+epoch 63, train 1/7, loss=0.3003 lr=0.0003
+epoch 63, train 7/7, loss=0.3265 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 63, val, loss=0.3385 classification result=0.8606
+Epoch: 63, Time cost: 0.09418988227844238
+epoch 64, train 1/7, loss=0.3067 lr=0.0003
+epoch 64, train 7/7, loss=0.3141 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 64, val, loss=0.3389 classification result=0.8625
+Epoch: 64, Time cost: 0.09088492393493652
+epoch 65, train 1/7, loss=0.2893 lr=0.0003
+epoch 65, train 7/7, loss=0.2717 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 65, val, loss=0.3377 classification result=0.8594
+Epoch: 65, Time cost: 0.16105890274047852
+epoch 66, train 1/7, loss=0.2840 lr=0.0003
+epoch 66, train 7/7, loss=0.2928 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 66, val, loss=0.3391 classification result=0.8638
+Epoch: 66, Time cost: 0.09249687194824219
+epoch 67, train 1/7, loss=0.2622 lr=0.0003
+epoch 67, train 7/7, loss=0.3452 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 67, val, loss=0.3401 classification result=0.8619
+Epoch: 67, Time cost: 0.09163403511047363
+epoch 68, train 1/7, loss=0.3205 lr=0.0003
+epoch 68, train 7/7, loss=0.3356 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 68, val, loss=0.3393 classification result=0.8631
+Epoch: 68, Time cost: 0.09140753746032715
+epoch 69, train 1/7, loss=0.2891 lr=0.0003
+epoch 69, train 7/7, loss=0.3276 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 69, val, loss=0.3398 classification result=0.8600
+Epoch: 69, Time cost: 0.09514236450195312
+epoch 70, train 1/7, loss=0.3113 lr=0.0003
+epoch 70, train 7/7, loss=0.3856 lr=0.0003
+best epoch 49, best val res=0.8706
+epoch 70, val, loss=0.3420 classification result=0.8650
+Epoch: 70, Time cost: 0.0911562442779541
+best epoch 49, best val res=0.8706
+Test: loss=0.3281
+[Accuracy]=0.8660
+[Avg_Recall]=0.7275
+[Avg_Precision]=0.8228
+[F1]=0.6000
+[LogLoss]=0.3281
+[AUC]=0.8677
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.7760 lr=0.0003
+epoch 0, train 7/7, loss=0.5763 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.5962 classification result=0.7488
+Epoch: 0, Time cost: 0.10047292709350586
+epoch 1, train 1/7, loss=0.5672 lr=0.0003
+epoch 1, train 7/7, loss=0.5217 lr=0.0003
+best epoch 0, best val res=0.7488
+epoch 1, val, loss=0.5075 classification result=0.8037
+Epoch: 1, Time cost: 0.09808588027954102
+epoch 2, train 1/7, loss=0.4703 lr=0.0003
+epoch 2, train 7/7, loss=0.4437 lr=0.0003
+best epoch 1, best val res=0.8037
+epoch 2, val, loss=0.4457 classification result=0.8462
+Epoch: 2, Time cost: 0.09764337539672852
+epoch 3, train 1/7, loss=0.4210 lr=0.0003
+epoch 3, train 7/7, loss=0.3754 lr=0.0003
+best epoch 2, best val res=0.8462
+epoch 3, val, loss=0.4101 classification result=0.8488
+Epoch: 3, Time cost: 0.16607236862182617
+epoch 4, train 1/7, loss=0.3815 lr=0.0003
+epoch 4, train 7/7, loss=0.4122 lr=0.0003
+best epoch 3, best val res=0.8488
+epoch 4, val, loss=0.3880 classification result=0.8512
+Epoch: 4, Time cost: 0.09714245796203613
+epoch 5, train 1/7, loss=0.3633 lr=0.0003
+epoch 5, train 7/7, loss=0.3783 lr=0.0003
+best epoch 4, best val res=0.8512
+epoch 5, val, loss=0.3732 classification result=0.8494
+Epoch: 5, Time cost: 0.0929102897644043
+epoch 6, train 1/7, loss=0.3800 lr=0.0003
+epoch 6, train 7/7, loss=0.3941 lr=0.0003
+best epoch 4, best val res=0.8512
+epoch 6, val, loss=0.3613 classification result=0.8506
+Epoch: 6, Time cost: 0.09189057350158691
+epoch 7, train 1/7, loss=0.3716 lr=0.0003
+epoch 7, train 7/7, loss=0.3610 lr=0.0003
+best epoch 4, best val res=0.8512
+epoch 7, val, loss=0.3518 classification result=0.8550
+Epoch: 7, Time cost: 0.10496187210083008
+epoch 8, train 1/7, loss=0.3422 lr=0.0003
+epoch 8, train 7/7, loss=0.3238 lr=0.0003
+best epoch 7, best val res=0.8550
+epoch 8, val, loss=0.3455 classification result=0.8562
+Epoch: 8, Time cost: 0.09888863563537598
+epoch 9, train 1/7, loss=0.3603 lr=0.0003
+epoch 9, train 7/7, loss=0.3971 lr=0.0003
+best epoch 8, best val res=0.8562
+epoch 9, val, loss=0.3424 classification result=0.8562
+Epoch: 9, Time cost: 0.10042572021484375
+epoch 10, train 1/7, loss=0.3145 lr=0.0003
+epoch 10, train 7/7, loss=0.3107 lr=0.0003
+best epoch 9, best val res=0.8562
+epoch 10, val, loss=0.3368 classification result=0.8581
+Epoch: 10, Time cost: 0.09998226165771484
+epoch 11, train 1/7, loss=0.3381 lr=0.0003
+epoch 11, train 7/7, loss=0.2738 lr=0.0003
+best epoch 10, best val res=0.8581
+epoch 11, val, loss=0.3356 classification result=0.8594
+Epoch: 11, Time cost: 0.09846687316894531
+epoch 12, train 1/7, loss=0.3249 lr=0.0003
+epoch 12, train 7/7, loss=0.3566 lr=0.0003
+best epoch 11, best val res=0.8594
+epoch 12, val, loss=0.3341 classification result=0.8625
+Epoch: 12, Time cost: 0.10162067413330078
+epoch 13, train 1/7, loss=0.3474 lr=0.0003
+epoch 13, train 7/7, loss=0.2931 lr=0.0003
+best epoch 12, best val res=0.8625
+epoch 13, val, loss=0.3345 classification result=0.8606
+Epoch: 13, Time cost: 0.09209799766540527
+epoch 14, train 1/7, loss=0.3369 lr=0.0003
+epoch 14, train 7/7, loss=0.3421 lr=0.0003
+best epoch 12, best val res=0.8625
+epoch 14, val, loss=0.3346 classification result=0.8575
+Epoch: 14, Time cost: 0.1864776611328125
+epoch 15, train 1/7, loss=0.3316 lr=0.0003
+epoch 15, train 7/7, loss=0.3319 lr=0.0003
+best epoch 12, best val res=0.8625
+epoch 15, val, loss=0.3328 classification result=0.8594
+Epoch: 15, Time cost: 0.09333348274230957
+epoch 16, train 1/7, loss=0.3559 lr=0.0003
+epoch 16, train 7/7, loss=0.3801 lr=0.0003
+best epoch 12, best val res=0.8625
+epoch 16, val, loss=0.3322 classification result=0.8638
+Epoch: 16, Time cost: 0.09885406494140625
+epoch 17, train 1/7, loss=0.3202 lr=0.0003
+epoch 17, train 7/7, loss=0.3207 lr=0.0003
+best epoch 16, best val res=0.8638
+epoch 17, val, loss=0.3292 classification result=0.8638
+Epoch: 17, Time cost: 0.10212445259094238
+epoch 18, train 1/7, loss=0.3311 lr=0.0003
+epoch 18, train 7/7, loss=0.3076 lr=0.0003
+best epoch 17, best val res=0.8638
+epoch 18, val, loss=0.3284 classification result=0.8606
+Epoch: 18, Time cost: 0.0945136547088623
+epoch 19, train 1/7, loss=0.3396 lr=0.0003
+epoch 19, train 7/7, loss=0.3182 lr=0.0003
+best epoch 17, best val res=0.8638
+epoch 19, val, loss=0.3312 classification result=0.8625
+Epoch: 19, Time cost: 0.09381914138793945
+epoch 20, train 1/7, loss=0.3525 lr=0.0003
+epoch 20, train 7/7, loss=0.3266 lr=0.0003
+best epoch 17, best val res=0.8638
+epoch 20, val, loss=0.3306 classification result=0.8644
+Epoch: 20, Time cost: 0.10016798973083496
+epoch 21, train 1/7, loss=0.3051 lr=0.0003
+epoch 21, train 7/7, loss=0.3197 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 21, val, loss=0.3324 classification result=0.8606
+Epoch: 21, Time cost: 0.09383845329284668
+epoch 22, train 1/7, loss=0.3114 lr=0.0003
+epoch 22, train 7/7, loss=0.2876 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 22, val, loss=0.3312 classification result=0.8638
+Epoch: 22, Time cost: 0.09202194213867188
+epoch 23, train 1/7, loss=0.3249 lr=0.0003
+epoch 23, train 7/7, loss=0.3636 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 23, val, loss=0.3295 classification result=0.8638
+Epoch: 23, Time cost: 0.09393548965454102
+epoch 24, train 1/7, loss=0.3198 lr=0.0003
+epoch 24, train 7/7, loss=0.2740 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 24, val, loss=0.3308 classification result=0.8644
+Epoch: 24, Time cost: 0.10361361503601074
+epoch 25, train 1/7, loss=0.3183 lr=0.0003
+epoch 25, train 7/7, loss=0.3295 lr=0.0003
+best epoch 24, best val res=0.8644
+epoch 25, val, loss=0.3316 classification result=0.8625
+Epoch: 25, Time cost: 0.17334222793579102
+epoch 26, train 1/7, loss=0.3130 lr=0.0003
+epoch 26, train 7/7, loss=0.3062 lr=0.0003
+best epoch 24, best val res=0.8644
+epoch 26, val, loss=0.3316 classification result=0.8644
+Epoch: 26, Time cost: 0.1000363826751709
+epoch 27, train 1/7, loss=0.3457 lr=0.0003
+epoch 27, train 7/7, loss=0.2921 lr=0.0003
+best epoch 26, best val res=0.8644
+epoch 27, val, loss=0.3313 classification result=0.8638
+Epoch: 27, Time cost: 0.0925443172454834
+epoch 28, train 1/7, loss=0.3176 lr=0.0003
+epoch 28, train 7/7, loss=0.3916 lr=0.0003
+best epoch 26, best val res=0.8644
+epoch 28, val, loss=0.3308 classification result=0.8612
+Epoch: 28, Time cost: 0.09285640716552734
+epoch 29, train 1/7, loss=0.3161 lr=0.0003
+epoch 29, train 7/7, loss=0.2740 lr=0.0003
+best epoch 26, best val res=0.8644
+epoch 29, val, loss=0.3306 classification result=0.8600
+Epoch: 29, Time cost: 0.09464120864868164
+epoch 30, train 1/7, loss=0.3040 lr=0.0003
+epoch 30, train 7/7, loss=0.3179 lr=0.0003
+best epoch 26, best val res=0.8644
+epoch 30, val, loss=0.3308 classification result=0.8638
+Epoch: 30, Time cost: 0.09355545043945312
+epoch 31, train 1/7, loss=0.3057 lr=0.0003
+epoch 31, train 7/7, loss=0.2977 lr=0.0003
+best epoch 26, best val res=0.8644
+epoch 31, val, loss=0.3297 classification result=0.8638
+Epoch: 31, Time cost: 0.09200310707092285
+epoch 32, train 1/7, loss=0.3164 lr=0.0003
+epoch 32, train 7/7, loss=0.2720 lr=0.0003
+best epoch 26, best val res=0.8644
+epoch 32, val, loss=0.3310 classification result=0.8638
+Epoch: 32, Time cost: 0.09353256225585938
+epoch 33, train 1/7, loss=0.3450 lr=0.0003
+epoch 33, train 7/7, loss=0.3417 lr=0.0003
+best epoch 26, best val res=0.8644
+epoch 33, val, loss=0.3308 classification result=0.8656
+Epoch: 33, Time cost: 0.10232090950012207
+epoch 34, train 1/7, loss=0.3086 lr=0.0003
+epoch 34, train 7/7, loss=0.3791 lr=0.0003
+best epoch 33, best val res=0.8656
+epoch 34, val, loss=0.3330 classification result=0.8662
+Epoch: 34, Time cost: 0.09711956977844238
+epoch 35, train 1/7, loss=0.3385 lr=0.0003
+epoch 35, train 7/7, loss=0.3148 lr=0.0003
+best epoch 34, best val res=0.8662
+epoch 35, val, loss=0.3329 classification result=0.8662
+Epoch: 35, Time cost: 0.09784054756164551
+epoch 36, train 1/7, loss=0.3271 lr=0.0003
+epoch 36, train 7/7, loss=0.2808 lr=0.0003
+best epoch 35, best val res=0.8662
+epoch 36, val, loss=0.3330 classification result=0.8644
+Epoch: 36, Time cost: 0.16583251953125
+epoch 37, train 1/7, loss=0.3055 lr=0.0003
+epoch 37, train 7/7, loss=0.4206 lr=0.0003
+best epoch 35, best val res=0.8662
+epoch 37, val, loss=0.3300 classification result=0.8650
+Epoch: 37, Time cost: 0.09080338478088379
+epoch 38, train 1/7, loss=0.3055 lr=0.0003
+epoch 38, train 7/7, loss=0.2970 lr=0.0003
+best epoch 35, best val res=0.8662
+epoch 38, val, loss=0.3338 classification result=0.8619
+Epoch: 38, Time cost: 0.09072041511535645
+epoch 39, train 1/7, loss=0.3096 lr=0.0003
+epoch 39, train 7/7, loss=0.3099 lr=0.0003
+best epoch 35, best val res=0.8662
+epoch 39, val, loss=0.3330 classification result=0.8625
+Epoch: 39, Time cost: 0.09417057037353516
+epoch 40, train 1/7, loss=0.3020 lr=0.0003
+epoch 40, train 7/7, loss=0.2950 lr=0.0003
+best epoch 35, best val res=0.8662
+epoch 40, val, loss=0.3295 classification result=0.8638
+Epoch: 40, Time cost: 0.09158921241760254
+epoch 41, train 1/7, loss=0.3095 lr=0.0003
+epoch 41, train 7/7, loss=0.3721 lr=0.0003
+best epoch 35, best val res=0.8662
+epoch 41, val, loss=0.3306 classification result=0.8675
+Epoch: 41, Time cost: 0.09836864471435547
+epoch 42, train 1/7, loss=0.3153 lr=0.0003
+epoch 42, train 7/7, loss=0.3255 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 42, val, loss=0.3368 classification result=0.8600
+Epoch: 42, Time cost: 0.09244728088378906
+epoch 43, train 1/7, loss=0.3095 lr=0.0003
+epoch 43, train 7/7, loss=0.3694 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 43, val, loss=0.3343 classification result=0.8631
+Epoch: 43, Time cost: 0.09172368049621582
+epoch 44, train 1/7, loss=0.3093 lr=0.0003
+epoch 44, train 7/7, loss=0.3297 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 44, val, loss=0.3327 classification result=0.8625
+Epoch: 44, Time cost: 0.09145140647888184
+epoch 45, train 1/7, loss=0.3145 lr=0.0003
+epoch 45, train 7/7, loss=0.2948 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 45, val, loss=0.3356 classification result=0.8638
+Epoch: 45, Time cost: 0.0931246280670166
+epoch 46, train 1/7, loss=0.3088 lr=0.0003
+epoch 46, train 7/7, loss=0.3137 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 46, val, loss=0.3355 classification result=0.8631
+Epoch: 46, Time cost: 0.09145236015319824
+epoch 47, train 1/7, loss=0.3114 lr=0.0003
+epoch 47, train 7/7, loss=0.3807 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 47, val, loss=0.3342 classification result=0.8656
+Epoch: 47, Time cost: 0.15840864181518555
+epoch 48, train 1/7, loss=0.3566 lr=0.0003
+epoch 48, train 7/7, loss=0.3556 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 48, val, loss=0.3332 classification result=0.8650
+Epoch: 48, Time cost: 0.09506011009216309
+epoch 49, train 1/7, loss=0.3117 lr=0.0003
+epoch 49, train 7/7, loss=0.2491 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 49, val, loss=0.3334 classification result=0.8594
+Epoch: 49, Time cost: 0.09067034721374512
+epoch 50, train 1/7, loss=0.2680 lr=0.0003
+epoch 50, train 7/7, loss=0.2769 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 50, val, loss=0.3351 classification result=0.8594
+Epoch: 50, Time cost: 0.08994913101196289
+epoch 51, train 1/7, loss=0.2940 lr=0.0003
+epoch 51, train 7/7, loss=0.3669 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 51, val, loss=0.3354 classification result=0.8625
+Epoch: 51, Time cost: 0.09075713157653809
+epoch 52, train 1/7, loss=0.2975 lr=0.0003
+epoch 52, train 7/7, loss=0.2865 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 52, val, loss=0.3341 classification result=0.8644
+Epoch: 52, Time cost: 0.09414529800415039
+epoch 53, train 1/7, loss=0.3334 lr=0.0003
+epoch 53, train 7/7, loss=0.2946 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 53, val, loss=0.3350 classification result=0.8619
+Epoch: 53, Time cost: 0.09179902076721191
+epoch 54, train 1/7, loss=0.2503 lr=0.0003
+epoch 54, train 7/7, loss=0.2995 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 54, val, loss=0.3351 classification result=0.8556
+Epoch: 54, Time cost: 0.09030628204345703
+epoch 55, train 1/7, loss=0.3248 lr=0.0003
+epoch 55, train 7/7, loss=0.3012 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 55, val, loss=0.3346 classification result=0.8612
+Epoch: 55, Time cost: 0.09245562553405762
+epoch 56, train 1/7, loss=0.2967 lr=0.0003
+epoch 56, train 7/7, loss=0.2864 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 56, val, loss=0.3387 classification result=0.8612
+Epoch: 56, Time cost: 0.09018802642822266
+epoch 57, train 1/7, loss=0.3088 lr=0.0003
+epoch 57, train 7/7, loss=0.2883 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 57, val, loss=0.3383 classification result=0.8594
+Epoch: 57, Time cost: 0.15756464004516602
+epoch 58, train 1/7, loss=0.3004 lr=0.0003
+epoch 58, train 7/7, loss=0.2948 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 58, val, loss=0.3354 classification result=0.8581
+Epoch: 58, Time cost: 0.09481644630432129
+epoch 59, train 1/7, loss=0.3077 lr=0.0003
+epoch 59, train 7/7, loss=0.3073 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 59, val, loss=0.3385 classification result=0.8594
+Epoch: 59, Time cost: 0.09170079231262207
+epoch 60, train 1/7, loss=0.2864 lr=0.0003
+epoch 60, train 7/7, loss=0.2600 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 60, val, loss=0.3381 classification result=0.8581
+Epoch: 60, Time cost: 0.09110069274902344
+epoch 61, train 1/7, loss=0.2956 lr=0.0003
+epoch 61, train 7/7, loss=0.2842 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 61, val, loss=0.3368 classification result=0.8619
+Epoch: 61, Time cost: 0.0942389965057373
+epoch 62, train 1/7, loss=0.2794 lr=0.0003
+epoch 62, train 7/7, loss=0.3306 lr=0.0003
+best epoch 41, best val res=0.8675
+epoch 62, val, loss=0.3370 classification result=0.8644
+Epoch: 62, Time cost: 0.09152436256408691
+best epoch 41, best val res=0.8675
+Test: loss=0.3275
+[Accuracy]=0.8655
+[Avg_Recall]=0.7308
+[Avg_Precision]=0.8184
+[F1]=0.6038
+[LogLoss]=0.3275
+[AUC]=0.8687
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.7796 lr=0.0003
+epoch 0, train 7/7, loss=0.5727 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.6305 classification result=0.6756
+Epoch: 0, Time cost: 0.09945893287658691
+epoch 1, train 1/7, loss=0.5751 lr=0.0003
+epoch 1, train 7/7, loss=0.4844 lr=0.0003
+best epoch 0, best val res=0.6756
+epoch 1, val, loss=0.5173 classification result=0.7956
+Epoch: 1, Time cost: 0.0975492000579834
+epoch 2, train 1/7, loss=0.4756 lr=0.0003
+epoch 2, train 7/7, loss=0.4625 lr=0.0003
+best epoch 1, best val res=0.7956
+epoch 2, val, loss=0.4488 classification result=0.8413
+Epoch: 2, Time cost: 0.09781718254089355
+epoch 3, train 1/7, loss=0.4225 lr=0.0003
+epoch 3, train 7/7, loss=0.4151 lr=0.0003
+best epoch 2, best val res=0.8413
+epoch 3, val, loss=0.4093 classification result=0.8481
+Epoch: 3, Time cost: 0.17122149467468262
+epoch 4, train 1/7, loss=0.3925 lr=0.0003
+epoch 4, train 7/7, loss=0.3389 lr=0.0003
+best epoch 3, best val res=0.8481
+epoch 4, val, loss=0.3878 classification result=0.8538
+Epoch: 4, Time cost: 0.0973043441772461
+epoch 5, train 1/7, loss=0.3637 lr=0.0003
+epoch 5, train 7/7, loss=0.3754 lr=0.0003
+best epoch 4, best val res=0.8538
+epoch 5, val, loss=0.3773 classification result=0.8506
+Epoch: 5, Time cost: 0.08977031707763672
+epoch 6, train 1/7, loss=0.3603 lr=0.0003
+epoch 6, train 7/7, loss=0.3915 lr=0.0003
+best epoch 4, best val res=0.8538
+epoch 6, val, loss=0.3594 classification result=0.8494
+Epoch: 6, Time cost: 0.09357023239135742
+epoch 7, train 1/7, loss=0.3470 lr=0.0003
+epoch 7, train 7/7, loss=0.3628 lr=0.0003
+best epoch 4, best val res=0.8538
+epoch 7, val, loss=0.3471 classification result=0.8531
+Epoch: 7, Time cost: 0.09026956558227539
+epoch 8, train 1/7, loss=0.3521 lr=0.0003
+epoch 8, train 7/7, loss=0.3278 lr=0.0003
+best epoch 4, best val res=0.8538
+epoch 8, val, loss=0.3419 classification result=0.8531
+Epoch: 8, Time cost: 0.09014105796813965
+epoch 9, train 1/7, loss=0.3561 lr=0.0003
+epoch 9, train 7/7, loss=0.3396 lr=0.0003
+best epoch 4, best val res=0.8538
+epoch 9, val, loss=0.3374 classification result=0.8556
+Epoch: 9, Time cost: 0.09941935539245605
+epoch 10, train 1/7, loss=0.3541 lr=0.0003
+epoch 10, train 7/7, loss=0.3617 lr=0.0003
+best epoch 9, best val res=0.8556
+epoch 10, val, loss=0.3367 classification result=0.8562
+Epoch: 10, Time cost: 0.09816503524780273
+epoch 11, train 1/7, loss=0.3678 lr=0.0003
+epoch 11, train 7/7, loss=0.2875 lr=0.0003
+best epoch 10, best val res=0.8562
+epoch 11, val, loss=0.3340 classification result=0.8562
+Epoch: 11, Time cost: 0.09679079055786133
+epoch 12, train 1/7, loss=0.3031 lr=0.0003
+epoch 12, train 7/7, loss=0.3772 lr=0.0003
+best epoch 11, best val res=0.8562
+epoch 12, val, loss=0.3316 classification result=0.8594
+Epoch: 12, Time cost: 0.10213565826416016
+epoch 13, train 1/7, loss=0.3187 lr=0.0003
+epoch 13, train 7/7, loss=0.3232 lr=0.0003
+best epoch 12, best val res=0.8594
+epoch 13, val, loss=0.3322 classification result=0.8631
+Epoch: 13, Time cost: 0.0977473258972168
+epoch 14, train 1/7, loss=0.3465 lr=0.0003
+epoch 14, train 7/7, loss=0.3631 lr=0.0003
+best epoch 13, best val res=0.8631
+epoch 14, val, loss=0.3294 classification result=0.8594
+Epoch: 14, Time cost: 0.15916109085083008
+epoch 15, train 1/7, loss=0.3338 lr=0.0003
+epoch 15, train 7/7, loss=0.3774 lr=0.0003
+best epoch 13, best val res=0.8631
+epoch 15, val, loss=0.3317 classification result=0.8619
+Epoch: 15, Time cost: 0.09296131134033203
+epoch 16, train 1/7, loss=0.3039 lr=0.0003
+epoch 16, train 7/7, loss=0.3056 lr=0.0003
+best epoch 13, best val res=0.8631
+epoch 16, val, loss=0.3310 classification result=0.8606
+Epoch: 16, Time cost: 0.09094715118408203
+epoch 17, train 1/7, loss=0.3309 lr=0.0003
+epoch 17, train 7/7, loss=0.3277 lr=0.0003
+best epoch 13, best val res=0.8631
+epoch 17, val, loss=0.3307 classification result=0.8575
+Epoch: 17, Time cost: 0.09114646911621094
+epoch 18, train 1/7, loss=0.3005 lr=0.0003
+epoch 18, train 7/7, loss=0.2888 lr=0.0003
+best epoch 13, best val res=0.8631
+epoch 18, val, loss=0.3309 classification result=0.8550
+Epoch: 18, Time cost: 0.09471440315246582
+epoch 19, train 1/7, loss=0.3233 lr=0.0003
+epoch 19, train 7/7, loss=0.3519 lr=0.0003
+best epoch 13, best val res=0.8631
+epoch 19, val, loss=0.3322 classification result=0.8644
+Epoch: 19, Time cost: 0.0998694896697998
+epoch 20, train 1/7, loss=0.3187 lr=0.0003
+epoch 20, train 7/7, loss=0.3482 lr=0.0003
+best epoch 19, best val res=0.8644
+epoch 20, val, loss=0.3294 classification result=0.8669
+Epoch: 20, Time cost: 0.0998220443725586
+epoch 21, train 1/7, loss=0.3333 lr=0.0003
+epoch 21, train 7/7, loss=0.3093 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 21, val, loss=0.3302 classification result=0.8612
+Epoch: 21, Time cost: 0.09117722511291504
+epoch 22, train 1/7, loss=0.3177 lr=0.0003
+epoch 22, train 7/7, loss=0.3729 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 22, val, loss=0.3331 classification result=0.8619
+Epoch: 22, Time cost: 0.09284663200378418
+epoch 23, train 1/7, loss=0.2895 lr=0.0003
+epoch 23, train 7/7, loss=0.3067 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 23, val, loss=0.3316 classification result=0.8650
+Epoch: 23, Time cost: 0.09108734130859375
+epoch 24, train 1/7, loss=0.2937 lr=0.0003
+epoch 24, train 7/7, loss=0.3181 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 24, val, loss=0.3284 classification result=0.8631
+Epoch: 24, Time cost: 0.09157919883728027
+epoch 25, train 1/7, loss=0.3074 lr=0.0003
+epoch 25, train 7/7, loss=0.3509 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 25, val, loss=0.3309 classification result=0.8575
+Epoch: 25, Time cost: 0.1611158847808838
+epoch 26, train 1/7, loss=0.3243 lr=0.0003
+epoch 26, train 7/7, loss=0.2806 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 26, val, loss=0.3332 classification result=0.8650
+Epoch: 26, Time cost: 0.0906829833984375
+epoch 27, train 1/7, loss=0.3334 lr=0.0003
+epoch 27, train 7/7, loss=0.3285 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 27, val, loss=0.3310 classification result=0.8644
+Epoch: 27, Time cost: 0.09151744842529297
+epoch 28, train 1/7, loss=0.3064 lr=0.0003
+epoch 28, train 7/7, loss=0.3309 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 28, val, loss=0.3300 classification result=0.8662
+Epoch: 28, Time cost: 0.09373903274536133
+epoch 29, train 1/7, loss=0.3347 lr=0.0003
+epoch 29, train 7/7, loss=0.3336 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 29, val, loss=0.3339 classification result=0.8638
+Epoch: 29, Time cost: 0.09230327606201172
+epoch 30, train 1/7, loss=0.3049 lr=0.0003
+epoch 30, train 7/7, loss=0.3315 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 30, val, loss=0.3331 classification result=0.8631
+Epoch: 30, Time cost: 0.09025073051452637
+epoch 31, train 1/7, loss=0.3277 lr=0.0003
+epoch 31, train 7/7, loss=0.2971 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 31, val, loss=0.3349 classification result=0.8625
+Epoch: 31, Time cost: 0.09585237503051758
+epoch 32, train 1/7, loss=0.3189 lr=0.0003
+epoch 32, train 7/7, loss=0.2998 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 32, val, loss=0.3327 classification result=0.8612
+Epoch: 32, Time cost: 0.09578824043273926
+epoch 33, train 1/7, loss=0.3066 lr=0.0003
+epoch 33, train 7/7, loss=0.2676 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 33, val, loss=0.3322 classification result=0.8631
+Epoch: 33, Time cost: 0.09169197082519531
+epoch 34, train 1/7, loss=0.3284 lr=0.0003
+epoch 34, train 7/7, loss=0.3037 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 34, val, loss=0.3355 classification result=0.8625
+Epoch: 34, Time cost: 0.0940854549407959
+epoch 35, train 1/7, loss=0.3299 lr=0.0003
+epoch 35, train 7/7, loss=0.3324 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 35, val, loss=0.3360 classification result=0.8662
+Epoch: 35, Time cost: 0.0914616584777832
+epoch 36, train 1/7, loss=0.2886 lr=0.0003
+epoch 36, train 7/7, loss=0.3607 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 36, val, loss=0.3343 classification result=0.8650
+Epoch: 36, Time cost: 0.15926480293273926
+epoch 37, train 1/7, loss=0.2982 lr=0.0003
+epoch 37, train 7/7, loss=0.2977 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 37, val, loss=0.3327 classification result=0.8612
+Epoch: 37, Time cost: 0.09324836730957031
+epoch 38, train 1/7, loss=0.3025 lr=0.0003
+epoch 38, train 7/7, loss=0.3300 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 38, val, loss=0.3356 classification result=0.8631
+Epoch: 38, Time cost: 0.09166622161865234
+epoch 39, train 1/7, loss=0.3234 lr=0.0003
+epoch 39, train 7/7, loss=0.3855 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 39, val, loss=0.3320 classification result=0.8631
+Epoch: 39, Time cost: 0.0927278995513916
+epoch 40, train 1/7, loss=0.3037 lr=0.0003
+epoch 40, train 7/7, loss=0.3525 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 40, val, loss=0.3326 classification result=0.8625
+Epoch: 40, Time cost: 0.09360551834106445
+epoch 41, train 1/7, loss=0.3110 lr=0.0003
+epoch 41, train 7/7, loss=0.4035 lr=0.0003
+best epoch 20, best val res=0.8669
+epoch 41, val, loss=0.3354 classification result=0.8619
+Epoch: 41, Time cost: 0.09070968627929688
+best epoch 20, best val res=0.8669
+Test: loss=0.3266
+[Accuracy]=0.8650
+[Avg_Recall]=0.7241
+[Avg_Precision]=0.8222
+[F1]=0.5946
+[LogLoss]=0.3266
+[AUC]=0.8703
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.5883 lr=0.0003
+epoch 0, train 7/7, loss=0.4863 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.4992 classification result=0.8225
+Epoch: 0, Time cost: 0.0968163013458252
+epoch 1, train 1/7, loss=0.4687 lr=0.0003
+epoch 1, train 7/7, loss=0.3998 lr=0.0003
+best epoch 0, best val res=0.8225
+epoch 1, val, loss=0.4369 classification result=0.8431
+Epoch: 1, Time cost: 0.09867215156555176
+epoch 2, train 1/7, loss=0.4243 lr=0.0003
+epoch 2, train 7/7, loss=0.3713 lr=0.0003
+best epoch 1, best val res=0.8431
+epoch 2, val, loss=0.3983 classification result=0.8512
+Epoch: 2, Time cost: 0.09830665588378906
+epoch 3, train 1/7, loss=0.3825 lr=0.0003
+epoch 3, train 7/7, loss=0.3852 lr=0.0003
+best epoch 2, best val res=0.8512
+epoch 3, val, loss=0.3732 classification result=0.8531
+Epoch: 3, Time cost: 0.10496282577514648
+epoch 4, train 1/7, loss=0.3497 lr=0.0003
+epoch 4, train 7/7, loss=0.3703 lr=0.0003
+best epoch 3, best val res=0.8531
+epoch 4, val, loss=0.3627 classification result=0.8481
+Epoch: 4, Time cost: 0.18282318115234375
+epoch 5, train 1/7, loss=0.3554 lr=0.0003
+epoch 5, train 7/7, loss=0.4007 lr=0.0003
+best epoch 3, best val res=0.8531
+epoch 5, val, loss=0.3563 classification result=0.8488
+Epoch: 5, Time cost: 0.0915381908416748
+epoch 6, train 1/7, loss=0.3638 lr=0.0003
+epoch 6, train 7/7, loss=0.3839 lr=0.0003
+best epoch 3, best val res=0.8531
+epoch 6, val, loss=0.3481 classification result=0.8500
+Epoch: 6, Time cost: 0.09104132652282715
+epoch 7, train 1/7, loss=0.3709 lr=0.0003
+epoch 7, train 7/7, loss=0.3391 lr=0.0003
+best epoch 3, best val res=0.8531
+epoch 7, val, loss=0.3431 classification result=0.8550
+Epoch: 7, Time cost: 0.09769320487976074
+epoch 8, train 1/7, loss=0.3822 lr=0.0003
+epoch 8, train 7/7, loss=0.3911 lr=0.0003
+best epoch 7, best val res=0.8550
+epoch 8, val, loss=0.3413 classification result=0.8550
+Epoch: 8, Time cost: 0.09824204444885254
+epoch 9, train 1/7, loss=0.3343 lr=0.0003
+epoch 9, train 7/7, loss=0.3945 lr=0.0003
+best epoch 8, best val res=0.8550
+epoch 9, val, loss=0.3345 classification result=0.8569
+Epoch: 9, Time cost: 0.10037493705749512
+epoch 10, train 1/7, loss=0.3459 lr=0.0003
+epoch 10, train 7/7, loss=0.3174 lr=0.0003
+best epoch 9, best val res=0.8569
+epoch 10, val, loss=0.3331 classification result=0.8562
+Epoch: 10, Time cost: 0.0908975601196289
+epoch 11, train 1/7, loss=0.3350 lr=0.0003
+epoch 11, train 7/7, loss=0.3303 lr=0.0003
+best epoch 9, best val res=0.8569
+epoch 11, val, loss=0.3345 classification result=0.8556
+Epoch: 11, Time cost: 0.09142422676086426
+epoch 12, train 1/7, loss=0.3070 lr=0.0003
+epoch 12, train 7/7, loss=0.3262 lr=0.0003
+best epoch 9, best val res=0.8569
+epoch 12, val, loss=0.3347 classification result=0.8556
+Epoch: 12, Time cost: 0.09214019775390625
+epoch 13, train 1/7, loss=0.3289 lr=0.0003
+epoch 13, train 7/7, loss=0.3023 lr=0.0003
+best epoch 9, best val res=0.8569
+epoch 13, val, loss=0.3338 classification result=0.8575
+Epoch: 13, Time cost: 0.1006155014038086
+epoch 14, train 1/7, loss=0.3201 lr=0.0003
+epoch 14, train 7/7, loss=0.3981 lr=0.0003
+best epoch 13, best val res=0.8575
+epoch 14, val, loss=0.3328 classification result=0.8588
+Epoch: 14, Time cost: 0.09794378280639648
+epoch 15, train 1/7, loss=0.3054 lr=0.0003
+epoch 15, train 7/7, loss=0.3220 lr=0.0003
+best epoch 14, best val res=0.8588
+epoch 15, val, loss=0.3303 classification result=0.8619
+Epoch: 15, Time cost: 0.16914105415344238
+epoch 16, train 1/7, loss=0.3130 lr=0.0003
+epoch 16, train 7/7, loss=0.3461 lr=0.0003
+best epoch 15, best val res=0.8619
+epoch 16, val, loss=0.3300 classification result=0.8625
+Epoch: 16, Time cost: 0.1013941764831543
+epoch 17, train 1/7, loss=0.3094 lr=0.0003
+epoch 17, train 7/7, loss=0.3463 lr=0.0003
+best epoch 16, best val res=0.8625
+epoch 17, val, loss=0.3313 classification result=0.8612
+Epoch: 17, Time cost: 0.09087491035461426
+epoch 18, train 1/7, loss=0.3378 lr=0.0003
+epoch 18, train 7/7, loss=0.3541 lr=0.0003
+best epoch 16, best val res=0.8625
+epoch 18, val, loss=0.3300 classification result=0.8619
+Epoch: 18, Time cost: 0.09244608879089355
+epoch 19, train 1/7, loss=0.3563 lr=0.0003
+epoch 19, train 7/7, loss=0.3427 lr=0.0003
+best epoch 16, best val res=0.8625
+epoch 19, val, loss=0.3288 classification result=0.8631
+Epoch: 19, Time cost: 0.09895968437194824
+epoch 20, train 1/7, loss=0.3073 lr=0.0003
+epoch 20, train 7/7, loss=0.2982 lr=0.0003
+best epoch 19, best val res=0.8631
+epoch 20, val, loss=0.3284 classification result=0.8619
+Epoch: 20, Time cost: 0.09227776527404785
+epoch 21, train 1/7, loss=0.3544 lr=0.0003
+epoch 21, train 7/7, loss=0.3355 lr=0.0003
+best epoch 19, best val res=0.8631
+epoch 21, val, loss=0.3274 classification result=0.8650
+Epoch: 21, Time cost: 0.09955859184265137
+epoch 22, train 1/7, loss=0.3117 lr=0.0003
+epoch 22, train 7/7, loss=0.3832 lr=0.0003
+best epoch 21, best val res=0.8650
+epoch 22, val, loss=0.3275 classification result=0.8662
+Epoch: 22, Time cost: 0.10029482841491699
+epoch 23, train 1/7, loss=0.3443 lr=0.0003
+epoch 23, train 7/7, loss=0.3391 lr=0.0003
+best epoch 22, best val res=0.8662
+epoch 23, val, loss=0.3286 classification result=0.8656
+Epoch: 23, Time cost: 0.09314465522766113
+epoch 24, train 1/7, loss=0.3138 lr=0.0003
+epoch 24, train 7/7, loss=0.2548 lr=0.0003
+best epoch 22, best val res=0.8662
+epoch 24, val, loss=0.3291 classification result=0.8625
+Epoch: 24, Time cost: 0.17627263069152832
+epoch 25, train 1/7, loss=0.3143 lr=0.0003
+epoch 25, train 7/7, loss=0.3863 lr=0.0003
+best epoch 22, best val res=0.8662
+epoch 25, val, loss=0.3297 classification result=0.8600
+Epoch: 25, Time cost: 0.09135055541992188
+epoch 26, train 1/7, loss=0.3152 lr=0.0003
+epoch 26, train 7/7, loss=0.2657 lr=0.0003
+best epoch 22, best val res=0.8662
+epoch 26, val, loss=0.3293 classification result=0.8638
+Epoch: 26, Time cost: 0.09283685684204102
+epoch 27, train 1/7, loss=0.3430 lr=0.0003
+epoch 27, train 7/7, loss=0.2695 lr=0.0003
+best epoch 22, best val res=0.8662
+epoch 27, val, loss=0.3281 classification result=0.8656
+Epoch: 27, Time cost: 0.09496665000915527
+epoch 28, train 1/7, loss=0.3460 lr=0.0003
+epoch 28, train 7/7, loss=0.3338 lr=0.0003
+best epoch 22, best val res=0.8662
+epoch 28, val, loss=0.3279 classification result=0.8662
+Epoch: 28, Time cost: 0.09985518455505371
+epoch 29, train 1/7, loss=0.3249 lr=0.0003
+epoch 29, train 7/7, loss=0.3053 lr=0.0003
+best epoch 28, best val res=0.8662
+epoch 29, val, loss=0.3295 classification result=0.8650
+Epoch: 29, Time cost: 0.09103560447692871
+epoch 30, train 1/7, loss=0.3381 lr=0.0003
+epoch 30, train 7/7, loss=0.3637 lr=0.0003
+best epoch 28, best val res=0.8662
+epoch 30, val, loss=0.3288 classification result=0.8656
+Epoch: 30, Time cost: 0.09266424179077148
+epoch 31, train 1/7, loss=0.2875 lr=0.0003
+epoch 31, train 7/7, loss=0.3711 lr=0.0003
+best epoch 28, best val res=0.8662
+epoch 31, val, loss=0.3314 classification result=0.8662
+Epoch: 31, Time cost: 0.10269474983215332
+epoch 32, train 1/7, loss=0.3065 lr=0.0003
+epoch 32, train 7/7, loss=0.3363 lr=0.0003
+best epoch 31, best val res=0.8662
+epoch 32, val, loss=0.3293 classification result=0.8638
+Epoch: 32, Time cost: 0.09288358688354492
+epoch 33, train 1/7, loss=0.3107 lr=0.0003
+epoch 33, train 7/7, loss=0.3105 lr=0.0003
+best epoch 31, best val res=0.8662
+epoch 33, val, loss=0.3299 classification result=0.8675
+Epoch: 33, Time cost: 0.10028481483459473
+epoch 34, train 1/7, loss=0.3013 lr=0.0003
+epoch 34, train 7/7, loss=0.3187 lr=0.0003
+best epoch 33, best val res=0.8675
+epoch 34, val, loss=0.3287 classification result=0.8631
+Epoch: 34, Time cost: 0.09408211708068848
+epoch 35, train 1/7, loss=0.3300 lr=0.0003
+epoch 35, train 7/7, loss=0.3227 lr=0.0003
+best epoch 33, best val res=0.8675
+epoch 35, val, loss=0.3308 classification result=0.8631
+Epoch: 35, Time cost: 0.15901899337768555
+epoch 36, train 1/7, loss=0.3084 lr=0.0003
+epoch 36, train 7/7, loss=0.3089 lr=0.0003
+best epoch 33, best val res=0.8675
+epoch 36, val, loss=0.3321 classification result=0.8656
+Epoch: 36, Time cost: 0.0948178768157959
+epoch 37, train 1/7, loss=0.3054 lr=0.0003
+epoch 37, train 7/7, loss=0.3102 lr=0.0003
+best epoch 33, best val res=0.8675
+epoch 37, val, loss=0.3308 classification result=0.8656
+Epoch: 37, Time cost: 0.09173011779785156
+epoch 38, train 1/7, loss=0.3337 lr=0.0003
+epoch 38, train 7/7, loss=0.3147 lr=0.0003
+best epoch 33, best val res=0.8675
+epoch 38, val, loss=0.3290 classification result=0.8688
+Epoch: 38, Time cost: 0.09831643104553223
+epoch 39, train 1/7, loss=0.2798 lr=0.0003
+epoch 39, train 7/7, loss=0.3133 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 39, val, loss=0.3308 classification result=0.8656
+Epoch: 39, Time cost: 0.09076523780822754
+epoch 40, train 1/7, loss=0.2832 lr=0.0003
+epoch 40, train 7/7, loss=0.2869 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 40, val, loss=0.3327 classification result=0.8606
+Epoch: 40, Time cost: 0.09533023834228516
+epoch 41, train 1/7, loss=0.3143 lr=0.0003
+epoch 41, train 7/7, loss=0.2653 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 41, val, loss=0.3330 classification result=0.8662
+Epoch: 41, Time cost: 0.09240269660949707
+epoch 42, train 1/7, loss=0.3035 lr=0.0003
+epoch 42, train 7/7, loss=0.3051 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 42, val, loss=0.3318 classification result=0.8681
+Epoch: 42, Time cost: 0.09089994430541992
+epoch 43, train 1/7, loss=0.3073 lr=0.0003
+epoch 43, train 7/7, loss=0.2924 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 43, val, loss=0.3319 classification result=0.8619
+Epoch: 43, Time cost: 0.09416079521179199
+epoch 44, train 1/7, loss=0.2878 lr=0.0003
+epoch 44, train 7/7, loss=0.2702 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 44, val, loss=0.3348 classification result=0.8631
+Epoch: 44, Time cost: 0.09070444107055664
+epoch 45, train 1/7, loss=0.3002 lr=0.0003
+epoch 45, train 7/7, loss=0.3830 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 45, val, loss=0.3355 classification result=0.8656
+Epoch: 45, Time cost: 0.09678888320922852
+epoch 46, train 1/7, loss=0.3196 lr=0.0003
+epoch 46, train 7/7, loss=0.2891 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 46, val, loss=0.3340 classification result=0.8625
+Epoch: 46, Time cost: 0.16450881958007812
+epoch 47, train 1/7, loss=0.2995 lr=0.0003
+epoch 47, train 7/7, loss=0.2927 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 47, val, loss=0.3331 classification result=0.8625
+Epoch: 47, Time cost: 0.09186577796936035
+epoch 48, train 1/7, loss=0.3345 lr=0.0003
+epoch 48, train 7/7, loss=0.2506 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 48, val, loss=0.3341 classification result=0.8681
+Epoch: 48, Time cost: 0.0917670726776123
+epoch 49, train 1/7, loss=0.2802 lr=0.0003
+epoch 49, train 7/7, loss=0.3517 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 49, val, loss=0.3325 classification result=0.8650
+Epoch: 49, Time cost: 0.09515023231506348
+epoch 50, train 1/7, loss=0.2825 lr=0.0003
+epoch 50, train 7/7, loss=0.3209 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 50, val, loss=0.3352 classification result=0.8625
+Epoch: 50, Time cost: 0.09301090240478516
+epoch 51, train 1/7, loss=0.3146 lr=0.0003
+epoch 51, train 7/7, loss=0.3091 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 51, val, loss=0.3347 classification result=0.8612
+Epoch: 51, Time cost: 0.09132122993469238
+epoch 52, train 1/7, loss=0.2987 lr=0.0003
+epoch 52, train 7/7, loss=0.3156 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 52, val, loss=0.3358 classification result=0.8638
+Epoch: 52, Time cost: 0.09325957298278809
+epoch 53, train 1/7, loss=0.3136 lr=0.0003
+epoch 53, train 7/7, loss=0.2549 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 53, val, loss=0.3348 classification result=0.8600
+Epoch: 53, Time cost: 0.12367916107177734
+epoch 54, train 1/7, loss=0.3141 lr=0.0003
+epoch 54, train 7/7, loss=0.3409 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 54, val, loss=0.3352 classification result=0.8650
+Epoch: 54, Time cost: 0.10479903221130371
+epoch 55, train 1/7, loss=0.2980 lr=0.0003
+epoch 55, train 7/7, loss=0.3047 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 55, val, loss=0.3351 classification result=0.8612
+Epoch: 55, Time cost: 0.09141135215759277
+epoch 56, train 1/7, loss=0.2978 lr=0.0003
+epoch 56, train 7/7, loss=0.2920 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 56, val, loss=0.3363 classification result=0.8675
+Epoch: 56, Time cost: 0.10536718368530273
+epoch 57, train 1/7, loss=0.2904 lr=0.0003
+epoch 57, train 7/7, loss=0.2557 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 57, val, loss=0.3355 classification result=0.8650
+Epoch: 57, Time cost: 0.15968799591064453
+epoch 58, train 1/7, loss=0.3093 lr=0.0003
+epoch 58, train 7/7, loss=0.2778 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 58, val, loss=0.3375 classification result=0.8644
+Epoch: 58, Time cost: 0.09270048141479492
+epoch 59, train 1/7, loss=0.3166 lr=0.0003
+epoch 59, train 7/7, loss=0.2747 lr=0.0003
+best epoch 38, best val res=0.8688
+epoch 59, val, loss=0.3368 classification result=0.8638
+Epoch: 59, Time cost: 0.09056329727172852
+best epoch 38, best val res=0.8688
+Test: loss=0.3272
+[Accuracy]=0.8650
+[Avg_Recall]=0.7223
+[Avg_Precision]=0.8239
+[F1]=0.5921
+[LogLoss]=0.3272
+[AUC]=0.8680
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.7339 lr=0.0003
+epoch 0, train 7/7, loss=0.5693 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.5965 classification result=0.7400
+Epoch: 0, Time cost: 0.10203862190246582
+epoch 1, train 1/7, loss=0.5298 lr=0.0003
+epoch 1, train 7/7, loss=0.4483 lr=0.0003
+best epoch 0, best val res=0.7400
+epoch 1, val, loss=0.5077 classification result=0.8063
+Epoch: 1, Time cost: 0.09953451156616211
+epoch 2, train 1/7, loss=0.4647 lr=0.0003
+epoch 2, train 7/7, loss=0.4256 lr=0.0003
+best epoch 1, best val res=0.8063
+epoch 2, val, loss=0.4442 classification result=0.8462
+Epoch: 2, Time cost: 0.09908175468444824
+epoch 3, train 1/7, loss=0.4014 lr=0.0003
+epoch 3, train 7/7, loss=0.4294 lr=0.0003
+best epoch 2, best val res=0.8462
+epoch 3, val, loss=0.4057 classification result=0.8525
+Epoch: 3, Time cost: 0.10396409034729004
+epoch 4, train 1/7, loss=0.3868 lr=0.0003
+epoch 4, train 7/7, loss=0.4098 lr=0.0003
+best epoch 3, best val res=0.8525
+epoch 4, val, loss=0.3819 classification result=0.8488
+Epoch: 4, Time cost: 0.09107780456542969
+epoch 5, train 1/7, loss=0.3593 lr=0.0003
+epoch 5, train 7/7, loss=0.2939 lr=0.0003
+best epoch 3, best val res=0.8525
+epoch 5, val, loss=0.3643 classification result=0.8531
+Epoch: 5, Time cost: 0.10486555099487305
+epoch 6, train 1/7, loss=0.3621 lr=0.0003
+epoch 6, train 7/7, loss=0.4185 lr=0.0003
+best epoch 5, best val res=0.8531
+epoch 6, val, loss=0.3564 classification result=0.8525
+Epoch: 6, Time cost: 0.09632492065429688
+epoch 7, train 1/7, loss=0.3383 lr=0.0003
+epoch 7, train 7/7, loss=0.3500 lr=0.0003
+best epoch 5, best val res=0.8531
+epoch 7, val, loss=0.3471 classification result=0.8550
+Epoch: 7, Time cost: 0.10011839866638184
+epoch 8, train 1/7, loss=0.3366 lr=0.0003
+epoch 8, train 7/7, loss=0.3707 lr=0.0003
+best epoch 7, best val res=0.8550
+epoch 8, val, loss=0.3407 classification result=0.8575
+Epoch: 8, Time cost: 0.16833114624023438
+epoch 9, train 1/7, loss=0.3340 lr=0.0003
+epoch 9, train 7/7, loss=0.3490 lr=0.0003
+best epoch 8, best val res=0.8575
+epoch 9, val, loss=0.3412 classification result=0.8556
+Epoch: 9, Time cost: 0.09749531745910645
+epoch 10, train 1/7, loss=0.3433 lr=0.0003
+epoch 10, train 7/7, loss=0.2993 lr=0.0003
+best epoch 8, best val res=0.8575
+epoch 10, val, loss=0.3378 classification result=0.8550
+Epoch: 10, Time cost: 0.09424710273742676
+epoch 11, train 1/7, loss=0.3512 lr=0.0003
+epoch 11, train 7/7, loss=0.3149 lr=0.0003
+best epoch 8, best val res=0.8575
+epoch 11, val, loss=0.3348 classification result=0.8544
+Epoch: 11, Time cost: 0.09366917610168457
+epoch 12, train 1/7, loss=0.3675 lr=0.0003
+epoch 12, train 7/7, loss=0.3810 lr=0.0003
+best epoch 8, best val res=0.8575
+epoch 12, val, loss=0.3328 classification result=0.8594
+Epoch: 12, Time cost: 0.10160326957702637
+epoch 13, train 1/7, loss=0.3272 lr=0.0003
+epoch 13, train 7/7, loss=0.3149 lr=0.0003
+best epoch 12, best val res=0.8594
+epoch 13, val, loss=0.3311 classification result=0.8569
+Epoch: 13, Time cost: 0.09129118919372559
+epoch 14, train 1/7, loss=0.3085 lr=0.0003
+epoch 14, train 7/7, loss=0.3274 lr=0.0003
+best epoch 12, best val res=0.8594
+epoch 14, val, loss=0.3324 classification result=0.8569
+Epoch: 14, Time cost: 0.09255099296569824
+epoch 15, train 1/7, loss=0.3312 lr=0.0003
+epoch 15, train 7/7, loss=0.2725 lr=0.0003
+best epoch 12, best val res=0.8594
+epoch 15, val, loss=0.3306 classification result=0.8562
+Epoch: 15, Time cost: 0.09337759017944336
+epoch 16, train 1/7, loss=0.3294 lr=0.0003
+epoch 16, train 7/7, loss=0.2961 lr=0.0003
+best epoch 12, best val res=0.8594
+epoch 16, val, loss=0.3318 classification result=0.8575
+Epoch: 16, Time cost: 0.09445381164550781
+epoch 17, train 1/7, loss=0.3409 lr=0.0003
+epoch 17, train 7/7, loss=0.3435 lr=0.0003
+best epoch 12, best val res=0.8594
+epoch 17, val, loss=0.3331 classification result=0.8569
+Epoch: 17, Time cost: 0.0926516056060791
+epoch 18, train 1/7, loss=0.3051 lr=0.0003
+epoch 18, train 7/7, loss=0.3264 lr=0.0003
+best epoch 12, best val res=0.8594
+epoch 18, val, loss=0.3315 classification result=0.8581
+Epoch: 18, Time cost: 0.09086155891418457
+epoch 19, train 1/7, loss=0.3281 lr=0.0003
+epoch 19, train 7/7, loss=0.2814 lr=0.0003
+best epoch 12, best val res=0.8594
+epoch 19, val, loss=0.3304 classification result=0.8594
+Epoch: 19, Time cost: 0.17288661003112793
+epoch 20, train 1/7, loss=0.3186 lr=0.0003
+epoch 20, train 7/7, loss=0.3950 lr=0.0003
+best epoch 19, best val res=0.8594
+epoch 20, val, loss=0.3279 classification result=0.8619
+Epoch: 20, Time cost: 0.0979166030883789
+epoch 21, train 1/7, loss=0.3452 lr=0.0003
+epoch 21, train 7/7, loss=0.2646 lr=0.0003
+best epoch 20, best val res=0.8619
+epoch 21, val, loss=0.3306 classification result=0.8606
+Epoch: 21, Time cost: 0.09415555000305176
+epoch 22, train 1/7, loss=0.3273 lr=0.0003
+epoch 22, train 7/7, loss=0.3908 lr=0.0003
+best epoch 20, best val res=0.8619
+epoch 22, val, loss=0.3312 classification result=0.8588
+Epoch: 22, Time cost: 0.09117865562438965
+epoch 23, train 1/7, loss=0.2941 lr=0.0003
+epoch 23, train 7/7, loss=0.3093 lr=0.0003
+best epoch 20, best val res=0.8619
+epoch 23, val, loss=0.3299 classification result=0.8619
+Epoch: 23, Time cost: 0.09885931015014648
+epoch 24, train 1/7, loss=0.3259 lr=0.0003
+epoch 24, train 7/7, loss=0.2748 lr=0.0003
+best epoch 23, best val res=0.8619
+epoch 24, val, loss=0.3310 classification result=0.8644
+Epoch: 24, Time cost: 0.09842872619628906
+epoch 25, train 1/7, loss=0.3260 lr=0.0003
+epoch 25, train 7/7, loss=0.3068 lr=0.0003
+best epoch 24, best val res=0.8644
+epoch 25, val, loss=0.3287 classification result=0.8644
+Epoch: 25, Time cost: 0.10148906707763672
+epoch 26, train 1/7, loss=0.2954 lr=0.0003
+epoch 26, train 7/7, loss=0.3033 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 26, val, loss=0.3306 classification result=0.8656
+Epoch: 26, Time cost: 0.0986173152923584
+epoch 27, train 1/7, loss=0.3190 lr=0.0003
+epoch 27, train 7/7, loss=0.3381 lr=0.0003
+best epoch 26, best val res=0.8656
+epoch 27, val, loss=0.3318 classification result=0.8631
+Epoch: 27, Time cost: 0.09139490127563477
+epoch 28, train 1/7, loss=0.3270 lr=0.0003
+epoch 28, train 7/7, loss=0.3337 lr=0.0003
+best epoch 26, best val res=0.8656
+epoch 28, val, loss=0.3295 classification result=0.8619
+Epoch: 28, Time cost: 0.09366822242736816
+epoch 29, train 1/7, loss=0.3061 lr=0.0003
+epoch 29, train 7/7, loss=0.4326 lr=0.0003
+best epoch 26, best val res=0.8656
+epoch 29, val, loss=0.3307 classification result=0.8638
+Epoch: 29, Time cost: 0.15826082229614258
+epoch 30, train 1/7, loss=0.3052 lr=0.0003
+epoch 30, train 7/7, loss=0.3026 lr=0.0003
+best epoch 26, best val res=0.8656
+epoch 30, val, loss=0.3331 classification result=0.8594
+Epoch: 30, Time cost: 0.09162640571594238
+epoch 31, train 1/7, loss=0.3279 lr=0.0003
+epoch 31, train 7/7, loss=0.2516 lr=0.0003
+best epoch 26, best val res=0.8656
+epoch 31, val, loss=0.3335 classification result=0.8619
+Epoch: 31, Time cost: 0.09523367881774902
+epoch 32, train 1/7, loss=0.3071 lr=0.0003
+epoch 32, train 7/7, loss=0.2961 lr=0.0003
+best epoch 26, best val res=0.8656
+epoch 32, val, loss=0.3317 classification result=0.8625
+Epoch: 32, Time cost: 0.1042783260345459
+epoch 33, train 1/7, loss=0.3146 lr=0.0003
+epoch 33, train 7/7, loss=0.2788 lr=0.0003
+best epoch 26, best val res=0.8656
+epoch 33, val, loss=0.3336 classification result=0.8650
+Epoch: 33, Time cost: 0.0910177230834961
+epoch 34, train 1/7, loss=0.2953 lr=0.0003
+epoch 34, train 7/7, loss=0.2759 lr=0.0003
+best epoch 26, best val res=0.8656
+epoch 34, val, loss=0.3316 classification result=0.8669
+Epoch: 34, Time cost: 0.10226321220397949
+epoch 35, train 1/7, loss=0.2879 lr=0.0003
+epoch 35, train 7/7, loss=0.2704 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 35, val, loss=0.3319 classification result=0.8631
+Epoch: 35, Time cost: 0.09259200096130371
+epoch 36, train 1/7, loss=0.3149 lr=0.0003
+epoch 36, train 7/7, loss=0.3653 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 36, val, loss=0.3319 classification result=0.8638
+Epoch: 36, Time cost: 0.09114956855773926
+epoch 37, train 1/7, loss=0.2949 lr=0.0003
+epoch 37, train 7/7, loss=0.3053 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 37, val, loss=0.3365 classification result=0.8631
+Epoch: 37, Time cost: 0.09466123580932617
+epoch 38, train 1/7, loss=0.3071 lr=0.0003
+epoch 38, train 7/7, loss=0.2939 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 38, val, loss=0.3328 classification result=0.8606
+Epoch: 38, Time cost: 0.0923006534576416
+epoch 39, train 1/7, loss=0.3216 lr=0.0003
+epoch 39, train 7/7, loss=0.3223 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 39, val, loss=0.3323 classification result=0.8612
+Epoch: 39, Time cost: 0.15837335586547852
+epoch 40, train 1/7, loss=0.3272 lr=0.0003
+epoch 40, train 7/7, loss=0.2785 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 40, val, loss=0.3311 classification result=0.8600
+Epoch: 40, Time cost: 0.09631013870239258
+epoch 41, train 1/7, loss=0.3519 lr=0.0003
+epoch 41, train 7/7, loss=0.2978 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 41, val, loss=0.3335 classification result=0.8638
+Epoch: 41, Time cost: 0.09219765663146973
+epoch 42, train 1/7, loss=0.3128 lr=0.0003
+epoch 42, train 7/7, loss=0.2940 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 42, val, loss=0.3347 classification result=0.8644
+Epoch: 42, Time cost: 0.09352350234985352
+epoch 43, train 1/7, loss=0.3003 lr=0.0003
+epoch 43, train 7/7, loss=0.3411 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 43, val, loss=0.3327 classification result=0.8631
+Epoch: 43, Time cost: 0.09528541564941406
+epoch 44, train 1/7, loss=0.2866 lr=0.0003
+epoch 44, train 7/7, loss=0.2959 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 44, val, loss=0.3339 classification result=0.8588
+Epoch: 44, Time cost: 0.09227585792541504
+epoch 45, train 1/7, loss=0.2919 lr=0.0003
+epoch 45, train 7/7, loss=0.3303 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 45, val, loss=0.3350 classification result=0.8619
+Epoch: 45, Time cost: 0.09370970726013184
+epoch 46, train 1/7, loss=0.3085 lr=0.0003
+epoch 46, train 7/7, loss=0.2989 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 46, val, loss=0.3349 classification result=0.8612
+Epoch: 46, Time cost: 0.0939643383026123
+epoch 47, train 1/7, loss=0.2966 lr=0.0003
+epoch 47, train 7/7, loss=0.2765 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 47, val, loss=0.3314 classification result=0.8631
+Epoch: 47, Time cost: 0.09264111518859863
+epoch 48, train 1/7, loss=0.2846 lr=0.0003
+epoch 48, train 7/7, loss=0.2583 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 48, val, loss=0.3344 classification result=0.8594
+Epoch: 48, Time cost: 0.09231352806091309
+epoch 49, train 1/7, loss=0.2963 lr=0.0003
+epoch 49, train 7/7, loss=0.3076 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 49, val, loss=0.3368 classification result=0.8619
+Epoch: 49, Time cost: 0.16480326652526855
+epoch 50, train 1/7, loss=0.3045 lr=0.0003
+epoch 50, train 7/7, loss=0.3058 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 50, val, loss=0.3361 classification result=0.8556
+Epoch: 50, Time cost: 0.09348845481872559
+epoch 51, train 1/7, loss=0.3168 lr=0.0003
+epoch 51, train 7/7, loss=0.3250 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 51, val, loss=0.3347 classification result=0.8612
+Epoch: 51, Time cost: 0.09238362312316895
+epoch 52, train 1/7, loss=0.2973 lr=0.0003
+epoch 52, train 7/7, loss=0.2505 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 52, val, loss=0.3374 classification result=0.8631
+Epoch: 52, Time cost: 0.0933067798614502
+epoch 53, train 1/7, loss=0.2839 lr=0.0003
+epoch 53, train 7/7, loss=0.2876 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 53, val, loss=0.3363 classification result=0.8619
+Epoch: 53, Time cost: 0.09273648262023926
+epoch 54, train 1/7, loss=0.2750 lr=0.0003
+epoch 54, train 7/7, loss=0.2899 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 54, val, loss=0.3360 classification result=0.8606
+Epoch: 54, Time cost: 0.09601211547851562
+epoch 55, train 1/7, loss=0.2980 lr=0.0003
+epoch 55, train 7/7, loss=0.3058 lr=0.0003
+best epoch 34, best val res=0.8669
+epoch 55, val, loss=0.3359 classification result=0.8606
+Epoch: 55, Time cost: 0.09174871444702148
+best epoch 34, best val res=0.8669
+Test: loss=0.3279
+[Accuracy]=0.8680
+[Avg_Recall]=0.7333
+[Avg_Precision]=0.8248
+[F1]=0.6095
+[LogLoss]=0.3279
+[AUC]=0.8679
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.6917 lr=0.0003
+epoch 0, train 7/7, loss=0.5704 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.5953 classification result=0.7419
+Epoch: 0, Time cost: 0.09912276268005371
+epoch 1, train 1/7, loss=0.5443 lr=0.0003
+epoch 1, train 7/7, loss=0.3944 lr=0.0003
+best epoch 0, best val res=0.7419
+epoch 1, val, loss=0.4971 classification result=0.8231
+Epoch: 1, Time cost: 0.09891510009765625
+epoch 2, train 1/7, loss=0.4462 lr=0.0003
+epoch 2, train 7/7, loss=0.3996 lr=0.0003
+best epoch 1, best val res=0.8231
+epoch 2, val, loss=0.4396 classification result=0.8494
+Epoch: 2, Time cost: 0.09908771514892578
+epoch 3, train 1/7, loss=0.4027 lr=0.0003
+epoch 3, train 7/7, loss=0.3826 lr=0.0003
+best epoch 2, best val res=0.8494
+epoch 3, val, loss=0.4027 classification result=0.8456
+Epoch: 3, Time cost: 0.09247350692749023
+epoch 4, train 1/7, loss=0.3933 lr=0.0003
+epoch 4, train 7/7, loss=0.3455 lr=0.0003
+best epoch 2, best val res=0.8494
+epoch 4, val, loss=0.3811 classification result=0.8500
+Epoch: 4, Time cost: 0.16335368156433105
+epoch 5, train 1/7, loss=0.3580 lr=0.0003
+epoch 5, train 7/7, loss=0.3654 lr=0.0003
+best epoch 4, best val res=0.8500
+epoch 5, val, loss=0.3594 classification result=0.8538
+Epoch: 5, Time cost: 0.09842061996459961
+epoch 6, train 1/7, loss=0.3258 lr=0.0003
+epoch 6, train 7/7, loss=0.3579 lr=0.0003
+best epoch 5, best val res=0.8538
+epoch 6, val, loss=0.3486 classification result=0.8544
+Epoch: 6, Time cost: 0.0977327823638916
+epoch 7, train 1/7, loss=0.3586 lr=0.0003
+epoch 7, train 7/7, loss=0.3568 lr=0.0003
+best epoch 6, best val res=0.8544
+epoch 7, val, loss=0.3422 classification result=0.8556
+Epoch: 7, Time cost: 0.10631442070007324
+epoch 8, train 1/7, loss=0.3576 lr=0.0003
+epoch 8, train 7/7, loss=0.3670 lr=0.0003
+best epoch 7, best val res=0.8556
+epoch 8, val, loss=0.3404 classification result=0.8550
+Epoch: 8, Time cost: 0.09208989143371582
+epoch 9, train 1/7, loss=0.3498 lr=0.0003
+epoch 9, train 7/7, loss=0.3537 lr=0.0003
+best epoch 7, best val res=0.8556
+epoch 9, val, loss=0.3390 classification result=0.8538
+Epoch: 9, Time cost: 0.09219598770141602
+epoch 10, train 1/7, loss=0.3408 lr=0.0003
+epoch 10, train 7/7, loss=0.3836 lr=0.0003
+best epoch 7, best val res=0.8556
+epoch 10, val, loss=0.3370 classification result=0.8550
+Epoch: 10, Time cost: 0.09198594093322754
+epoch 11, train 1/7, loss=0.3470 lr=0.0003
+epoch 11, train 7/7, loss=0.3274 lr=0.0003
+best epoch 7, best val res=0.8556
+epoch 11, val, loss=0.3359 classification result=0.8550
+Epoch: 11, Time cost: 0.09267830848693848
+epoch 12, train 1/7, loss=0.3502 lr=0.0003
+epoch 12, train 7/7, loss=0.3575 lr=0.0003
+best epoch 7, best val res=0.8556
+epoch 12, val, loss=0.3356 classification result=0.8550
+Epoch: 12, Time cost: 0.09188294410705566
+epoch 13, train 1/7, loss=0.3354 lr=0.0003
+epoch 13, train 7/7, loss=0.3273 lr=0.0003
+best epoch 7, best val res=0.8556
+epoch 13, val, loss=0.3331 classification result=0.8569
+Epoch: 13, Time cost: 0.09802651405334473
+epoch 14, train 1/7, loss=0.3472 lr=0.0003
+epoch 14, train 7/7, loss=0.4225 lr=0.0003
+best epoch 13, best val res=0.8569
+epoch 14, val, loss=0.3311 classification result=0.8569
+Epoch: 14, Time cost: 0.10235071182250977
+epoch 15, train 1/7, loss=0.3311 lr=0.0003
+epoch 15, train 7/7, loss=0.3983 lr=0.0003
+best epoch 14, best val res=0.8569
+epoch 15, val, loss=0.3331 classification result=0.8569
+Epoch: 15, Time cost: 0.1878645420074463
+epoch 16, train 1/7, loss=0.3287 lr=0.0003
+epoch 16, train 7/7, loss=0.3732 lr=0.0003
+best epoch 15, best val res=0.8569
+epoch 16, val, loss=0.3304 classification result=0.8638
+Epoch: 16, Time cost: 0.09721994400024414
+epoch 17, train 1/7, loss=0.3445 lr=0.0003
+epoch 17, train 7/7, loss=0.2799 lr=0.0003
+best epoch 16, best val res=0.8638
+epoch 17, val, loss=0.3304 classification result=0.8619
+Epoch: 17, Time cost: 0.09130644798278809
+epoch 18, train 1/7, loss=0.3290 lr=0.0003
+epoch 18, train 7/7, loss=0.3036 lr=0.0003
+best epoch 16, best val res=0.8638
+epoch 18, val, loss=0.3299 classification result=0.8606
+Epoch: 18, Time cost: 0.09080839157104492
+epoch 19, train 1/7, loss=0.3454 lr=0.0003
+epoch 19, train 7/7, loss=0.3533 lr=0.0003
+best epoch 16, best val res=0.8638
+epoch 19, val, loss=0.3314 classification result=0.8681
+Epoch: 19, Time cost: 0.09758615493774414
+epoch 20, train 1/7, loss=0.3249 lr=0.0003
+epoch 20, train 7/7, loss=0.2829 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 20, val, loss=0.3312 classification result=0.8650
+Epoch: 20, Time cost: 0.09204506874084473
+epoch 21, train 1/7, loss=0.3559 lr=0.0003
+epoch 21, train 7/7, loss=0.3511 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 21, val, loss=0.3314 classification result=0.8638
+Epoch: 21, Time cost: 0.09098100662231445
+epoch 22, train 1/7, loss=0.3211 lr=0.0003
+epoch 22, train 7/7, loss=0.3276 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 22, val, loss=0.3286 classification result=0.8650
+Epoch: 22, Time cost: 0.09212756156921387
+epoch 23, train 1/7, loss=0.3201 lr=0.0003
+epoch 23, train 7/7, loss=0.2425 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 23, val, loss=0.3282 classification result=0.8631
+Epoch: 23, Time cost: 0.09285140037536621
+epoch 24, train 1/7, loss=0.3142 lr=0.0003
+epoch 24, train 7/7, loss=0.3531 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 24, val, loss=0.3302 classification result=0.8656
+Epoch: 24, Time cost: 0.09398221969604492
+epoch 25, train 1/7, loss=0.3212 lr=0.0003
+epoch 25, train 7/7, loss=0.3257 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 25, val, loss=0.3284 classification result=0.8638
+Epoch: 25, Time cost: 0.09680414199829102
+epoch 26, train 1/7, loss=0.2951 lr=0.0003
+epoch 26, train 7/7, loss=0.3244 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 26, val, loss=0.3299 classification result=0.8650
+Epoch: 26, Time cost: 0.1715693473815918
+epoch 27, train 1/7, loss=0.3325 lr=0.0003
+epoch 27, train 7/7, loss=0.2827 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 27, val, loss=0.3298 classification result=0.8612
+Epoch: 27, Time cost: 0.09320926666259766
+epoch 28, train 1/7, loss=0.3167 lr=0.0003
+epoch 28, train 7/7, loss=0.3219 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 28, val, loss=0.3295 classification result=0.8612
+Epoch: 28, Time cost: 0.0917212963104248
+epoch 29, train 1/7, loss=0.3294 lr=0.0003
+epoch 29, train 7/7, loss=0.3351 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 29, val, loss=0.3321 classification result=0.8594
+Epoch: 29, Time cost: 0.0977630615234375
+epoch 30, train 1/7, loss=0.2924 lr=0.0003
+epoch 30, train 7/7, loss=0.2920 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 30, val, loss=0.3319 classification result=0.8662
+Epoch: 30, Time cost: 0.09110832214355469
+epoch 31, train 1/7, loss=0.2981 lr=0.0003
+epoch 31, train 7/7, loss=0.3384 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 31, val, loss=0.3302 classification result=0.8669
+Epoch: 31, Time cost: 0.09119129180908203
+epoch 32, train 1/7, loss=0.3350 lr=0.0003
+epoch 32, train 7/7, loss=0.3205 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 32, val, loss=0.3297 classification result=0.8638
+Epoch: 32, Time cost: 0.09164237976074219
+epoch 33, train 1/7, loss=0.3222 lr=0.0003
+epoch 33, train 7/7, loss=0.3107 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 33, val, loss=0.3299 classification result=0.8631
+Epoch: 33, Time cost: 0.0916135311126709
+epoch 34, train 1/7, loss=0.3079 lr=0.0003
+epoch 34, train 7/7, loss=0.3639 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 34, val, loss=0.3303 classification result=0.8638
+Epoch: 34, Time cost: 0.09116387367248535
+epoch 35, train 1/7, loss=0.2900 lr=0.0003
+epoch 35, train 7/7, loss=0.3324 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 35, val, loss=0.3315 classification result=0.8638
+Epoch: 35, Time cost: 0.09181880950927734
+epoch 36, train 1/7, loss=0.3020 lr=0.0003
+epoch 36, train 7/7, loss=0.2842 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 36, val, loss=0.3306 classification result=0.8644
+Epoch: 36, Time cost: 0.09344291687011719
+epoch 37, train 1/7, loss=0.3032 lr=0.0003
+epoch 37, train 7/7, loss=0.3753 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 37, val, loss=0.3319 classification result=0.8638
+Epoch: 37, Time cost: 0.16228866577148438
+epoch 38, train 1/7, loss=0.2979 lr=0.0003
+epoch 38, train 7/7, loss=0.3747 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 38, val, loss=0.3308 classification result=0.8631
+Epoch: 38, Time cost: 0.09797191619873047
+epoch 39, train 1/7, loss=0.3187 lr=0.0003
+epoch 39, train 7/7, loss=0.2829 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 39, val, loss=0.3304 classification result=0.8612
+Epoch: 39, Time cost: 0.09269571304321289
+epoch 40, train 1/7, loss=0.3312 lr=0.0003
+epoch 40, train 7/7, loss=0.3011 lr=0.0003
+best epoch 19, best val res=0.8681
+epoch 40, val, loss=0.3315 classification result=0.8619
+Epoch: 40, Time cost: 0.09189367294311523
+best epoch 19, best val res=0.8681
+Test: loss=0.3261
+[Accuracy]=0.8630
+[Avg_Recall]=0.7174
+[Avg_Precision]=0.8210
+[F1]=0.5836
+[LogLoss]=0.3261
+[AUC]=0.8717
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.7057 lr=0.0003
+epoch 0, train 7/7, loss=0.5412 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.5601 classification result=0.8200
+Epoch: 0, Time cost: 0.09998846054077148
+epoch 1, train 1/7, loss=0.5282 lr=0.0003
+epoch 1, train 7/7, loss=0.4832 lr=0.0003
+best epoch 0, best val res=0.8200
+epoch 1, val, loss=0.4791 classification result=0.8356
+Epoch: 1, Time cost: 0.0991673469543457
+epoch 2, train 1/7, loss=0.4569 lr=0.0003
+epoch 2, train 7/7, loss=0.4462 lr=0.0003
+best epoch 1, best val res=0.8356
+epoch 2, val, loss=0.4273 classification result=0.8525
+Epoch: 2, Time cost: 0.10147833824157715
+epoch 3, train 1/7, loss=0.3933 lr=0.0003
+epoch 3, train 7/7, loss=0.4048 lr=0.0003
+best epoch 2, best val res=0.8525
+epoch 3, val, loss=0.3957 classification result=0.8544
+Epoch: 3, Time cost: 0.10209274291992188
+epoch 4, train 1/7, loss=0.3703 lr=0.0003
+epoch 4, train 7/7, loss=0.3970 lr=0.0003
+best epoch 3, best val res=0.8544
+epoch 4, val, loss=0.3797 classification result=0.8569
+Epoch: 4, Time cost: 0.10093832015991211
+epoch 5, train 1/7, loss=0.3568 lr=0.0003
+epoch 5, train 7/7, loss=0.3292 lr=0.0003
+best epoch 4, best val res=0.8569
+epoch 5, val, loss=0.3659 classification result=0.8556
+Epoch: 5, Time cost: 0.16226744651794434
+epoch 6, train 1/7, loss=0.3506 lr=0.0003
+epoch 6, train 7/7, loss=0.3856 lr=0.0003
+best epoch 4, best val res=0.8569
+epoch 6, val, loss=0.3549 classification result=0.8525
+Epoch: 6, Time cost: 0.09363675117492676
+epoch 7, train 1/7, loss=0.3402 lr=0.0003
+epoch 7, train 7/7, loss=0.3633 lr=0.0003
+best epoch 4, best val res=0.8569
+epoch 7, val, loss=0.3482 classification result=0.8562
+Epoch: 7, Time cost: 0.09150958061218262
+epoch 8, train 1/7, loss=0.3566 lr=0.0003
+epoch 8, train 7/7, loss=0.3753 lr=0.0003
+best epoch 4, best val res=0.8569
+epoch 8, val, loss=0.3431 classification result=0.8544
+Epoch: 8, Time cost: 0.09415483474731445
+epoch 9, train 1/7, loss=0.3372 lr=0.0003
+epoch 9, train 7/7, loss=0.3590 lr=0.0003
+best epoch 4, best val res=0.8569
+epoch 9, val, loss=0.3386 classification result=0.8538
+Epoch: 9, Time cost: 0.09328198432922363
+epoch 10, train 1/7, loss=0.3318 lr=0.0003
+epoch 10, train 7/7, loss=0.3216 lr=0.0003
+best epoch 4, best val res=0.8569
+epoch 10, val, loss=0.3379 classification result=0.8531
+Epoch: 10, Time cost: 0.09141016006469727
+epoch 11, train 1/7, loss=0.3327 lr=0.0003
+epoch 11, train 7/7, loss=0.2898 lr=0.0003
+best epoch 4, best val res=0.8569
+epoch 11, val, loss=0.3376 classification result=0.8550
+Epoch: 11, Time cost: 0.09250903129577637
+epoch 12, train 1/7, loss=0.3519 lr=0.0003
+epoch 12, train 7/7, loss=0.3564 lr=0.0003
+best epoch 4, best val res=0.8569
+epoch 12, val, loss=0.3338 classification result=0.8588
+Epoch: 12, Time cost: 0.09823393821716309
+epoch 13, train 1/7, loss=0.3306 lr=0.0003
+epoch 13, train 7/7, loss=0.3725 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 13, val, loss=0.3339 classification result=0.8562
+Epoch: 13, Time cost: 0.09207510948181152
+epoch 14, train 1/7, loss=0.3247 lr=0.0003
+epoch 14, train 7/7, loss=0.3089 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 14, val, loss=0.3339 classification result=0.8581
+Epoch: 14, Time cost: 0.09231996536254883
+epoch 15, train 1/7, loss=0.3282 lr=0.0003
+epoch 15, train 7/7, loss=0.2955 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 15, val, loss=0.3336 classification result=0.8619
+Epoch: 15, Time cost: 0.16501474380493164
+epoch 16, train 1/7, loss=0.3187 lr=0.0003
+epoch 16, train 7/7, loss=0.3253 lr=0.0003
+best epoch 15, best val res=0.8619
+epoch 16, val, loss=0.3323 classification result=0.8600
+Epoch: 16, Time cost: 0.09357690811157227
+epoch 17, train 1/7, loss=0.3258 lr=0.0003
+epoch 17, train 7/7, loss=0.3510 lr=0.0003
+best epoch 15, best val res=0.8619
+epoch 17, val, loss=0.3317 classification result=0.8644
+Epoch: 17, Time cost: 0.10197257995605469
+epoch 18, train 1/7, loss=0.3246 lr=0.0003
+epoch 18, train 7/7, loss=0.3026 lr=0.0003
+best epoch 17, best val res=0.8644
+epoch 18, val, loss=0.3308 classification result=0.8650
+Epoch: 18, Time cost: 0.10049200057983398
+epoch 19, train 1/7, loss=0.3341 lr=0.0003
+epoch 19, train 7/7, loss=0.3326 lr=0.0003
+best epoch 18, best val res=0.8650
+epoch 19, val, loss=0.3310 classification result=0.8619
+Epoch: 19, Time cost: 0.09311938285827637
+epoch 20, train 1/7, loss=0.3105 lr=0.0003
+epoch 20, train 7/7, loss=0.3495 lr=0.0003
+best epoch 18, best val res=0.8650
+epoch 20, val, loss=0.3319 classification result=0.8638
+Epoch: 20, Time cost: 0.09280204772949219
+epoch 21, train 1/7, loss=0.3462 lr=0.0003
+epoch 21, train 7/7, loss=0.2883 lr=0.0003
+best epoch 18, best val res=0.8650
+epoch 21, val, loss=0.3305 classification result=0.8662
+Epoch: 21, Time cost: 0.09907412528991699
+epoch 22, train 1/7, loss=0.3423 lr=0.0003
+epoch 22, train 7/7, loss=0.3955 lr=0.0003
+best epoch 21, best val res=0.8662
+epoch 22, val, loss=0.3309 classification result=0.8612
+Epoch: 22, Time cost: 0.09387969970703125
+epoch 23, train 1/7, loss=0.3267 lr=0.0003
+epoch 23, train 7/7, loss=0.2557 lr=0.0003
+best epoch 21, best val res=0.8662
+epoch 23, val, loss=0.3332 classification result=0.8606
+Epoch: 23, Time cost: 0.092864990234375
+epoch 24, train 1/7, loss=0.3095 lr=0.0003
+epoch 24, train 7/7, loss=0.3680 lr=0.0003
+best epoch 21, best val res=0.8662
+epoch 24, val, loss=0.3310 classification result=0.8625
+Epoch: 24, Time cost: 0.0931248664855957
+epoch 25, train 1/7, loss=0.3525 lr=0.0003
+epoch 25, train 7/7, loss=0.3594 lr=0.0003
+best epoch 21, best val res=0.8662
+epoch 25, val, loss=0.3305 classification result=0.8631
+Epoch: 25, Time cost: 0.09226131439208984
+epoch 26, train 1/7, loss=0.3137 lr=0.0003
+epoch 26, train 7/7, loss=0.3095 lr=0.0003
+best epoch 21, best val res=0.8662
+epoch 26, val, loss=0.3317 classification result=0.8656
+Epoch: 26, Time cost: 0.15787291526794434
+epoch 27, train 1/7, loss=0.3016 lr=0.0003
+epoch 27, train 7/7, loss=0.2932 lr=0.0003
+best epoch 21, best val res=0.8662
+epoch 27, val, loss=0.3314 classification result=0.8669
+Epoch: 27, Time cost: 0.10600161552429199
+epoch 28, train 1/7, loss=0.3389 lr=0.0003
+epoch 28, train 7/7, loss=0.2492 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 28, val, loss=0.3322 classification result=0.8662
+Epoch: 28, Time cost: 0.09477400779724121
+epoch 29, train 1/7, loss=0.3055 lr=0.0003
+epoch 29, train 7/7, loss=0.3306 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 29, val, loss=0.3342 classification result=0.8644
+Epoch: 29, Time cost: 0.09486651420593262
+epoch 30, train 1/7, loss=0.3280 lr=0.0003
+epoch 30, train 7/7, loss=0.3003 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 30, val, loss=0.3348 classification result=0.8625
+Epoch: 30, Time cost: 0.09679365158081055
+epoch 31, train 1/7, loss=0.2972 lr=0.0003
+epoch 31, train 7/7, loss=0.3180 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 31, val, loss=0.3325 classification result=0.8631
+Epoch: 31, Time cost: 0.09193778038024902
+epoch 32, train 1/7, loss=0.3265 lr=0.0003
+epoch 32, train 7/7, loss=0.2759 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 32, val, loss=0.3327 classification result=0.8656
+Epoch: 32, Time cost: 0.09431815147399902
+epoch 33, train 1/7, loss=0.2939 lr=0.0003
+epoch 33, train 7/7, loss=0.3867 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 33, val, loss=0.3335 classification result=0.8650
+Epoch: 33, Time cost: 0.09578609466552734
+epoch 34, train 1/7, loss=0.3237 lr=0.0003
+epoch 34, train 7/7, loss=0.3172 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 34, val, loss=0.3345 classification result=0.8631
+Epoch: 34, Time cost: 0.09293556213378906
+epoch 35, train 1/7, loss=0.3126 lr=0.0003
+epoch 35, train 7/7, loss=0.2852 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 35, val, loss=0.3333 classification result=0.8656
+Epoch: 35, Time cost: 0.09020352363586426
+epoch 36, train 1/7, loss=0.3199 lr=0.0003
+epoch 36, train 7/7, loss=0.3552 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 36, val, loss=0.3337 classification result=0.8662
+Epoch: 36, Time cost: 0.09235858917236328
+epoch 37, train 1/7, loss=0.2987 lr=0.0003
+epoch 37, train 7/7, loss=0.3765 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 37, val, loss=0.3367 classification result=0.8625
+Epoch: 37, Time cost: 0.15790724754333496
+epoch 38, train 1/7, loss=0.3190 lr=0.0003
+epoch 38, train 7/7, loss=0.2761 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 38, val, loss=0.3366 classification result=0.8619
+Epoch: 38, Time cost: 0.09293913841247559
+epoch 39, train 1/7, loss=0.3134 lr=0.0003
+epoch 39, train 7/7, loss=0.2660 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 39, val, loss=0.3360 classification result=0.8656
+Epoch: 39, Time cost: 0.09375953674316406
+epoch 40, train 1/7, loss=0.3074 lr=0.0003
+epoch 40, train 7/7, loss=0.3325 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 40, val, loss=0.3353 classification result=0.8638
+Epoch: 40, Time cost: 0.09297561645507812
+epoch 41, train 1/7, loss=0.3036 lr=0.0003
+epoch 41, train 7/7, loss=0.3122 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 41, val, loss=0.3352 classification result=0.8631
+Epoch: 41, Time cost: 0.0933995246887207
+epoch 42, train 1/7, loss=0.2926 lr=0.0003
+epoch 42, train 7/7, loss=0.3040 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 42, val, loss=0.3356 classification result=0.8631
+Epoch: 42, Time cost: 0.09647536277770996
+epoch 43, train 1/7, loss=0.3139 lr=0.0003
+epoch 43, train 7/7, loss=0.2648 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 43, val, loss=0.3366 classification result=0.8638
+Epoch: 43, Time cost: 0.09181451797485352
+epoch 44, train 1/7, loss=0.2984 lr=0.0003
+epoch 44, train 7/7, loss=0.2671 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 44, val, loss=0.3381 classification result=0.8606
+Epoch: 44, Time cost: 0.09362936019897461
+epoch 45, train 1/7, loss=0.2972 lr=0.0003
+epoch 45, train 7/7, loss=0.2758 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 45, val, loss=0.3371 classification result=0.8631
+Epoch: 45, Time cost: 0.0937199592590332
+epoch 46, train 1/7, loss=0.2836 lr=0.0003
+epoch 46, train 7/7, loss=0.2983 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 46, val, loss=0.3360 classification result=0.8631
+Epoch: 46, Time cost: 0.09445810317993164
+epoch 47, train 1/7, loss=0.3215 lr=0.0003
+epoch 47, train 7/7, loss=0.2994 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 47, val, loss=0.3395 classification result=0.8594
+Epoch: 47, Time cost: 0.0920567512512207
+epoch 48, train 1/7, loss=0.2952 lr=0.0003
+epoch 48, train 7/7, loss=0.3048 lr=0.0003
+best epoch 27, best val res=0.8669
+epoch 48, val, loss=0.3373 classification result=0.8656
+Epoch: 48, Time cost: 0.16170001029968262
+best epoch 27, best val res=0.8669
+Test: loss=0.3269
+[Accuracy]=0.8660
+[Avg_Recall]=0.7275
+[Avg_Precision]=0.8228
+[F1]=0.6000
+[LogLoss]=0.3269
+[AUC]=0.8691
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.6793 lr=0.0003
+epoch 0, train 7/7, loss=0.5292 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.5535 classification result=0.7837
+Epoch: 0, Time cost: 0.0979459285736084
+epoch 1, train 1/7, loss=0.5067 lr=0.0003
+epoch 1, train 7/7, loss=0.4146 lr=0.0003
+best epoch 0, best val res=0.7837
+epoch 1, val, loss=0.4780 classification result=0.8250
+Epoch: 1, Time cost: 0.09902501106262207
+epoch 2, train 1/7, loss=0.4327 lr=0.0003
+epoch 2, train 7/7, loss=0.4118 lr=0.0003
+best epoch 1, best val res=0.8250
+epoch 2, val, loss=0.4260 classification result=0.8506
+Epoch: 2, Time cost: 0.09842562675476074
+epoch 3, train 1/7, loss=0.3563 lr=0.0003
+epoch 3, train 7/7, loss=0.3675 lr=0.0003
+best epoch 2, best val res=0.8506
+epoch 3, val, loss=0.3913 classification result=0.8506
+Epoch: 3, Time cost: 0.11249804496765137
+epoch 4, train 1/7, loss=0.3811 lr=0.0003
+epoch 4, train 7/7, loss=0.3609 lr=0.0003
+best epoch 3, best val res=0.8506
+epoch 4, val, loss=0.3733 classification result=0.8531
+Epoch: 4, Time cost: 0.09852814674377441
+epoch 5, train 1/7, loss=0.3268 lr=0.0003
+epoch 5, train 7/7, loss=0.3737 lr=0.0003
+best epoch 4, best val res=0.8531
+epoch 5, val, loss=0.3612 classification result=0.8544
+Epoch: 5, Time cost: 0.10059070587158203
+epoch 6, train 1/7, loss=0.3545 lr=0.0003
+epoch 6, train 7/7, loss=0.3838 lr=0.0003
+best epoch 5, best val res=0.8544
+epoch 6, val, loss=0.3552 classification result=0.8525
+Epoch: 6, Time cost: 0.0936739444732666
+epoch 7, train 1/7, loss=0.3666 lr=0.0003
+epoch 7, train 7/7, loss=0.3269 lr=0.0003
+best epoch 5, best val res=0.8544
+epoch 7, val, loss=0.3475 classification result=0.8512
+Epoch: 7, Time cost: 0.09354066848754883
+epoch 8, train 1/7, loss=0.3533 lr=0.0003
+epoch 8, train 7/7, loss=0.3116 lr=0.0003
+best epoch 5, best val res=0.8544
+epoch 8, val, loss=0.3442 classification result=0.8569
+Epoch: 8, Time cost: 0.09896302223205566
+epoch 9, train 1/7, loss=0.3689 lr=0.0003
+epoch 9, train 7/7, loss=0.3295 lr=0.0003
+best epoch 8, best val res=0.8569
+epoch 9, val, loss=0.3394 classification result=0.8519
+Epoch: 9, Time cost: 0.09249758720397949
+epoch 10, train 1/7, loss=0.3350 lr=0.0003
+epoch 10, train 7/7, loss=0.2973 lr=0.0003
+best epoch 8, best val res=0.8569
+epoch 10, val, loss=0.3366 classification result=0.8538
+Epoch: 10, Time cost: 0.1616811752319336
+epoch 11, train 1/7, loss=0.3689 lr=0.0003
+epoch 11, train 7/7, loss=0.2888 lr=0.0003
+best epoch 8, best val res=0.8569
+epoch 11, val, loss=0.3341 classification result=0.8575
+Epoch: 11, Time cost: 0.09838533401489258
+epoch 12, train 1/7, loss=0.3312 lr=0.0003
+epoch 12, train 7/7, loss=0.3518 lr=0.0003
+best epoch 11, best val res=0.8575
+epoch 12, val, loss=0.3344 classification result=0.8538
+Epoch: 12, Time cost: 0.09363317489624023
+epoch 13, train 1/7, loss=0.3423 lr=0.0003
+epoch 13, train 7/7, loss=0.2945 lr=0.0003
+best epoch 11, best val res=0.8575
+epoch 13, val, loss=0.3332 classification result=0.8588
+Epoch: 13, Time cost: 0.09946632385253906
+epoch 14, train 1/7, loss=0.3369 lr=0.0003
+epoch 14, train 7/7, loss=0.3423 lr=0.0003
+best epoch 13, best val res=0.8588
+epoch 14, val, loss=0.3324 classification result=0.8600
+Epoch: 14, Time cost: 0.09931635856628418
+epoch 15, train 1/7, loss=0.3534 lr=0.0003
+epoch 15, train 7/7, loss=0.3094 lr=0.0003
+best epoch 14, best val res=0.8600
+epoch 15, val, loss=0.3330 classification result=0.8581
+Epoch: 15, Time cost: 0.09168791770935059
+epoch 16, train 1/7, loss=0.3403 lr=0.0003
+epoch 16, train 7/7, loss=0.3384 lr=0.0003
+best epoch 14, best val res=0.8600
+epoch 16, val, loss=0.3323 classification result=0.8581
+Epoch: 16, Time cost: 0.09226584434509277
+epoch 17, train 1/7, loss=0.3252 lr=0.0003
+epoch 17, train 7/7, loss=0.3809 lr=0.0003
+best epoch 14, best val res=0.8600
+epoch 17, val, loss=0.3308 classification result=0.8588
+Epoch: 17, Time cost: 0.09297537803649902
+epoch 18, train 1/7, loss=0.3399 lr=0.0003
+epoch 18, train 7/7, loss=0.3436 lr=0.0003
+best epoch 14, best val res=0.8600
+epoch 18, val, loss=0.3305 classification result=0.8631
+Epoch: 18, Time cost: 0.09784626960754395
+epoch 19, train 1/7, loss=0.3204 lr=0.0003
+epoch 19, train 7/7, loss=0.3111 lr=0.0003
+best epoch 18, best val res=0.8631
+epoch 19, val, loss=0.3307 classification result=0.8650
+Epoch: 19, Time cost: 0.0980226993560791
+epoch 20, train 1/7, loss=0.3341 lr=0.0003
+epoch 20, train 7/7, loss=0.3068 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 20, val, loss=0.3302 classification result=0.8612
+Epoch: 20, Time cost: 0.16044044494628906
+epoch 21, train 1/7, loss=0.3198 lr=0.0003
+epoch 21, train 7/7, loss=0.2860 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 21, val, loss=0.3304 classification result=0.8581
+Epoch: 21, Time cost: 0.09040594100952148
+epoch 22, train 1/7, loss=0.3391 lr=0.0003
+epoch 22, train 7/7, loss=0.3373 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 22, val, loss=0.3296 classification result=0.8588
+Epoch: 22, Time cost: 0.09102964401245117
+epoch 23, train 1/7, loss=0.3002 lr=0.0003
+epoch 23, train 7/7, loss=0.2965 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 23, val, loss=0.3308 classification result=0.8588
+Epoch: 23, Time cost: 0.0932471752166748
+epoch 24, train 1/7, loss=0.3054 lr=0.0003
+epoch 24, train 7/7, loss=0.3105 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 24, val, loss=0.3306 classification result=0.8600
+Epoch: 24, Time cost: 0.0909891128540039
+epoch 25, train 1/7, loss=0.3138 lr=0.0003
+epoch 25, train 7/7, loss=0.3280 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 25, val, loss=0.3307 classification result=0.8600
+Epoch: 25, Time cost: 0.09069156646728516
+epoch 26, train 1/7, loss=0.3421 lr=0.0003
+epoch 26, train 7/7, loss=0.3046 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 26, val, loss=0.3312 classification result=0.8612
+Epoch: 26, Time cost: 0.09562063217163086
+epoch 27, train 1/7, loss=0.3296 lr=0.0003
+epoch 27, train 7/7, loss=0.2917 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 27, val, loss=0.3315 classification result=0.8581
+Epoch: 27, Time cost: 0.0907294750213623
+epoch 28, train 1/7, loss=0.3248 lr=0.0003
+epoch 28, train 7/7, loss=0.3440 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 28, val, loss=0.3311 classification result=0.8556
+Epoch: 28, Time cost: 0.0912468433380127
+epoch 29, train 1/7, loss=0.3073 lr=0.0003
+epoch 29, train 7/7, loss=0.2904 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 29, val, loss=0.3314 classification result=0.8594
+Epoch: 29, Time cost: 0.09236383438110352
+epoch 30, train 1/7, loss=0.3134 lr=0.0003
+epoch 30, train 7/7, loss=0.3197 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 30, val, loss=0.3318 classification result=0.8612
+Epoch: 30, Time cost: 0.1595146656036377
+epoch 31, train 1/7, loss=0.2979 lr=0.0003
+epoch 31, train 7/7, loss=0.2793 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 31, val, loss=0.3306 classification result=0.8612
+Epoch: 31, Time cost: 0.09318161010742188
+epoch 32, train 1/7, loss=0.3159 lr=0.0003
+epoch 32, train 7/7, loss=0.3264 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 32, val, loss=0.3322 classification result=0.8600
+Epoch: 32, Time cost: 0.09205460548400879
+epoch 33, train 1/7, loss=0.3517 lr=0.0003
+epoch 33, train 7/7, loss=0.2994 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 33, val, loss=0.3322 classification result=0.8638
+Epoch: 33, Time cost: 0.09103131294250488
+epoch 34, train 1/7, loss=0.3244 lr=0.0003
+epoch 34, train 7/7, loss=0.3440 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 34, val, loss=0.3319 classification result=0.8625
+Epoch: 34, Time cost: 0.09163665771484375
+epoch 35, train 1/7, loss=0.3212 lr=0.0003
+epoch 35, train 7/7, loss=0.3209 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 35, val, loss=0.3325 classification result=0.8575
+Epoch: 35, Time cost: 0.09155559539794922
+epoch 36, train 1/7, loss=0.3217 lr=0.0003
+epoch 36, train 7/7, loss=0.2965 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 36, val, loss=0.3328 classification result=0.8588
+Epoch: 36, Time cost: 0.0939173698425293
+epoch 37, train 1/7, loss=0.3227 lr=0.0003
+epoch 37, train 7/7, loss=0.3463 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 37, val, loss=0.3327 classification result=0.8606
+Epoch: 37, Time cost: 0.09172892570495605
+epoch 38, train 1/7, loss=0.3067 lr=0.0003
+epoch 38, train 7/7, loss=0.3529 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 38, val, loss=0.3307 classification result=0.8606
+Epoch: 38, Time cost: 0.09026002883911133
+epoch 39, train 1/7, loss=0.3041 lr=0.0003
+epoch 39, train 7/7, loss=0.2622 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 39, val, loss=0.3313 classification result=0.8612
+Epoch: 39, Time cost: 0.09304428100585938
+epoch 40, train 1/7, loss=0.2920 lr=0.0003
+epoch 40, train 7/7, loss=0.3231 lr=0.0003
+best epoch 19, best val res=0.8650
+epoch 40, val, loss=0.3348 classification result=0.8588
+Epoch: 40, Time cost: 0.1533961296081543
+best epoch 19, best val res=0.8650
+Test: loss=0.3270
+[Accuracy]=0.8705
+[Avg_Recall]=0.7257
+[Avg_Precision]=0.8416
+[F1]=0.6022
+[LogLoss]=0.3270
+[AUC]=0.8691
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.7506 lr=0.0003
+epoch 0, train 7/7, loss=0.5640 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.5591 classification result=0.7987
+Epoch: 0, Time cost: 0.09697556495666504
+epoch 1, train 1/7, loss=0.5541 lr=0.0003
+epoch 1, train 7/7, loss=0.4659 lr=0.0003
+best epoch 0, best val res=0.7987
+epoch 1, val, loss=0.4988 classification result=0.8281
+Epoch: 1, Time cost: 0.09799075126647949
+epoch 2, train 1/7, loss=0.4770 lr=0.0003
+epoch 2, train 7/7, loss=0.4049 lr=0.0003
+best epoch 1, best val res=0.8281
+epoch 2, val, loss=0.4535 classification result=0.8475
+Epoch: 2, Time cost: 0.0985414981842041
+epoch 3, train 1/7, loss=0.4008 lr=0.0003
+epoch 3, train 7/7, loss=0.3611 lr=0.0003
+best epoch 2, best val res=0.8475
+epoch 3, val, loss=0.4168 classification result=0.8525
+Epoch: 3, Time cost: 0.09932112693786621
+epoch 4, train 1/7, loss=0.3858 lr=0.0003
+epoch 4, train 7/7, loss=0.3729 lr=0.0003
+best epoch 3, best val res=0.8525
+epoch 4, val, loss=0.3879 classification result=0.8481
+Epoch: 4, Time cost: 0.09102487564086914
+epoch 5, train 1/7, loss=0.3921 lr=0.0003
+epoch 5, train 7/7, loss=0.3521 lr=0.0003
+best epoch 3, best val res=0.8525
+epoch 5, val, loss=0.3687 classification result=0.8519
+Epoch: 5, Time cost: 0.09799313545227051
+epoch 6, train 1/7, loss=0.3555 lr=0.0003
+epoch 6, train 7/7, loss=0.3873 lr=0.0003
+best epoch 3, best val res=0.8525
+epoch 6, val, loss=0.3558 classification result=0.8531
+Epoch: 6, Time cost: 0.11118888854980469
+epoch 7, train 1/7, loss=0.3380 lr=0.0003
+epoch 7, train 7/7, loss=0.3604 lr=0.0003
+best epoch 6, best val res=0.8531
+epoch 7, val, loss=0.3475 classification result=0.8556
+Epoch: 7, Time cost: 0.09900522232055664
+epoch 8, train 1/7, loss=0.3270 lr=0.0003
+epoch 8, train 7/7, loss=0.3467 lr=0.0003
+best epoch 7, best val res=0.8556
+epoch 8, val, loss=0.3412 classification result=0.8550
+Epoch: 8, Time cost: 0.09207487106323242
+epoch 9, train 1/7, loss=0.3642 lr=0.0003
+epoch 9, train 7/7, loss=0.3491 lr=0.0003
+best epoch 7, best val res=0.8556
+epoch 9, val, loss=0.3375 classification result=0.8562
+Epoch: 9, Time cost: 0.10399293899536133
+epoch 10, train 1/7, loss=0.3595 lr=0.0003
+epoch 10, train 7/7, loss=0.3540 lr=0.0003
+best epoch 9, best val res=0.8562
+epoch 10, val, loss=0.3369 classification result=0.8562
+Epoch: 10, Time cost: 0.16749310493469238
+epoch 11, train 1/7, loss=0.3299 lr=0.0003
+epoch 11, train 7/7, loss=0.3385 lr=0.0003
+best epoch 10, best val res=0.8562
+epoch 11, val, loss=0.3346 classification result=0.8594
+Epoch: 11, Time cost: 0.10181236267089844
+epoch 12, train 1/7, loss=0.3302 lr=0.0003
+epoch 12, train 7/7, loss=0.4045 lr=0.0003
+best epoch 11, best val res=0.8594
+epoch 12, val, loss=0.3323 classification result=0.8588
+Epoch: 12, Time cost: 0.0936887264251709
+epoch 13, train 1/7, loss=0.3354 lr=0.0003
+epoch 13, train 7/7, loss=0.3164 lr=0.0003
+best epoch 11, best val res=0.8594
+epoch 13, val, loss=0.3319 classification result=0.8638
+Epoch: 13, Time cost: 0.10370206832885742
+epoch 14, train 1/7, loss=0.3027 lr=0.0003
+epoch 14, train 7/7, loss=0.3246 lr=0.0003
+best epoch 13, best val res=0.8638
+epoch 14, val, loss=0.3329 classification result=0.8575
+Epoch: 14, Time cost: 0.09673857688903809
+epoch 15, train 1/7, loss=0.3361 lr=0.0003
+epoch 15, train 7/7, loss=0.4299 lr=0.0003
+best epoch 13, best val res=0.8638
+epoch 15, val, loss=0.3337 classification result=0.8562
+Epoch: 15, Time cost: 0.0974278450012207
+epoch 16, train 1/7, loss=0.3638 lr=0.0003
+epoch 16, train 7/7, loss=0.2874 lr=0.0003
+best epoch 13, best val res=0.8638
+epoch 16, val, loss=0.3305 classification result=0.8594
+Epoch: 16, Time cost: 0.09519767761230469
+epoch 17, train 1/7, loss=0.3230 lr=0.0003
+epoch 17, train 7/7, loss=0.3535 lr=0.0003
+best epoch 13, best val res=0.8638
+epoch 17, val, loss=0.3321 classification result=0.8594
+Epoch: 17, Time cost: 0.09440898895263672
+epoch 18, train 1/7, loss=0.3060 lr=0.0003
+epoch 18, train 7/7, loss=0.3295 lr=0.0003
+best epoch 13, best val res=0.8638
+epoch 18, val, loss=0.3319 classification result=0.8625
+Epoch: 18, Time cost: 0.09185171127319336
+epoch 19, train 1/7, loss=0.3337 lr=0.0003
+epoch 19, train 7/7, loss=0.3089 lr=0.0003
+best epoch 13, best val res=0.8638
+epoch 19, val, loss=0.3307 classification result=0.8638
+Epoch: 19, Time cost: 0.09764647483825684
+epoch 20, train 1/7, loss=0.3298 lr=0.0003
+epoch 20, train 7/7, loss=0.3590 lr=0.0003
+best epoch 19, best val res=0.8638
+epoch 20, val, loss=0.3319 classification result=0.8612
+Epoch: 20, Time cost: 0.09241747856140137
+epoch 21, train 1/7, loss=0.3406 lr=0.0003
+epoch 21, train 7/7, loss=0.3030 lr=0.0003
+best epoch 19, best val res=0.8638
+epoch 21, val, loss=0.3315 classification result=0.8612
+Epoch: 21, Time cost: 0.1975865364074707
+epoch 22, train 1/7, loss=0.3184 lr=0.0003
+epoch 22, train 7/7, loss=0.3178 lr=0.0003
+best epoch 19, best val res=0.8638
+epoch 22, val, loss=0.3302 classification result=0.8650
+Epoch: 22, Time cost: 0.10798382759094238
+epoch 23, train 1/7, loss=0.3269 lr=0.0003
+epoch 23, train 7/7, loss=0.3095 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 23, val, loss=0.3299 classification result=0.8600
+Epoch: 23, Time cost: 0.09671592712402344
+epoch 24, train 1/7, loss=0.3241 lr=0.0003
+epoch 24, train 7/7, loss=0.3126 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 24, val, loss=0.3302 classification result=0.8612
+Epoch: 24, Time cost: 0.09173011779785156
+epoch 25, train 1/7, loss=0.3328 lr=0.0003
+epoch 25, train 7/7, loss=0.2775 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 25, val, loss=0.3299 classification result=0.8631
+Epoch: 25, Time cost: 0.09132146835327148
+epoch 26, train 1/7, loss=0.3385 lr=0.0003
+epoch 26, train 7/7, loss=0.3282 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 26, val, loss=0.3330 classification result=0.8619
+Epoch: 26, Time cost: 0.09136080741882324
+epoch 27, train 1/7, loss=0.3057 lr=0.0003
+epoch 27, train 7/7, loss=0.3710 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 27, val, loss=0.3338 classification result=0.8644
+Epoch: 27, Time cost: 0.09150028228759766
+epoch 28, train 1/7, loss=0.3112 lr=0.0003
+epoch 28, train 7/7, loss=0.3479 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 28, val, loss=0.3326 classification result=0.8625
+Epoch: 28, Time cost: 0.09215378761291504
+epoch 29, train 1/7, loss=0.3132 lr=0.0003
+epoch 29, train 7/7, loss=0.3229 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 29, val, loss=0.3322 classification result=0.8638
+Epoch: 29, Time cost: 0.09397673606872559
+epoch 30, train 1/7, loss=0.3185 lr=0.0003
+epoch 30, train 7/7, loss=0.3082 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 30, val, loss=0.3326 classification result=0.8569
+Epoch: 30, Time cost: 0.09410381317138672
+epoch 31, train 1/7, loss=0.3286 lr=0.0003
+epoch 31, train 7/7, loss=0.2922 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 31, val, loss=0.3317 classification result=0.8625
+Epoch: 31, Time cost: 0.09439635276794434
+epoch 32, train 1/7, loss=0.3398 lr=0.0003
+epoch 32, train 7/7, loss=0.3701 lr=0.0003
+best epoch 22, best val res=0.8650
+epoch 32, val, loss=0.3324 classification result=0.8650
+Epoch: 32, Time cost: 0.16887521743774414
+epoch 33, train 1/7, loss=0.2813 lr=0.0003
+epoch 33, train 7/7, loss=0.3862 lr=0.0003
+best epoch 32, best val res=0.8650
+epoch 33, val, loss=0.3319 classification result=0.8650
+Epoch: 33, Time cost: 0.10166025161743164
+epoch 34, train 1/7, loss=0.3021 lr=0.0003
+epoch 34, train 7/7, loss=0.3166 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 34, val, loss=0.3317 classification result=0.8619
+Epoch: 34, Time cost: 0.09258151054382324
+epoch 35, train 1/7, loss=0.3069 lr=0.0003
+epoch 35, train 7/7, loss=0.2555 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 35, val, loss=0.3322 classification result=0.8619
+Epoch: 35, Time cost: 0.09616994857788086
+epoch 36, train 1/7, loss=0.2991 lr=0.0003
+epoch 36, train 7/7, loss=0.2779 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 36, val, loss=0.3327 classification result=0.8631
+Epoch: 36, Time cost: 0.09586763381958008
+epoch 37, train 1/7, loss=0.3407 lr=0.0003
+epoch 37, train 7/7, loss=0.2623 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 37, val, loss=0.3317 classification result=0.8638
+Epoch: 37, Time cost: 0.0964806079864502
+epoch 38, train 1/7, loss=0.3271 lr=0.0003
+epoch 38, train 7/7, loss=0.2704 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 38, val, loss=0.3306 classification result=0.8656
+Epoch: 38, Time cost: 0.10132551193237305
+epoch 39, train 1/7, loss=0.3404 lr=0.0003
+epoch 39, train 7/7, loss=0.3216 lr=0.0003
+best epoch 38, best val res=0.8656
+epoch 39, val, loss=0.3312 classification result=0.8644
+Epoch: 39, Time cost: 0.09386968612670898
+epoch 40, train 1/7, loss=0.3278 lr=0.0003
+epoch 40, train 7/7, loss=0.3141 lr=0.0003
+best epoch 38, best val res=0.8656
+epoch 40, val, loss=0.3341 classification result=0.8681
+Epoch: 40, Time cost: 0.1020505428314209
+epoch 41, train 1/7, loss=0.3361 lr=0.0003
+epoch 41, train 7/7, loss=0.3375 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 41, val, loss=0.3314 classification result=0.8612
+Epoch: 41, Time cost: 0.09199237823486328
+epoch 42, train 1/7, loss=0.3156 lr=0.0003
+epoch 42, train 7/7, loss=0.3365 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 42, val, loss=0.3328 classification result=0.8612
+Epoch: 42, Time cost: 0.09329605102539062
+epoch 43, train 1/7, loss=0.2866 lr=0.0003
+epoch 43, train 7/7, loss=0.2739 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 43, val, loss=0.3343 classification result=0.8625
+Epoch: 43, Time cost: 0.18074607849121094
+epoch 44, train 1/7, loss=0.2870 lr=0.0003
+epoch 44, train 7/7, loss=0.3393 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 44, val, loss=0.3326 classification result=0.8638
+Epoch: 44, Time cost: 0.09379982948303223
+epoch 45, train 1/7, loss=0.2883 lr=0.0003
+epoch 45, train 7/7, loss=0.2906 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 45, val, loss=0.3322 classification result=0.8638
+Epoch: 45, Time cost: 0.09252762794494629
+epoch 46, train 1/7, loss=0.2730 lr=0.0003
+epoch 46, train 7/7, loss=0.2902 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 46, val, loss=0.3352 classification result=0.8612
+Epoch: 46, Time cost: 0.09203577041625977
+epoch 47, train 1/7, loss=0.2876 lr=0.0003
+epoch 47, train 7/7, loss=0.3349 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 47, val, loss=0.3344 classification result=0.8606
+Epoch: 47, Time cost: 0.09221124649047852
+epoch 48, train 1/7, loss=0.2824 lr=0.0003
+epoch 48, train 7/7, loss=0.3069 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 48, val, loss=0.3344 classification result=0.8631
+Epoch: 48, Time cost: 0.0922083854675293
+epoch 49, train 1/7, loss=0.2972 lr=0.0003
+epoch 49, train 7/7, loss=0.3326 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 49, val, loss=0.3369 classification result=0.8619
+Epoch: 49, Time cost: 0.09371566772460938
+epoch 50, train 1/7, loss=0.3177 lr=0.0003
+epoch 50, train 7/7, loss=0.3415 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 50, val, loss=0.3349 classification result=0.8619
+Epoch: 50, Time cost: 0.09589219093322754
+epoch 51, train 1/7, loss=0.3348 lr=0.0003
+epoch 51, train 7/7, loss=0.3207 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 51, val, loss=0.3345 classification result=0.8625
+Epoch: 51, Time cost: 0.09525442123413086
+epoch 52, train 1/7, loss=0.3092 lr=0.0003
+epoch 52, train 7/7, loss=0.3232 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 52, val, loss=0.3360 classification result=0.8638
+Epoch: 52, Time cost: 0.09282183647155762
+epoch 53, train 1/7, loss=0.3034 lr=0.0003
+epoch 53, train 7/7, loss=0.2902 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 53, val, loss=0.3360 classification result=0.8588
+Epoch: 53, Time cost: 0.09001898765563965
+epoch 54, train 1/7, loss=0.3325 lr=0.0003
+epoch 54, train 7/7, loss=0.2940 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 54, val, loss=0.3371 classification result=0.8638
+Epoch: 54, Time cost: 0.15944647789001465
+epoch 55, train 1/7, loss=0.2987 lr=0.0003
+epoch 55, train 7/7, loss=0.3363 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 55, val, loss=0.3334 classification result=0.8656
+Epoch: 55, Time cost: 0.09082388877868652
+epoch 56, train 1/7, loss=0.3007 lr=0.0003
+epoch 56, train 7/7, loss=0.3293 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 56, val, loss=0.3353 classification result=0.8619
+Epoch: 56, Time cost: 0.09352803230285645
+epoch 57, train 1/7, loss=0.3248 lr=0.0003
+epoch 57, train 7/7, loss=0.2590 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 57, val, loss=0.3367 classification result=0.8594
+Epoch: 57, Time cost: 0.09594488143920898
+epoch 58, train 1/7, loss=0.2849 lr=0.0003
+epoch 58, train 7/7, loss=0.2930 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 58, val, loss=0.3369 classification result=0.8631
+Epoch: 58, Time cost: 0.09213566780090332
+epoch 59, train 1/7, loss=0.2924 lr=0.0003
+epoch 59, train 7/7, loss=0.2817 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 59, val, loss=0.3352 classification result=0.8638
+Epoch: 59, Time cost: 0.0956430435180664
+epoch 60, train 1/7, loss=0.2760 lr=0.0003
+epoch 60, train 7/7, loss=0.2807 lr=0.0003
+best epoch 40, best val res=0.8681
+epoch 60, val, loss=0.3351 classification result=0.8681
+Epoch: 60, Time cost: 0.09807395935058594
+epoch 61, train 1/7, loss=0.3090 lr=0.0003
+epoch 61, train 7/7, loss=0.2789 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 61, val, loss=0.3347 classification result=0.8638
+Epoch: 61, Time cost: 0.0928947925567627
+epoch 62, train 1/7, loss=0.2875 lr=0.0003
+epoch 62, train 7/7, loss=0.2355 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 62, val, loss=0.3371 classification result=0.8650
+Epoch: 62, Time cost: 0.09203052520751953
+epoch 63, train 1/7, loss=0.2780 lr=0.0003
+epoch 63, train 7/7, loss=0.2682 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 63, val, loss=0.3345 classification result=0.8638
+Epoch: 63, Time cost: 0.09419441223144531
+epoch 64, train 1/7, loss=0.3230 lr=0.0003
+epoch 64, train 7/7, loss=0.2843 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 64, val, loss=0.3347 classification result=0.8631
+Epoch: 64, Time cost: 0.0974116325378418
+epoch 65, train 1/7, loss=0.2934 lr=0.0003
+epoch 65, train 7/7, loss=0.3177 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 65, val, loss=0.3397 classification result=0.8638
+Epoch: 65, Time cost: 0.1591200828552246
+epoch 66, train 1/7, loss=0.3037 lr=0.0003
+epoch 66, train 7/7, loss=0.3514 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 66, val, loss=0.3416 classification result=0.8662
+Epoch: 66, Time cost: 0.09105992317199707
+epoch 67, train 1/7, loss=0.3062 lr=0.0003
+epoch 67, train 7/7, loss=0.2515 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 67, val, loss=0.3382 classification result=0.8606
+Epoch: 67, Time cost: 0.09334921836853027
+epoch 68, train 1/7, loss=0.2898 lr=0.0003
+epoch 68, train 7/7, loss=0.2707 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 68, val, loss=0.3391 classification result=0.8619
+Epoch: 68, Time cost: 0.0934438705444336
+epoch 69, train 1/7, loss=0.2932 lr=0.0003
+epoch 69, train 7/7, loss=0.3290 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 69, val, loss=0.3357 classification result=0.8619
+Epoch: 69, Time cost: 0.09487271308898926
+epoch 70, train 1/7, loss=0.2961 lr=0.0003
+epoch 70, train 7/7, loss=0.2947 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 70, val, loss=0.3381 classification result=0.8650
+Epoch: 70, Time cost: 0.09829497337341309
+epoch 71, train 1/7, loss=0.2830 lr=0.0003
+epoch 71, train 7/7, loss=0.3534 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 71, val, loss=0.3404 classification result=0.8625
+Epoch: 71, Time cost: 0.09422850608825684
+epoch 72, train 1/7, loss=0.2874 lr=0.0003
+epoch 72, train 7/7, loss=0.3224 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 72, val, loss=0.3404 classification result=0.8606
+Epoch: 72, Time cost: 0.09097957611083984
+epoch 73, train 1/7, loss=0.2836 lr=0.0003
+epoch 73, train 7/7, loss=0.3095 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 73, val, loss=0.3371 classification result=0.8656
+Epoch: 73, Time cost: 0.09278059005737305
+epoch 74, train 1/7, loss=0.2823 lr=0.0003
+epoch 74, train 7/7, loss=0.3131 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 74, val, loss=0.3387 classification result=0.8638
+Epoch: 74, Time cost: 0.09102010726928711
+epoch 75, train 1/7, loss=0.3091 lr=0.0003
+epoch 75, train 7/7, loss=0.2486 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 75, val, loss=0.3402 classification result=0.8625
+Epoch: 75, Time cost: 0.15622782707214355
+epoch 76, train 1/7, loss=0.2942 lr=0.0003
+epoch 76, train 7/7, loss=0.2945 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 76, val, loss=0.3402 classification result=0.8612
+Epoch: 76, Time cost: 0.09657454490661621
+epoch 77, train 1/7, loss=0.2738 lr=0.0003
+epoch 77, train 7/7, loss=0.3276 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 77, val, loss=0.3421 classification result=0.8588
+Epoch: 77, Time cost: 0.09545326232910156
+epoch 78, train 1/7, loss=0.2592 lr=0.0003
+epoch 78, train 7/7, loss=0.2770 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 78, val, loss=0.3417 classification result=0.8612
+Epoch: 78, Time cost: 0.09474945068359375
+epoch 79, train 1/7, loss=0.2737 lr=0.0003
+epoch 79, train 7/7, loss=0.2967 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 79, val, loss=0.3398 classification result=0.8600
+Epoch: 79, Time cost: 0.09167671203613281
+epoch 80, train 1/7, loss=0.2930 lr=0.0003
+epoch 80, train 7/7, loss=0.2682 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 80, val, loss=0.3412 classification result=0.8619
+Epoch: 80, Time cost: 0.09211134910583496
+epoch 81, train 1/7, loss=0.2976 lr=0.0003
+epoch 81, train 7/7, loss=0.2456 lr=0.0003
+best epoch 60, best val res=0.8681
+epoch 81, val, loss=0.3401 classification result=0.8612
+Epoch: 81, Time cost: 0.09274148941040039
+best epoch 60, best val res=0.8681
+Test: loss=0.3333
+[Accuracy]=0.8625
+[Avg_Recall]=0.7408
+[Avg_Precision]=0.8028
+[F1]=0.6132
+[LogLoss]=0.3333
+[AUC]=0.8648
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.7872 lr=0.0003
+epoch 0, train 7/7, loss=0.6092 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.6156 classification result=0.6963
+Epoch: 0, Time cost: 0.09978961944580078
+epoch 1, train 1/7, loss=0.6051 lr=0.0003
+epoch 1, train 7/7, loss=0.5331 lr=0.0003
+best epoch 0, best val res=0.6963
+epoch 1, val, loss=0.5331 classification result=0.7856
+Epoch: 1, Time cost: 0.10568594932556152
+epoch 2, train 1/7, loss=0.4902 lr=0.0003
+epoch 2, train 7/7, loss=0.4359 lr=0.0003
+best epoch 1, best val res=0.7856
+epoch 2, val, loss=0.4784 classification result=0.8387
+Epoch: 2, Time cost: 0.10037541389465332
+epoch 3, train 1/7, loss=0.4251 lr=0.0003
+epoch 3, train 7/7, loss=0.4120 lr=0.0003
+best epoch 2, best val res=0.8387
+epoch 3, val, loss=0.4264 classification result=0.8488
+Epoch: 3, Time cost: 0.1666579246520996
+epoch 4, train 1/7, loss=0.4095 lr=0.0003
+epoch 4, train 7/7, loss=0.3323 lr=0.0003
+best epoch 3, best val res=0.8488
+epoch 4, val, loss=0.3913 classification result=0.8494
+Epoch: 4, Time cost: 0.09903907775878906
+epoch 5, train 1/7, loss=0.3819 lr=0.0003
+epoch 5, train 7/7, loss=0.3556 lr=0.0003
+best epoch 4, best val res=0.8494
+epoch 5, val, loss=0.3722 classification result=0.8550
+Epoch: 5, Time cost: 0.10064506530761719
+epoch 6, train 1/7, loss=0.3591 lr=0.0003
+epoch 6, train 7/7, loss=0.3723 lr=0.0003
+best epoch 5, best val res=0.8550
+epoch 6, val, loss=0.3535 classification result=0.8550
+Epoch: 6, Time cost: 0.10082173347473145
+epoch 7, train 1/7, loss=0.3509 lr=0.0003
+epoch 7, train 7/7, loss=0.3300 lr=0.0003
+best epoch 6, best val res=0.8550
+epoch 7, val, loss=0.3467 classification result=0.8531
+Epoch: 7, Time cost: 0.09341216087341309
+epoch 8, train 1/7, loss=0.3521 lr=0.0003
+epoch 8, train 7/7, loss=0.3706 lr=0.0003
+best epoch 6, best val res=0.8550
+epoch 8, val, loss=0.3431 classification result=0.8512
+Epoch: 8, Time cost: 0.09181904792785645
+epoch 9, train 1/7, loss=0.3713 lr=0.0003
+epoch 9, train 7/7, loss=0.3207 lr=0.0003
+best epoch 6, best val res=0.8550
+epoch 9, val, loss=0.3385 classification result=0.8562
+Epoch: 9, Time cost: 0.09943485260009766
+epoch 10, train 1/7, loss=0.3650 lr=0.0003
+epoch 10, train 7/7, loss=0.3471 lr=0.0003
+best epoch 9, best val res=0.8562
+epoch 10, val, loss=0.3373 classification result=0.8556
+Epoch: 10, Time cost: 0.0905766487121582
+epoch 11, train 1/7, loss=0.3514 lr=0.0003
+epoch 11, train 7/7, loss=0.3563 lr=0.0003
+best epoch 9, best val res=0.8562
+epoch 11, val, loss=0.3365 classification result=0.8556
+Epoch: 11, Time cost: 0.09285807609558105
+epoch 12, train 1/7, loss=0.3582 lr=0.0003
+epoch 12, train 7/7, loss=0.2995 lr=0.0003
+best epoch 9, best val res=0.8562
+epoch 12, val, loss=0.3347 classification result=0.8600
+Epoch: 12, Time cost: 0.09958577156066895
+epoch 13, train 1/7, loss=0.3223 lr=0.0003
+epoch 13, train 7/7, loss=0.3530 lr=0.0003
+best epoch 12, best val res=0.8600
+epoch 13, val, loss=0.3348 classification result=0.8594
+Epoch: 13, Time cost: 0.17139601707458496
+epoch 14, train 1/7, loss=0.3427 lr=0.0003
+epoch 14, train 7/7, loss=0.4612 lr=0.0003
+best epoch 12, best val res=0.8600
+epoch 14, val, loss=0.3337 classification result=0.8588
+Epoch: 14, Time cost: 0.09464621543884277
+epoch 15, train 1/7, loss=0.3060 lr=0.0003
+epoch 15, train 7/7, loss=0.3336 lr=0.0003
+best epoch 12, best val res=0.8600
+epoch 15, val, loss=0.3322 classification result=0.8594
+Epoch: 15, Time cost: 0.09106111526489258
+epoch 16, train 1/7, loss=0.3101 lr=0.0003
+epoch 16, train 7/7, loss=0.3552 lr=0.0003
+best epoch 12, best val res=0.8600
+epoch 16, val, loss=0.3330 classification result=0.8619
+Epoch: 16, Time cost: 0.10086178779602051
+epoch 17, train 1/7, loss=0.3296 lr=0.0003
+epoch 17, train 7/7, loss=0.3621 lr=0.0003
+best epoch 16, best val res=0.8619
+epoch 17, val, loss=0.3313 classification result=0.8588
+Epoch: 17, Time cost: 0.0929255485534668
+epoch 18, train 1/7, loss=0.3364 lr=0.0003
+epoch 18, train 7/7, loss=0.3358 lr=0.0003
+best epoch 16, best val res=0.8619
+epoch 18, val, loss=0.3316 classification result=0.8594
+Epoch: 18, Time cost: 0.09282565116882324
+epoch 19, train 1/7, loss=0.3320 lr=0.0003
+epoch 19, train 7/7, loss=0.3648 lr=0.0003
+best epoch 16, best val res=0.8619
+epoch 19, val, loss=0.3307 classification result=0.8588
+Epoch: 19, Time cost: 0.09272456169128418
+epoch 20, train 1/7, loss=0.3549 lr=0.0003
+epoch 20, train 7/7, loss=0.2745 lr=0.0003
+best epoch 16, best val res=0.8619
+epoch 20, val, loss=0.3297 classification result=0.8575
+Epoch: 20, Time cost: 0.09604310989379883
+epoch 21, train 1/7, loss=0.3381 lr=0.0003
+epoch 21, train 7/7, loss=0.3148 lr=0.0003
+best epoch 16, best val res=0.8619
+epoch 21, val, loss=0.3297 classification result=0.8612
+Epoch: 21, Time cost: 0.09423279762268066
+epoch 22, train 1/7, loss=0.3381 lr=0.0003
+epoch 22, train 7/7, loss=0.2712 lr=0.0003
+best epoch 16, best val res=0.8619
+epoch 22, val, loss=0.3300 classification result=0.8619
+Epoch: 22, Time cost: 0.10071659088134766
+epoch 23, train 1/7, loss=0.3266 lr=0.0003
+epoch 23, train 7/7, loss=0.3457 lr=0.0003
+best epoch 22, best val res=0.8619
+epoch 23, val, loss=0.3307 classification result=0.8606
+Epoch: 23, Time cost: 0.09275531768798828
+epoch 24, train 1/7, loss=0.3213 lr=0.0003
+epoch 24, train 7/7, loss=0.3535 lr=0.0003
+best epoch 22, best val res=0.8619
+epoch 24, val, loss=0.3303 classification result=0.8612
+Epoch: 24, Time cost: 0.158430814743042
+epoch 25, train 1/7, loss=0.3224 lr=0.0003
+epoch 25, train 7/7, loss=0.3366 lr=0.0003
+best epoch 22, best val res=0.8619
+epoch 25, val, loss=0.3303 classification result=0.8631
+Epoch: 25, Time cost: 0.10688996315002441
+epoch 26, train 1/7, loss=0.3156 lr=0.0003
+epoch 26, train 7/7, loss=0.3312 lr=0.0003
+best epoch 25, best val res=0.8631
+epoch 26, val, loss=0.3303 classification result=0.8606
+Epoch: 26, Time cost: 0.09693598747253418
+epoch 27, train 1/7, loss=0.3107 lr=0.0003
+epoch 27, train 7/7, loss=0.3114 lr=0.0003
+best epoch 25, best val res=0.8631
+epoch 27, val, loss=0.3297 classification result=0.8644
+Epoch: 27, Time cost: 0.10439062118530273
+epoch 28, train 1/7, loss=0.3129 lr=0.0003
+epoch 28, train 7/7, loss=0.2608 lr=0.0003
+best epoch 27, best val res=0.8644
+epoch 28, val, loss=0.3303 classification result=0.8644
+Epoch: 28, Time cost: 0.10150909423828125
+epoch 29, train 1/7, loss=0.3035 lr=0.0003
+epoch 29, train 7/7, loss=0.2852 lr=0.0003
+best epoch 28, best val res=0.8644
+epoch 29, val, loss=0.3310 classification result=0.8562
+Epoch: 29, Time cost: 0.09301066398620605
+epoch 30, train 1/7, loss=0.3172 lr=0.0003
+epoch 30, train 7/7, loss=0.2708 lr=0.0003
+best epoch 28, best val res=0.8644
+epoch 30, val, loss=0.3304 classification result=0.8606
+Epoch: 30, Time cost: 0.09290051460266113
+epoch 31, train 1/7, loss=0.2942 lr=0.0003
+epoch 31, train 7/7, loss=0.3465 lr=0.0003
+best epoch 28, best val res=0.8644
+epoch 31, val, loss=0.3305 classification result=0.8625
+Epoch: 31, Time cost: 0.09143209457397461
+epoch 32, train 1/7, loss=0.3432 lr=0.0003
+epoch 32, train 7/7, loss=0.3149 lr=0.0003
+best epoch 28, best val res=0.8644
+epoch 32, val, loss=0.3298 classification result=0.8625
+Epoch: 32, Time cost: 0.09297060966491699
+epoch 33, train 1/7, loss=0.3258 lr=0.0003
+epoch 33, train 7/7, loss=0.2654 lr=0.0003
+best epoch 28, best val res=0.8644
+epoch 33, val, loss=0.3294 classification result=0.8650
+Epoch: 33, Time cost: 0.10189580917358398
+epoch 34, train 1/7, loss=0.3329 lr=0.0003
+epoch 34, train 7/7, loss=0.3163 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 34, val, loss=0.3306 classification result=0.8625
+Epoch: 34, Time cost: 0.0942533016204834
+epoch 35, train 1/7, loss=0.3237 lr=0.0003
+epoch 35, train 7/7, loss=0.3025 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 35, val, loss=0.3319 classification result=0.8644
+Epoch: 35, Time cost: 0.16961407661437988
+epoch 36, train 1/7, loss=0.3196 lr=0.0003
+epoch 36, train 7/7, loss=0.3366 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 36, val, loss=0.3315 classification result=0.8638
+Epoch: 36, Time cost: 0.09114360809326172
+epoch 37, train 1/7, loss=0.2754 lr=0.0003
+epoch 37, train 7/7, loss=0.3011 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 37, val, loss=0.3283 classification result=0.8644
+Epoch: 37, Time cost: 0.09215068817138672
+epoch 38, train 1/7, loss=0.3132 lr=0.0003
+epoch 38, train 7/7, loss=0.2927 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 38, val, loss=0.3307 classification result=0.8625
+Epoch: 38, Time cost: 0.09232687950134277
+epoch 39, train 1/7, loss=0.3031 lr=0.0003
+epoch 39, train 7/7, loss=0.3109 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 39, val, loss=0.3289 classification result=0.8619
+Epoch: 39, Time cost: 0.09331631660461426
+epoch 40, train 1/7, loss=0.3125 lr=0.0003
+epoch 40, train 7/7, loss=0.3013 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 40, val, loss=0.3320 classification result=0.8612
+Epoch: 40, Time cost: 0.0929255485534668
+epoch 41, train 1/7, loss=0.2962 lr=0.0003
+epoch 41, train 7/7, loss=0.3502 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 41, val, loss=0.3341 classification result=0.8631
+Epoch: 41, Time cost: 0.09450888633728027
+epoch 42, train 1/7, loss=0.2939 lr=0.0003
+epoch 42, train 7/7, loss=0.3685 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 42, val, loss=0.3335 classification result=0.8612
+Epoch: 42, Time cost: 0.09726548194885254
+epoch 43, train 1/7, loss=0.2834 lr=0.0003
+epoch 43, train 7/7, loss=0.3163 lr=0.0003
+best epoch 33, best val res=0.8650
+epoch 43, val, loss=0.3357 classification result=0.8662
+Epoch: 43, Time cost: 0.09802079200744629
+epoch 44, train 1/7, loss=0.3223 lr=0.0003
+epoch 44, train 7/7, loss=0.2841 lr=0.0003
+best epoch 43, best val res=0.8662
+epoch 44, val, loss=0.3340 classification result=0.8619
+Epoch: 44, Time cost: 0.09086394309997559
+epoch 45, train 1/7, loss=0.2926 lr=0.0003
+epoch 45, train 7/7, loss=0.2885 lr=0.0003
+best epoch 43, best val res=0.8662
+epoch 45, val, loss=0.3352 classification result=0.8662
+Epoch: 45, Time cost: 0.09945130348205566
+epoch 46, train 1/7, loss=0.2861 lr=0.0003
+epoch 46, train 7/7, loss=0.2994 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 46, val, loss=0.3365 classification result=0.8581
+Epoch: 46, Time cost: 0.1560525894165039
+epoch 47, train 1/7, loss=0.3045 lr=0.0003
+epoch 47, train 7/7, loss=0.3520 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 47, val, loss=0.3330 classification result=0.8612
+Epoch: 47, Time cost: 0.09359884262084961
+epoch 48, train 1/7, loss=0.3028 lr=0.0003
+epoch 48, train 7/7, loss=0.2854 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 48, val, loss=0.3326 classification result=0.8600
+Epoch: 48, Time cost: 0.09557390213012695
+epoch 49, train 1/7, loss=0.3243 lr=0.0003
+epoch 49, train 7/7, loss=0.3072 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 49, val, loss=0.3339 classification result=0.8619
+Epoch: 49, Time cost: 0.0919351577758789
+epoch 50, train 1/7, loss=0.3064 lr=0.0003
+epoch 50, train 7/7, loss=0.3252 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 50, val, loss=0.3337 classification result=0.8600
+Epoch: 50, Time cost: 0.09170317649841309
+epoch 51, train 1/7, loss=0.2927 lr=0.0003
+epoch 51, train 7/7, loss=0.3249 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 51, val, loss=0.3329 classification result=0.8612
+Epoch: 51, Time cost: 0.0933229923248291
+epoch 52, train 1/7, loss=0.3184 lr=0.0003
+epoch 52, train 7/7, loss=0.2678 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 52, val, loss=0.3373 classification result=0.8631
+Epoch: 52, Time cost: 0.09267711639404297
+epoch 53, train 1/7, loss=0.3032 lr=0.0003
+epoch 53, train 7/7, loss=0.2600 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 53, val, loss=0.3358 classification result=0.8631
+Epoch: 53, Time cost: 0.09118914604187012
+epoch 54, train 1/7, loss=0.3132 lr=0.0003
+epoch 54, train 7/7, loss=0.2831 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 54, val, loss=0.3346 classification result=0.8631
+Epoch: 54, Time cost: 0.09326934814453125
+epoch 55, train 1/7, loss=0.3185 lr=0.0003
+epoch 55, train 7/7, loss=0.3183 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 55, val, loss=0.3355 classification result=0.8588
+Epoch: 55, Time cost: 0.09893274307250977
+epoch 56, train 1/7, loss=0.3217 lr=0.0003
+epoch 56, train 7/7, loss=0.2516 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 56, val, loss=0.3324 classification result=0.8588
+Epoch: 56, Time cost: 0.16082382202148438
+epoch 57, train 1/7, loss=0.2990 lr=0.0003
+epoch 57, train 7/7, loss=0.2644 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 57, val, loss=0.3326 classification result=0.8619
+Epoch: 57, Time cost: 0.09427261352539062
+epoch 58, train 1/7, loss=0.3082 lr=0.0003
+epoch 58, train 7/7, loss=0.3116 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 58, val, loss=0.3350 classification result=0.8600
+Epoch: 58, Time cost: 0.0935821533203125
+epoch 59, train 1/7, loss=0.2978 lr=0.0003
+epoch 59, train 7/7, loss=0.2965 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 59, val, loss=0.3388 classification result=0.8581
+Epoch: 59, Time cost: 0.09155869483947754
+epoch 60, train 1/7, loss=0.2722 lr=0.0003
+epoch 60, train 7/7, loss=0.2582 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 60, val, loss=0.3390 classification result=0.8588
+Epoch: 60, Time cost: 0.09151506423950195
+epoch 61, train 1/7, loss=0.3017 lr=0.0003
+epoch 61, train 7/7, loss=0.3486 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 61, val, loss=0.3363 classification result=0.8625
+Epoch: 61, Time cost: 0.09692668914794922
+epoch 62, train 1/7, loss=0.2949 lr=0.0003
+epoch 62, train 7/7, loss=0.2855 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 62, val, loss=0.3381 classification result=0.8600
+Epoch: 62, Time cost: 0.09369683265686035
+epoch 63, train 1/7, loss=0.2541 lr=0.0003
+epoch 63, train 7/7, loss=0.3316 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 63, val, loss=0.3360 classification result=0.8631
+Epoch: 63, Time cost: 0.0940403938293457
+epoch 64, train 1/7, loss=0.2968 lr=0.0003
+epoch 64, train 7/7, loss=0.3237 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 64, val, loss=0.3389 classification result=0.8638
+Epoch: 64, Time cost: 0.09345483779907227
+epoch 65, train 1/7, loss=0.3074 lr=0.0003
+epoch 65, train 7/7, loss=0.3156 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 65, val, loss=0.3373 classification result=0.8656
+Epoch: 65, Time cost: 0.09105038642883301
+epoch 66, train 1/7, loss=0.2898 lr=0.0003
+epoch 66, train 7/7, loss=0.3110 lr=0.0003
+best epoch 45, best val res=0.8662
+epoch 66, val, loss=0.3402 classification result=0.8556
+Epoch: 66, Time cost: 0.1601715087890625
+best epoch 45, best val res=0.8662
+Test: loss=0.3280
+[Accuracy]=0.8655
+[Avg_Recall]=0.7363
+[Avg_Precision]=0.8144
+[F1]=0.6107
+[LogLoss]=0.3280
+[AUC]=0.8678
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=1.0226 lr=0.0003
+epoch 0, train 7/7, loss=0.7842 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.7754 classification result=0.3581
+Epoch: 0, Time cost: 0.09852004051208496
+epoch 1, train 1/7, loss=0.7524 lr=0.0003
+epoch 1, train 7/7, loss=0.6334 lr=0.0003
+best epoch 0, best val res=0.3581
+epoch 1, val, loss=0.6460 classification result=0.6369
+Epoch: 1, Time cost: 0.10217714309692383
+epoch 2, train 1/7, loss=0.6058 lr=0.0003
+epoch 2, train 7/7, loss=0.4907 lr=0.0003
+best epoch 1, best val res=0.6369
+epoch 2, val, loss=0.5486 classification result=0.7719
+Epoch: 2, Time cost: 0.10080909729003906
+epoch 3, train 1/7, loss=0.5162 lr=0.0003
+epoch 3, train 7/7, loss=0.4613 lr=0.0003
+best epoch 2, best val res=0.7719
+epoch 3, val, loss=0.4883 classification result=0.8244
+Epoch: 3, Time cost: 0.09837627410888672
+epoch 4, train 1/7, loss=0.4293 lr=0.0003
+epoch 4, train 7/7, loss=0.3663 lr=0.0003
+best epoch 3, best val res=0.8244
+epoch 4, val, loss=0.4452 classification result=0.8400
+Epoch: 4, Time cost: 0.09834575653076172
+epoch 5, train 1/7, loss=0.3949 lr=0.0003
+epoch 5, train 7/7, loss=0.4243 lr=0.0003
+best epoch 4, best val res=0.8400
+epoch 5, val, loss=0.4152 classification result=0.8406
+Epoch: 5, Time cost: 0.09962272644042969
+epoch 6, train 1/7, loss=0.3671 lr=0.0003
+epoch 6, train 7/7, loss=0.3363 lr=0.0003
+best epoch 5, best val res=0.8406
+epoch 6, val, loss=0.3784 classification result=0.8512
+Epoch: 6, Time cost: 0.09787511825561523
+epoch 7, train 1/7, loss=0.3740 lr=0.0003
+epoch 7, train 7/7, loss=0.3035 lr=0.0003
+best epoch 6, best val res=0.8512
+epoch 7, val, loss=0.3654 classification result=0.8562
+Epoch: 7, Time cost: 0.09909892082214355
+epoch 8, train 1/7, loss=0.3535 lr=0.0003
+epoch 8, train 7/7, loss=0.3613 lr=0.0003
+best epoch 7, best val res=0.8562
+epoch 8, val, loss=0.3526 classification result=0.8525
+Epoch: 8, Time cost: 0.09622526168823242
+epoch 9, train 1/7, loss=0.3625 lr=0.0003
+epoch 9, train 7/7, loss=0.3652 lr=0.0003
+best epoch 7, best val res=0.8562
+epoch 9, val, loss=0.3460 classification result=0.8562
+Epoch: 9, Time cost: 0.17769908905029297
+epoch 10, train 1/7, loss=0.3366 lr=0.0003
+epoch 10, train 7/7, loss=0.3301 lr=0.0003
+best epoch 9, best val res=0.8562
+epoch 10, val, loss=0.3397 classification result=0.8556
+Epoch: 10, Time cost: 0.09198832511901855
+epoch 11, train 1/7, loss=0.3545 lr=0.0003
+epoch 11, train 7/7, loss=0.2954 lr=0.0003
+best epoch 9, best val res=0.8562
+epoch 11, val, loss=0.3404 classification result=0.8594
+Epoch: 11, Time cost: 0.09836792945861816
+epoch 12, train 1/7, loss=0.3400 lr=0.0003
+epoch 12, train 7/7, loss=0.3729 lr=0.0003
+best epoch 11, best val res=0.8594
+epoch 12, val, loss=0.3365 classification result=0.8556
+Epoch: 12, Time cost: 0.09285187721252441
+epoch 13, train 1/7, loss=0.3442 lr=0.0003
+epoch 13, train 7/7, loss=0.3472 lr=0.0003
+best epoch 11, best val res=0.8594
+epoch 13, val, loss=0.3338 classification result=0.8644
+Epoch: 13, Time cost: 0.10098028182983398
+epoch 14, train 1/7, loss=0.3442 lr=0.0003
+epoch 14, train 7/7, loss=0.2852 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 14, val, loss=0.3360 classification result=0.8606
+Epoch: 14, Time cost: 0.09207582473754883
+epoch 15, train 1/7, loss=0.3048 lr=0.0003
+epoch 15, train 7/7, loss=0.3765 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 15, val, loss=0.3345 classification result=0.8600
+Epoch: 15, Time cost: 0.09514093399047852
+epoch 16, train 1/7, loss=0.3227 lr=0.0003
+epoch 16, train 7/7, loss=0.3416 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 16, val, loss=0.3340 classification result=0.8556
+Epoch: 16, Time cost: 0.09526181221008301
+epoch 17, train 1/7, loss=0.3313 lr=0.0003
+epoch 17, train 7/7, loss=0.3633 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 17, val, loss=0.3327 classification result=0.8544
+Epoch: 17, Time cost: 0.0951535701751709
+epoch 18, train 1/7, loss=0.3204 lr=0.0003
+epoch 18, train 7/7, loss=0.3428 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 18, val, loss=0.3319 classification result=0.8612
+Epoch: 18, Time cost: 0.09194040298461914
+epoch 19, train 1/7, loss=0.3022 lr=0.0003
+epoch 19, train 7/7, loss=0.3465 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 19, val, loss=0.3293 classification result=0.8612
+Epoch: 19, Time cost: 0.16220378875732422
+epoch 20, train 1/7, loss=0.3205 lr=0.0003
+epoch 20, train 7/7, loss=0.3168 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 20, val, loss=0.3312 classification result=0.8588
+Epoch: 20, Time cost: 0.09273934364318848
+epoch 21, train 1/7, loss=0.3484 lr=0.0003
+epoch 21, train 7/7, loss=0.3211 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 21, val, loss=0.3310 classification result=0.8606
+Epoch: 21, Time cost: 0.09418106079101562
+epoch 22, train 1/7, loss=0.3119 lr=0.0003
+epoch 22, train 7/7, loss=0.3448 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 22, val, loss=0.3307 classification result=0.8600
+Epoch: 22, Time cost: 0.0930488109588623
+epoch 23, train 1/7, loss=0.3014 lr=0.0003
+epoch 23, train 7/7, loss=0.3321 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 23, val, loss=0.3299 classification result=0.8638
+Epoch: 23, Time cost: 0.09892129898071289
+epoch 24, train 1/7, loss=0.3411 lr=0.0003
+epoch 24, train 7/7, loss=0.3554 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 24, val, loss=0.3290 classification result=0.8612
+Epoch: 24, Time cost: 0.09287452697753906
+epoch 25, train 1/7, loss=0.3110 lr=0.0003
+epoch 25, train 7/7, loss=0.3171 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 25, val, loss=0.3297 classification result=0.8631
+Epoch: 25, Time cost: 0.09214568138122559
+epoch 26, train 1/7, loss=0.3371 lr=0.0003
+epoch 26, train 7/7, loss=0.2902 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 26, val, loss=0.3310 classification result=0.8594
+Epoch: 26, Time cost: 0.09609723091125488
+epoch 27, train 1/7, loss=0.3139 lr=0.0003
+epoch 27, train 7/7, loss=0.3160 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 27, val, loss=0.3313 classification result=0.8569
+Epoch: 27, Time cost: 0.09192943572998047
+epoch 28, train 1/7, loss=0.3162 lr=0.0003
+epoch 28, train 7/7, loss=0.3479 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 28, val, loss=0.3297 classification result=0.8625
+Epoch: 28, Time cost: 0.09193301200866699
+epoch 29, train 1/7, loss=0.3541 lr=0.0003
+epoch 29, train 7/7, loss=0.2539 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 29, val, loss=0.3297 classification result=0.8619
+Epoch: 29, Time cost: 0.16713428497314453
+epoch 30, train 1/7, loss=0.3460 lr=0.0003
+epoch 30, train 7/7, loss=0.2774 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 30, val, loss=0.3330 classification result=0.8600
+Epoch: 30, Time cost: 0.09480667114257812
+epoch 31, train 1/7, loss=0.3101 lr=0.0003
+epoch 31, train 7/7, loss=0.3122 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 31, val, loss=0.3326 classification result=0.8606
+Epoch: 31, Time cost: 0.09259629249572754
+epoch 32, train 1/7, loss=0.3345 lr=0.0003
+epoch 32, train 7/7, loss=0.2951 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 32, val, loss=0.3330 classification result=0.8594
+Epoch: 32, Time cost: 0.09302711486816406
+epoch 33, train 1/7, loss=0.2945 lr=0.0003
+epoch 33, train 7/7, loss=0.3466 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 33, val, loss=0.3315 classification result=0.8612
+Epoch: 33, Time cost: 0.09115481376647949
+epoch 34, train 1/7, loss=0.3263 lr=0.0003
+epoch 34, train 7/7, loss=0.2791 lr=0.0003
+best epoch 13, best val res=0.8644
+epoch 34, val, loss=0.3278 classification result=0.8612
+Epoch: 34, Time cost: 0.09169220924377441
+best epoch 13, best val res=0.8644
+Test: loss=0.3324
+[Accuracy]=0.8670
+[Avg_Recall]=0.7190
+[Avg_Precision]=0.8349
+[F1]=0.5895
+[LogLoss]=0.3324
+[AUC]=0.8682
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.7054 lr=0.0003
+epoch 0, train 7/7, loss=0.5657 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.6112 classification result=0.6987
+Epoch: 0, Time cost: 0.0996856689453125
+epoch 1, train 1/7, loss=0.5285 lr=0.0003
+epoch 1, train 7/7, loss=0.4750 lr=0.0003
+best epoch 0, best val res=0.6987
+epoch 1, val, loss=0.5150 classification result=0.7987
+Epoch: 1, Time cost: 0.10211586952209473
+epoch 2, train 1/7, loss=0.4409 lr=0.0003
+epoch 2, train 7/7, loss=0.4261 lr=0.0003
+best epoch 1, best val res=0.7987
+epoch 2, val, loss=0.4458 classification result=0.8381
+Epoch: 2, Time cost: 0.10365056991577148
+epoch 3, train 1/7, loss=0.4130 lr=0.0003
+epoch 3, train 7/7, loss=0.4127 lr=0.0003
+best epoch 2, best val res=0.8381
+epoch 3, val, loss=0.4075 classification result=0.8456
+Epoch: 3, Time cost: 0.09850692749023438
+epoch 4, train 1/7, loss=0.4080 lr=0.0003
+epoch 4, train 7/7, loss=0.3469 lr=0.0003
+best epoch 3, best val res=0.8456
+epoch 4, val, loss=0.3832 classification result=0.8481
+Epoch: 4, Time cost: 0.1671452522277832
+epoch 5, train 1/7, loss=0.3688 lr=0.0003
+epoch 5, train 7/7, loss=0.3829 lr=0.0003
+best epoch 4, best val res=0.8481
+epoch 5, val, loss=0.3623 classification result=0.8538
+Epoch: 5, Time cost: 0.09984707832336426
+epoch 6, train 1/7, loss=0.3489 lr=0.0003
+epoch 6, train 7/7, loss=0.3189 lr=0.0003
+best epoch 5, best val res=0.8538
+epoch 6, val, loss=0.3529 classification result=0.8519
+Epoch: 6, Time cost: 0.0925595760345459
+epoch 7, train 1/7, loss=0.3651 lr=0.0003
+epoch 7, train 7/7, loss=0.3624 lr=0.0003
+best epoch 5, best val res=0.8538
+epoch 7, val, loss=0.3490 classification result=0.8519
+Epoch: 7, Time cost: 0.09449148178100586
+epoch 8, train 1/7, loss=0.3303 lr=0.0003
+epoch 8, train 7/7, loss=0.3208 lr=0.0003
+best epoch 5, best val res=0.8538
+epoch 8, val, loss=0.3420 classification result=0.8538
+Epoch: 8, Time cost: 0.10420346260070801
+epoch 9, train 1/7, loss=0.3539 lr=0.0003
+epoch 9, train 7/7, loss=0.3181 lr=0.0003
+best epoch 8, best val res=0.8538
+epoch 9, val, loss=0.3376 classification result=0.8556
+Epoch: 9, Time cost: 0.09860491752624512
+epoch 10, train 1/7, loss=0.3639 lr=0.0003
+epoch 10, train 7/7, loss=0.3453 lr=0.0003
+best epoch 9, best val res=0.8556
+epoch 10, val, loss=0.3352 classification result=0.8538
+Epoch: 10, Time cost: 0.0971834659576416
+epoch 11, train 1/7, loss=0.3464 lr=0.0003
+epoch 11, train 7/7, loss=0.4210 lr=0.0003
+best epoch 9, best val res=0.8556
+epoch 11, val, loss=0.3336 classification result=0.8519
+Epoch: 11, Time cost: 0.09356451034545898
+epoch 12, train 1/7, loss=0.3499 lr=0.0003
+epoch 12, train 7/7, loss=0.3277 lr=0.0003
+best epoch 9, best val res=0.8556
+epoch 12, val, loss=0.3331 classification result=0.8588
+Epoch: 12, Time cost: 0.09837985038757324
+epoch 13, train 1/7, loss=0.3404 lr=0.0003
+epoch 13, train 7/7, loss=0.3543 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 13, val, loss=0.3339 classification result=0.8569
+Epoch: 13, Time cost: 0.0913538932800293
+epoch 14, train 1/7, loss=0.3340 lr=0.0003
+epoch 14, train 7/7, loss=0.3309 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 14, val, loss=0.3359 classification result=0.8550
+Epoch: 14, Time cost: 0.09360432624816895
+epoch 15, train 1/7, loss=0.3383 lr=0.0003
+epoch 15, train 7/7, loss=0.3458 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 15, val, loss=0.3335 classification result=0.8550
+Epoch: 15, Time cost: 0.19758248329162598
+epoch 16, train 1/7, loss=0.3427 lr=0.0003
+epoch 16, train 7/7, loss=0.3689 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 16, val, loss=0.3336 classification result=0.8512
+Epoch: 16, Time cost: 0.09134697914123535
+epoch 17, train 1/7, loss=0.3242 lr=0.0003
+epoch 17, train 7/7, loss=0.3348 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 17, val, loss=0.3349 classification result=0.8575
+Epoch: 17, Time cost: 0.09108161926269531
+epoch 18, train 1/7, loss=0.3525 lr=0.0003
+epoch 18, train 7/7, loss=0.3022 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 18, val, loss=0.3295 classification result=0.8550
+Epoch: 18, Time cost: 0.09100985527038574
+epoch 19, train 1/7, loss=0.3296 lr=0.0003
+epoch 19, train 7/7, loss=0.2732 lr=0.0003
+best epoch 12, best val res=0.8588
+epoch 19, val, loss=0.3294 classification result=0.8606
+Epoch: 19, Time cost: 0.09986257553100586
+epoch 20, train 1/7, loss=0.3002 lr=0.0003
+epoch 20, train 7/7, loss=0.3632 lr=0.0003
+best epoch 19, best val res=0.8606
+epoch 20, val, loss=0.3300 classification result=0.8644
+Epoch: 20, Time cost: 0.1001286506652832
+epoch 21, train 1/7, loss=0.3373 lr=0.0003
+epoch 21, train 7/7, loss=0.3643 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 21, val, loss=0.3280 classification result=0.8606
+Epoch: 21, Time cost: 0.09632444381713867
+epoch 22, train 1/7, loss=0.3232 lr=0.0003
+epoch 22, train 7/7, loss=0.3302 lr=0.0003
+best epoch 20, best val res=0.8644
+epoch 22, val, loss=0.3291 classification result=0.8644
+Epoch: 22, Time cost: 0.10219264030456543
+epoch 23, train 1/7, loss=0.2878 lr=0.0003
+epoch 23, train 7/7, loss=0.3043 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 23, val, loss=0.3274 classification result=0.8594
+Epoch: 23, Time cost: 0.09297513961791992
+epoch 24, train 1/7, loss=0.3280 lr=0.0003
+epoch 24, train 7/7, loss=0.3261 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 24, val, loss=0.3279 classification result=0.8594
+Epoch: 24, Time cost: 0.09183716773986816
+epoch 25, train 1/7, loss=0.3107 lr=0.0003
+epoch 25, train 7/7, loss=0.3973 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 25, val, loss=0.3273 classification result=0.8644
+Epoch: 25, Time cost: 0.10059642791748047
+epoch 26, train 1/7, loss=0.3189 lr=0.0003
+epoch 26, train 7/7, loss=0.2871 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 26, val, loss=0.3305 classification result=0.8588
+Epoch: 26, Time cost: 0.15666890144348145
+epoch 27, train 1/7, loss=0.3252 lr=0.0003
+epoch 27, train 7/7, loss=0.3239 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 27, val, loss=0.3328 classification result=0.8581
+Epoch: 27, Time cost: 0.09488415718078613
+epoch 28, train 1/7, loss=0.2917 lr=0.0003
+epoch 28, train 7/7, loss=0.3470 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 28, val, loss=0.3289 classification result=0.8600
+Epoch: 28, Time cost: 0.0945429801940918
+epoch 29, train 1/7, loss=0.3082 lr=0.0003
+epoch 29, train 7/7, loss=0.3666 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 29, val, loss=0.3303 classification result=0.8631
+Epoch: 29, Time cost: 0.0951993465423584
+epoch 30, train 1/7, loss=0.3040 lr=0.0003
+epoch 30, train 7/7, loss=0.3322 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 30, val, loss=0.3323 classification result=0.8619
+Epoch: 30, Time cost: 0.0941629409790039
+epoch 31, train 1/7, loss=0.3165 lr=0.0003
+epoch 31, train 7/7, loss=0.2977 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 31, val, loss=0.3294 classification result=0.8619
+Epoch: 31, Time cost: 0.09121394157409668
+epoch 32, train 1/7, loss=0.3054 lr=0.0003
+epoch 32, train 7/7, loss=0.2766 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 32, val, loss=0.3303 classification result=0.8631
+Epoch: 32, Time cost: 0.09132766723632812
+epoch 33, train 1/7, loss=0.3156 lr=0.0003
+epoch 33, train 7/7, loss=0.3349 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 33, val, loss=0.3300 classification result=0.8606
+Epoch: 33, Time cost: 0.09523820877075195
+epoch 34, train 1/7, loss=0.3066 lr=0.0003
+epoch 34, train 7/7, loss=0.2943 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 34, val, loss=0.3307 classification result=0.8625
+Epoch: 34, Time cost: 0.09493041038513184
+epoch 35, train 1/7, loss=0.3192 lr=0.0003
+epoch 35, train 7/7, loss=0.3694 lr=0.0003
+best epoch 25, best val res=0.8644
+epoch 35, val, loss=0.3306 classification result=0.8669
+Epoch: 35, Time cost: 0.10277843475341797
+epoch 36, train 1/7, loss=0.2958 lr=0.0003
+epoch 36, train 7/7, loss=0.3272 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 36, val, loss=0.3305 classification result=0.8612
+Epoch: 36, Time cost: 0.09443163871765137
+epoch 37, train 1/7, loss=0.3004 lr=0.0003
+epoch 37, train 7/7, loss=0.2748 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 37, val, loss=0.3311 classification result=0.8638
+Epoch: 37, Time cost: 0.17400217056274414
+epoch 38, train 1/7, loss=0.2778 lr=0.0003
+epoch 38, train 7/7, loss=0.3401 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 38, val, loss=0.3360 classification result=0.8625
+Epoch: 38, Time cost: 0.09128904342651367
+epoch 39, train 1/7, loss=0.3476 lr=0.0003
+epoch 39, train 7/7, loss=0.3033 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 39, val, loss=0.3322 classification result=0.8600
+Epoch: 39, Time cost: 0.0930931568145752
+epoch 40, train 1/7, loss=0.3023 lr=0.0003
+epoch 40, train 7/7, loss=0.3315 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 40, val, loss=0.3325 classification result=0.8631
+Epoch: 40, Time cost: 0.09419798851013184
+epoch 41, train 1/7, loss=0.3038 lr=0.0003
+epoch 41, train 7/7, loss=0.3565 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 41, val, loss=0.3324 classification result=0.8656
+Epoch: 41, Time cost: 0.09612369537353516
+epoch 42, train 1/7, loss=0.3004 lr=0.0003
+epoch 42, train 7/7, loss=0.2526 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 42, val, loss=0.3330 classification result=0.8638
+Epoch: 42, Time cost: 0.09524321556091309
+epoch 43, train 1/7, loss=0.2705 lr=0.0003
+epoch 43, train 7/7, loss=0.2889 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 43, val, loss=0.3349 classification result=0.8644
+Epoch: 43, Time cost: 0.09240555763244629
+epoch 44, train 1/7, loss=0.2954 lr=0.0003
+epoch 44, train 7/7, loss=0.3371 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 44, val, loss=0.3352 classification result=0.8638
+Epoch: 44, Time cost: 0.09401345252990723
+epoch 45, train 1/7, loss=0.3032 lr=0.0003
+epoch 45, train 7/7, loss=0.3086 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 45, val, loss=0.3306 classification result=0.8619
+Epoch: 45, Time cost: 0.09252357482910156
+epoch 46, train 1/7, loss=0.3019 lr=0.0003
+epoch 46, train 7/7, loss=0.2786 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 46, val, loss=0.3334 classification result=0.8631
+Epoch: 46, Time cost: 0.09259939193725586
+epoch 47, train 1/7, loss=0.3181 lr=0.0003
+epoch 47, train 7/7, loss=0.3043 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 47, val, loss=0.3344 classification result=0.8625
+Epoch: 47, Time cost: 0.16303300857543945
+epoch 48, train 1/7, loss=0.3045 lr=0.0003
+epoch 48, train 7/7, loss=0.3407 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 48, val, loss=0.3362 classification result=0.8594
+Epoch: 48, Time cost: 0.09541916847229004
+epoch 49, train 1/7, loss=0.3072 lr=0.0003
+epoch 49, train 7/7, loss=0.2707 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 49, val, loss=0.3352 classification result=0.8631
+Epoch: 49, Time cost: 0.09378552436828613
+epoch 50, train 1/7, loss=0.3489 lr=0.0003
+epoch 50, train 7/7, loss=0.3024 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 50, val, loss=0.3353 classification result=0.8581
+Epoch: 50, Time cost: 0.0911705493927002
+epoch 51, train 1/7, loss=0.2923 lr=0.0003
+epoch 51, train 7/7, loss=0.2830 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 51, val, loss=0.3358 classification result=0.8600
+Epoch: 51, Time cost: 0.09154057502746582
+epoch 52, train 1/7, loss=0.3063 lr=0.0003
+epoch 52, train 7/7, loss=0.2922 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 52, val, loss=0.3352 classification result=0.8606
+Epoch: 52, Time cost: 0.09163427352905273
+epoch 53, train 1/7, loss=0.3039 lr=0.0003
+epoch 53, train 7/7, loss=0.3227 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 53, val, loss=0.3341 classification result=0.8612
+Epoch: 53, Time cost: 0.0911102294921875
+epoch 54, train 1/7, loss=0.2877 lr=0.0003
+epoch 54, train 7/7, loss=0.3217 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 54, val, loss=0.3345 classification result=0.8638
+Epoch: 54, Time cost: 0.09406828880310059
+epoch 55, train 1/7, loss=0.2761 lr=0.0003
+epoch 55, train 7/7, loss=0.2571 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 55, val, loss=0.3357 classification result=0.8656
+Epoch: 55, Time cost: 0.09299135208129883
+epoch 56, train 1/7, loss=0.3225 lr=0.0003
+epoch 56, train 7/7, loss=0.2483 lr=0.0003
+best epoch 35, best val res=0.8669
+epoch 56, val, loss=0.3373 classification result=0.8625
+Epoch: 56, Time cost: 0.09439539909362793
+best epoch 35, best val res=0.8669
+Test: loss=0.3249
+[Accuracy]=0.8685
+[Avg_Recall]=0.7327
+[Avg_Precision]=0.8271
+[F1]=0.6092
+[LogLoss]=0.3249
+[AUC]=0.8704
+{'model': {'d': 192, 'd_hidden_factor': 2.0, 'hidden_dropout': 0.3, 'n_layers': 2, 'residual_dropout': 0.0, 'activation': 'relu', 'normalization': 'batchnorm'}, 'training': {'lr': 0.0003, 'weight_decay': 1e-05, 'n_bins': 2}, 'general': {}}
+epoch 0, train 1/7, loss=0.7571 lr=0.0003
+epoch 0, train 7/7, loss=0.5819 lr=0.0003
+best epoch 0, best val res=0.0000
+epoch 0, val, loss=0.6218 classification result=0.6869
+Epoch: 0, Time cost: 0.16268229484558105
+epoch 1, train 1/7, loss=0.5577 lr=0.0003
+epoch 1, train 7/7, loss=0.4697 lr=0.0003
+best epoch 0, best val res=0.6869
+epoch 1, val, loss=0.5170 classification result=0.7981
+Epoch: 1, Time cost: 0.0980367660522461
+epoch 2, train 1/7, loss=0.4709 lr=0.0003
+epoch 2, train 7/7, loss=0.4607 lr=0.0003
+best epoch 1, best val res=0.7981
+epoch 2, val, loss=0.4510 classification result=0.8425
+Epoch: 2, Time cost: 0.09948253631591797
+epoch 3, train 1/7, loss=0.4268 lr=0.0003
+epoch 3, train 7/7, loss=0.3497 lr=0.0003
+best epoch 2, best val res=0.8425
+epoch 3, val, loss=0.4105 classification result=0.8475
+Epoch: 3, Time cost: 0.09822344779968262
+epoch 4, train 1/7, loss=0.3954 lr=0.0003
+epoch 4, train 7/7, loss=0.3658 lr=0.0003
+best epoch 3, best val res=0.8475
+epoch 4, val, loss=0.3901 classification result=0.8419
+Epoch: 4, Time cost: 0.09337043762207031
+epoch 5, train 1/7, loss=0.3947 lr=0.0003
+epoch 5, train 7/7, loss=0.3463 lr=0.0003
+best epoch 3, best val res=0.8475
+epoch 5, val, loss=0.3763 classification result=0.8462
+Epoch: 5, Time cost: 0.09850549697875977
+epoch 6, train 1/7, loss=0.3525 lr=0.0003
+epoch 6, train 7/7, loss=0.3426 lr=0.0003
+best epoch 3, best val res=0.8475
+epoch 6, val, loss=0.3633 classification result=0.8488
+Epoch: 6, Time cost: 0.0989692211151123
+epoch 7, train 1/7, loss=0.3646 lr=0.0003
+epoch 7, train 7/7, loss=0.3125 lr=0.0003
+best epoch 6, best val res=0.8488
+epoch 7, val, loss=0.3506 classification result=0.8488
+Epoch: 7, Time cost: 0.09795713424682617
+epoch 8, train 1/7, loss=0.3512 lr=0.0003
+epoch 8, train 7/7, loss=0.3868 lr=0.0003
+best epoch 7, best val res=0.8488
+epoch 8, val, loss=0.3432 classification result=0.8481
+Epoch: 8, Time cost: 0.09197068214416504
+epoch 9, train 1/7, loss=0.3138 lr=0.0003
+epoch 9, train 7/7, loss=0.2980 lr=0.0003
+best epoch 7, best val res=0.8488
+epoch 9, val, loss=0.3413 classification result=0.8506
+Epoch: 9, Time cost: 0.09777712821960449
+epoch 10, train 1/7, loss=0.3352 lr=0.0003
+epoch 10, train 7/7, loss=0.2996 lr=0.0003
+best epoch 9, best val res=0.8506
+epoch 10, val, loss=0.3393 classification result=0.8550
+Epoch: 10, Time cost: 0.16211724281311035
+epoch 11, train 1/7, loss=0.3321 lr=0.0003
+epoch 11, train 7/7, loss=0.3684 lr=0.0003
+best epoch 10, best val res=0.8550
+epoch 11, val, loss=0.3387 classification result=0.8538
+Epoch: 11, Time cost: 0.0936124324798584
+epoch 12, train 1/7, loss=0.3476 lr=0.0003
+epoch 12, train 7/7, loss=0.3420 lr=0.0003
+best epoch 10, best val res=0.8550
+epoch 12, val, loss=0.3338 classification result=0.8562
+Epoch: 12, Time cost: 0.10069656372070312
+epoch 13, train 1/7, loss=0.3058 lr=0.0003
+epoch 13, train 7/7, loss=0.3598 lr=0.0003
+best epoch 12, best val res=0.8562
+epoch 13, val, loss=0.3328 classification result=0.8606
+Epoch: 13, Time cost: 0.09810543060302734
+epoch 14, train 1/7, loss=0.3144 lr=0.0003
+epoch 14, train 7/7, loss=0.2991 lr=0.0003
+best epoch 13, best val res=0.8606
+epoch 14, val, loss=0.3348 classification result=0.8562
+Epoch: 14, Time cost: 0.09389019012451172
+epoch 15, train 1/7, loss=0.3345 lr=0.0003
+epoch 15, train 7/7, loss=0.2846 lr=0.0003
+best epoch 13, best val res=0.8606
+epoch 15, val, loss=0.3337 classification result=0.8556
+Epoch: 15, Time cost: 0.09203577041625977
+epoch 16, train 1/7, loss=0.3239 lr=0.0003
+epoch 16, train 7/7, loss=0.3254 lr=0.0003
+best epoch 13, best val res=0.8606
+epoch 16, val, loss=0.3342 classification result=0.8512
+Epoch: 16, Time cost: 0.09198355674743652
+epoch 17, train 1/7, loss=0.3364 lr=0.0003
+epoch 17, train 7/7, loss=0.3123 lr=0.0003
+best epoch 13, best val res=0.8606
+epoch 17, val, loss=0.3329 classification result=0.8600
+Epoch: 17, Time cost: 0.09110856056213379
+epoch 18, train 1/7, loss=0.3458 lr=0.0003
+epoch 18, train 7/7, loss=0.3621 lr=0.0003
+best epoch 13, best val res=0.8606
+epoch 18, val, loss=0.3331 classification result=0.8594
+Epoch: 18, Time cost: 0.09141349792480469
+epoch 19, train 1/7, loss=0.3078 lr=0.0003
+epoch 19, train 7/7, loss=0.3328 lr=0.0003
+best epoch 13, best val res=0.8606
+epoch 19, val, loss=0.3313 classification result=0.8606
+Epoch: 19, Time cost: 0.10069632530212402
+epoch 20, train 1/7, loss=0.3417 lr=0.0003
+epoch 20, train 7/7, loss=0.4023 lr=0.0003
+best epoch 19, best val res=0.8606
+epoch 20, val, loss=0.3328 classification result=0.8562
+Epoch: 20, Time cost: 0.09480118751525879
+epoch 21, train 1/7, loss=0.3365 lr=0.0003
+epoch 21, train 7/7, loss=0.3576 lr=0.0003
+best epoch 19, best val res=0.8606
+epoch 21, val, loss=0.3313 classification result=0.8619
+Epoch: 21, Time cost: 0.16681194305419922
+epoch 22, train 1/7, loss=0.3326 lr=0.0003
+epoch 22, train 7/7, loss=0.3435 lr=0.0003
+best epoch 21, best val res=0.8619
+epoch 22, val, loss=0.3302 classification result=0.8644
+Epoch: 22, Time cost: 0.09758186340332031
+epoch 23, train 1/7, loss=0.3131 lr=0.0003
+epoch 23, train 7/7, loss=0.3096 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 23, val, loss=0.3303 classification result=0.8631
+Epoch: 23, Time cost: 0.0929710865020752
+epoch 24, train 1/7, loss=0.3020 lr=0.0003
+epoch 24, train 7/7, loss=0.3189 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 24, val, loss=0.3309 classification result=0.8612
+Epoch: 24, Time cost: 0.09124922752380371
+epoch 25, train 1/7, loss=0.3020 lr=0.0003
+epoch 25, train 7/7, loss=0.2739 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 25, val, loss=0.3337 classification result=0.8600
+Epoch: 25, Time cost: 0.0917668342590332
+epoch 26, train 1/7, loss=0.2904 lr=0.0003
+epoch 26, train 7/7, loss=0.2844 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 26, val, loss=0.3310 classification result=0.8619
+Epoch: 26, Time cost: 0.09486913681030273
+epoch 27, train 1/7, loss=0.3343 lr=0.0003
+epoch 27, train 7/7, loss=0.3059 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 27, val, loss=0.3291 classification result=0.8631
+Epoch: 27, Time cost: 0.09576988220214844
+epoch 28, train 1/7, loss=0.3365 lr=0.0003
+epoch 28, train 7/7, loss=0.3670 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 28, val, loss=0.3321 classification result=0.8594
+Epoch: 28, Time cost: 0.09271097183227539
+epoch 29, train 1/7, loss=0.3309 lr=0.0003
+epoch 29, train 7/7, loss=0.3424 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 29, val, loss=0.3336 classification result=0.8619
+Epoch: 29, Time cost: 0.0920705795288086
+epoch 30, train 1/7, loss=0.3145 lr=0.0003
+epoch 30, train 7/7, loss=0.3351 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 30, val, loss=0.3318 classification result=0.8606
+Epoch: 30, Time cost: 0.0940544605255127
+epoch 31, train 1/7, loss=0.2706 lr=0.0003
+epoch 31, train 7/7, loss=0.2671 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 31, val, loss=0.3294 classification result=0.8619
+Epoch: 31, Time cost: 0.0924224853515625
+epoch 32, train 1/7, loss=0.3077 lr=0.0003
+epoch 32, train 7/7, loss=0.2990 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 32, val, loss=0.3303 classification result=0.8625
+Epoch: 32, Time cost: 0.1629810333251953
+epoch 33, train 1/7, loss=0.3021 lr=0.0003
+epoch 33, train 7/7, loss=0.3230 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 33, val, loss=0.3323 classification result=0.8619
+Epoch: 33, Time cost: 0.10096359252929688
+epoch 34, train 1/7, loss=0.2743 lr=0.0003
+epoch 34, train 7/7, loss=0.3520 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 34, val, loss=0.3327 classification result=0.8625
+Epoch: 34, Time cost: 0.09946393966674805
+epoch 35, train 1/7, loss=0.2954 lr=0.0003
+epoch 35, train 7/7, loss=0.3443 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 35, val, loss=0.3321 classification result=0.8594
+Epoch: 35, Time cost: 0.09747648239135742
+epoch 36, train 1/7, loss=0.2964 lr=0.0003
+epoch 36, train 7/7, loss=0.2938 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 36, val, loss=0.3303 classification result=0.8625
+Epoch: 36, Time cost: 0.09352993965148926
+epoch 37, train 1/7, loss=0.3083 lr=0.0003
+epoch 37, train 7/7, loss=0.2969 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 37, val, loss=0.3320 classification result=0.8600
+Epoch: 37, Time cost: 0.0972452163696289
+epoch 38, train 1/7, loss=0.3161 lr=0.0003
+epoch 38, train 7/7, loss=0.2509 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 38, val, loss=0.3336 classification result=0.8600
+Epoch: 38, Time cost: 0.09703564643859863
+epoch 39, train 1/7, loss=0.2979 lr=0.0003
+epoch 39, train 7/7, loss=0.3093 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 39, val, loss=0.3346 classification result=0.8588
+Epoch: 39, Time cost: 0.0976102352142334
+epoch 40, train 1/7, loss=0.2762 lr=0.0003
+epoch 40, train 7/7, loss=0.3562 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 40, val, loss=0.3329 classification result=0.8606
+Epoch: 40, Time cost: 0.09494853019714355
+epoch 41, train 1/7, loss=0.3098 lr=0.0003
+epoch 41, train 7/7, loss=0.3534 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 41, val, loss=0.3346 classification result=0.8575
+Epoch: 41, Time cost: 0.09424805641174316
+epoch 42, train 1/7, loss=0.3135 lr=0.0003
+epoch 42, train 7/7, loss=0.3299 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 42, val, loss=0.3318 classification result=0.8612
+Epoch: 42, Time cost: 0.09290528297424316
+epoch 43, train 1/7, loss=0.3291 lr=0.0003
+epoch 43, train 7/7, loss=0.3198 lr=0.0003
+best epoch 22, best val res=0.8644
+epoch 43, val, loss=0.3324 classification result=0.8600
+Epoch: 43, Time cost: 0.1629047393798828
+best epoch 22, best val res=0.8644
+Test: loss=0.3254
+[Accuracy]=0.8650
+[Avg_Recall]=0.7168
+[Avg_Precision]=0.8292
+[F1]=0.5846
+[LogLoss]=0.3254
+[AUC]=0.8720
+resnet: 15 Trials
+Accuracy Results: 0.86500000, 0.86750000, 0.86600000, 0.86550000, 0.86500000, 0.86500000, 0.86800000, 0.86300000, 0.86600000, 0.87050000, 0.86250000, 0.86550000, 0.86700000, 0.86850000, 0.86500000
+Accuracy MEAN = 0.86600000 ± 0.00199165
+Avg_Recall Results: 0.72409698, 0.73115411, 0.72746861, 0.73081325, 0.72409698, 0.72226772, 0.73329724, 0.71735372, 0.72746861, 0.72572033, 0.74082017, 0.73630102, 0.71895007, 0.73269649, 0.71677995
+Avg_Recall MEAN = 0.72728568 ± 0.00675185
+Avg_Precision Results: 0.82221641, 0.82492347, 0.82283164, 0.81838916, 0.82221641, 0.82385527, 0.82484070, 0.82100643, 0.82283164, 0.84155962, 0.80283329, 0.81436932, 0.83486704, 0.82709152, 0.82919351
+Avg_Precision MEAN = 0.82353503 ± 0.00837303
+F1 Results: 0.59459459, 0.60624071, 0.60000000, 0.60382916, 0.59459459, 0.59214502, 0.60946746, 0.58358663, 0.60000000, 0.60215054, 0.61322082, 0.61070912, 0.58950617, 0.60921248, 0.58461538
+F1 MEAN = 0.59959151 ± 0.00915078
+LogLoss Results: 0.32736987, 0.32545682, 0.32811567, 0.32749632, 0.32664466, 0.32724629, 0.32793789, 0.32611621, 0.32686958, 0.32697636, 0.33326568, 0.32796629, 0.33243189, 0.32494174, 0.32536902
+LogLoss MEAN = 0.32761362 ± 0.00226305
+AUC Results: 0.87031099, 0.87001485, 0.86765039, 0.86866836, 0.87033258, 0.86804061, 0.86794344, 0.87167753, 0.86912490, 0.86907709, 0.86483710, 0.86780155, 0.86815012, 0.87043901, 0.87203382
+AUC MEAN = 0.86907349 ± 0.00175813
+Time Results: 4.70616341, 5.61617899, 7.17676425, 6.41952419, 4.22638440, 6.18453860, 5.68459105, 4.18130183, 4.98593020, 4.13905501, 8.32953644, 6.86644506, 3.55899596, 5.80985308, 4.54102707
+Time MEAN = 5.49508597 ± 1.28937002
+Mean Loss: 3.27613619e-01
+-------------------- GPU info --------------------
+1 GPU Available.
+GPU 0: NVIDIA RTX A6000
+  Total Memory:          48676.75 MB
+  Multi Processor Count: 84
+  Compute Capability:    8.6
+--------------------------------------------------

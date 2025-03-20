@@ -1,0 +1,168 @@
+using gpu: 7
+{'batch_size': 1024,
+ 'cat_min_frequency': 0.0,
+ 'cat_nan_policy': 'new',
+ 'cat_policy': 'indices',
+ 'config': {'general': {'sample_size': 3000}, 'model': {}, 'training': {}},
+ 'dataset': 'Bank_Customer_Churn_Dataset',
+ 'dataset_path': 'data',
+ 'evaluate_option': 'best-val',
+ 'gpu': '7',
+ 'max_epoch': 200,
+ 'model_path': 'results_model',
+ 'model_type': 'tabpfn',
+ 'n_bins': 2,
+ 'n_trials': 100,
+ 'normalization': 'none',
+ 'num_nan_policy': 'mean',
+ 'num_policy': 'none',
+ 'retune': False,
+ 'save_path': 'results_model/Bank_Customer_Churn_Dataset-tabpfn/Epoch200BZ1024-Norm-none-Nan-mean-new-Cat-indices',
+ 'seed': 0,
+ 'seed_num': 15,
+ 'tune': False,
+ 'use_float': False,
+ 'workers': 0}
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4702
+[Accuracy]=0.8580
+[Avg_Recall]=0.6868
+[Avg_Precision]=0.8349
+[F1]=0.5329
+[LogLoss]=0.3518
+[AUC]=0.8512
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4684
+[Accuracy]=0.8600
+[Avg_Recall]=0.6999
+[Avg_Precision]=0.8271
+[F1]=0.5556
+[LogLoss]=0.3471
+[AUC]=0.8530
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4706
+[Accuracy]=0.8635
+[Avg_Recall]=0.7195
+[Avg_Precision]=0.8209
+[F1]=0.5870
+[LogLoss]=0.3419
+[AUC]=0.8577
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4749
+[Accuracy]=0.8550
+[Avg_Recall]=0.7041
+[Avg_Precision]=0.8035
+[F1]=0.5579
+[LogLoss]=0.3458
+[AUC]=0.8492
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4717
+[Accuracy]=0.8555
+[Avg_Recall]=0.6806
+[Avg_Precision]=0.8312
+[F1]=0.5207
+[LogLoss]=0.3510
+[AUC]=0.8538
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4688
+[Accuracy]=0.8600
+[Avg_Recall]=0.6871
+[Avg_Precision]=0.8447
+[F1]=0.5349
+[LogLoss]=0.3464
+[AUC]=0.8541
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4686
+[Accuracy]=0.8570
+[Avg_Recall]=0.6907
+[Avg_Precision]=0.8249
+[F1]=0.5387
+[LogLoss]=0.3528
+[AUC]=0.8485
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4706
+[Accuracy]=0.8590
+[Avg_Recall]=0.6892
+[Avg_Precision]=0.8363
+[F1]=0.5377
+[LogLoss]=0.3485
+[AUC]=0.8583
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4704
+[Accuracy]=0.8565
+[Avg_Recall]=0.6822
+[Avg_Precision]=0.8340
+[F1]=0.5240
+[LogLoss]=0.3481
+[AUC]=0.8558
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4774
+[Accuracy]=0.8555
+[Avg_Recall]=0.6779
+[Avg_Precision]=0.8354
+[F1]=0.5159
+[LogLoss]=0.3525
+[AUC]=0.8460
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4658
+[Accuracy]=0.8550
+[Avg_Recall]=0.6886
+[Avg_Precision]=0.8185
+[F1]=0.5338
+[LogLoss]=0.3476
+[AUC]=0.8576
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4676
+[Accuracy]=0.8635
+[Avg_Recall]=0.7085
+[Avg_Precision]=0.8321
+[F1]=0.5714
+[LogLoss]=0.3427
+[AUC]=0.8526
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4668
+[Accuracy]=0.8585
+[Avg_Recall]=0.6853
+[Avg_Precision]=0.8397
+[F1]=0.5307
+[LogLoss]=0.3539
+[AUC]=0.8527
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4737
+[Accuracy]=0.8555
+[Avg_Recall]=0.6870
+[Avg_Precision]=0.8226
+[F1]=0.5316
+[LogLoss]=0.3465
+[AUC]=0.8527
+{'model': {}, 'training': {'n_bins': 2}, 'general': {'sample_size': 3000}}
+Test: loss=0.4704
+[Accuracy]=0.8555
+[Avg_Recall]=0.6697
+[Avg_Precision]=0.8498
+[F1]=0.5009
+[LogLoss]=0.3498
+[AUC]=0.8554
+tabpfn: 15 Trials
+Accuracy Results: 0.85800000, 0.86000000, 0.86350000, 0.85500000, 0.85550000, 0.86000000, 0.85700000, 0.85900000, 0.85650000, 0.85550000, 0.85500000, 0.86350000, 0.85850000, 0.85550000, 0.85550000
+Accuracy MEAN = 0.85786667 ± 0.00277769
+Avg_Recall Results: 0.68677614, 0.69992180, 0.71949685, 0.70410009, 0.68063364, 0.68711701, 0.69072154, 0.68923315, 0.68217601, 0.67788975, 0.68855142, 0.70852131, 0.68526076, 0.68703603, 0.66965810
+Avg_Recall MEAN = 0.69047291 ± 0.01230056
+Avg_Precision Results: 0.83489169, 0.82709812, 0.82089320, 0.80350643, 0.83121974, 0.84467647, 0.82486713, 0.83632820, 0.83404792, 0.83537366, 0.81853951, 0.83209285, 0.83970429, 0.82259910, 0.84984861
+Avg_Precision MEAN = 0.83037913 ± 0.01102184
+F1 Results: 0.53289474, 0.55555556, 0.58698941, 0.55792683, 0.52072968, 0.53488372, 0.53870968, 0.53770492, 0.52404643, 0.51591290, 0.53376206, 0.57142857, 0.53067993, 0.53160454, 0.50086356
+F1 MEAN = 0.53824617 ± 0.02118259
+LogLoss Results: 0.35179633, 0.34713011, 0.34194002, 0.34583875, 0.35096495, 0.34636962, 0.35282008, 0.34854579, 0.34812561, 0.35254041, 0.34760930, 0.34267276, 0.35391535, 0.34648015, 0.34978076
+LogLoss MEAN = 0.34843533 ± 0.00344806
+AUC Results: 0.85121022, 0.85302714, 0.85766660, 0.84923753, 0.85379524, 0.85411606, 0.84847251, 0.85829589, 0.85577719, 0.84599237, 0.85757560, 0.85261687, 0.85268319, 0.85269707, 0.85535767
+AUC MEAN = 0.85323474 ± 0.00339005
+Time Results: 0.00088382, 0.00055242, 0.00054431, 0.00056767, 0.00054121, 0.00055265, 0.00054908, 0.00052285, 0.00054526, 0.00053644, 0.00053239, 0.00053906, 0.00053549, 0.00065112, 0.00054216
+Time MEAN = 0.00057306 ± 0.00008785
+Mean Loss: 4.70396596e-01
+-------------------- GPU info --------------------
+1 GPU Available.
+GPU 0: NVIDIA RTX A6000
+  Total Memory:          48676.75 MB
+  Multi Processor Count: 84
+  Compute Capability:    8.6
+--------------------------------------------------

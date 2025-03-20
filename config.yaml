@@ -1,0 +1,67 @@
+# classical model: [LogReg, NCM, LogReg, NCM, RandomForest, 
+#                   xgboost, catboost, lightgbm, svm, knn, 
+#                   NaiveBayes, dummy, LinearRegression]
+# deep_model:      [mlp, resnet, ftt, node, autoint, tabpfn, 
+#                   tangos, saint, tabcaps, tabnet, snn, ptarl, 
+#                   danets, dcn2, tabtransformer, dnnr, switchtab, 
+#                   grownet, tabr, modernNCA, hyperfast, bishop, 
+#                   realmlp, protogate, mlp_plr, excelformer, grande,
+#                   amformer, tabptm, trompt, tabm, PFN-v2, t2gformer]
+# --------------------------------------------------------------------------------
+# model constraints:
+# ------ dataset constraints ------
+# - classification only: [tabpfn, ncm, protogate, tabcaps]
+# ------ cat policy ------
+# - better not with cat_indice: [classical model, danets, dnnr, excelformer, mlp, node, protogate,
+#                                resnet, switchtab, tabcaps, tabnet, tangos]
+# - better with cat_indice: [tabpfn, PFN-v2, realmlp, catboost, tabtransformer,
+#                            amformer, autoint, bishop, dcn2, ftt, grande, 
+#                            grownet, hyperfast, ptarl, saint, snn, t2gformer,
+#                            tabm, trompt]
+# - use tabr_ohe: [mlp_plr, modernNCA, tabr]
+# - use ohe: [tabptm]
+# ------ num policy ------
+# - better not with num_binning: [tabpfn, PFN-v2, hyperfast, modernNCA, tabptm, tabr]
+# ------ norm policy ------
+# - better not with norm: [tabpfn, PFN-v2, hyperfast]
+# - standard norm: [tabptm]
+# --------------------------------------------------------------------------------
+# regression dataset: [cpu_small]
+# classification dataset: [bank]
+# --------------------------------------------------------------------------------
+dataset:
+  # cls
+  - bank 
+  - Bank_Customer_Churn_Dataset
+  - Fitness_Club_c
+  - heloc
+  - ringnorm
+  # reg
+  # - cpu_small
+  # - CPS1988
+  # - CookbookReviews
+  # - boston
+
+transform_list:
+  - nan:
+      policy: mean # mean, median
+  - label: {}
+  # - num_binning:
+  #     policy: Q
+  # - num_bin: {}
+  - cat_indice: {}
+  - norm: 
+      policy: standard # none, standard, minmax, robust, power, quantile, maxabs
+  
+model_type:
+  - xgboost
+  - lightgbm
+  - mlp
+  - resnet
+  - realmlp
+  - catboost
+  # - tabpfn
+  # - PFN-v2
+
+seed_num: 5
+
