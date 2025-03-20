@@ -74,19 +74,20 @@ class DataTransformPipeline:
         """
         Calls transform(...) on each transform in sequence, returning the final result.
         """
-        N_data = N_data.copy() if N_data is not None else None
-        C_data = C_data.copy() if C_data is not None else None
-        y_data = y_data.copy() if y_data is not None else None
         for transform_obj in self.pipeline:
             N_data, C_data, y_data = transform_obj.transform(N_data, C_data, y_data, self.shared_state)
         return N_data, C_data, y_data
 
     def fit_transform(self, N_data, C_data, y_data=None):
         """
-        Convenience method: calls fit() then transform() in order.
+        Convenience method: fit on the data, then transform it in place.
         """
-        self.fit(N_data, C_data, y_data)
-        return self.transform(N_data, C_data, y_data)
+        for transform_obj in self.pipeline:
+            # 1) Fit on the current state of the data
+            transform_obj.fit(N_data, C_data, y_data, self.shared_state)
+            # 2) Transform the data in place
+            N_data, C_data, y_data = transform_obj.transform(N_data, C_data, y_data, self.shared_state)
+        return N_data, C_data, y_data
 
     # def save(self, path):
     #     """

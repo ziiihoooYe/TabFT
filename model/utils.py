@@ -274,57 +274,6 @@ def merge_sampled_parameters(config, sampled_parameters):
             config[k] = v
 
 
-def show_results_classical(args,info,metric_name,results_list,time_list):
-    """
-    Show the results for classical models.
-
-    :args: argparse.Namespace, arguments
-    :info: dict, information about the dataset
-    :metric_name: list, names of the metrics
-    :results_list: list, list of results
-    :time_list: list, list of time
-    """
-    metric_arrays = {name: [] for name in metric_name}  
-
-
-    for result in results_list:
-        for idx, name in enumerate(metric_name):
-            metric_arrays[name].append(result[idx])
-
-    metric_arrays['Time'] = time_list
-    metric_name = metric_name + ('Time', )
-
-    mean_metrics = {name: np.mean(metric_arrays[name]) for name in metric_name}
-    std_metrics = {name: np.std(metric_arrays[name]) for name in metric_name}
-    
-
-    # Printing results
-    print(f'{args.model_type}: {args.seed_num} Trials')
-    for name in metric_name:
-        if info['task_type'] == 'regression' and name != 'Time':
-            formatted_results = ', '.join(['{:.8e}'.format(e) for e in metric_arrays[name]])
-            print(f'{name} Results: {formatted_results}')
-            print(f'{name} MEAN = {mean_metrics[name]:.8e} ± {std_metrics[name]:.8e}')
-        else:
-            formatted_results = ', '.join(['{:.8f}'.format(e) for e in metric_arrays[name]])
-            print(f'{name} Results: {formatted_results}')
-            print(f'{name} MEAN = {mean_metrics[name]:.8f} ± {std_metrics[name]:.8f}')
-
-    print('-' * 20, 'GPU info', '-' * 20)
-    if torch.cuda.is_available():
-        num_gpus = torch.cuda.device_count()
-        print(f"{num_gpus} GPU Available.")
-        for i in range(num_gpus):
-            gpu_info = torch.cuda.get_device_properties(i)
-            print(f"GPU {i}: {gpu_info.name}")
-            print(f"  Total Memory:          {gpu_info.total_memory / 1024**2} MB")
-            print(f"  Multi Processor Count: {gpu_info.multi_processor_count}")
-            print(f"  Compute Capability:    {gpu_info.major}.{gpu_info.minor}")
-    else:
-        print("CUDA is unavailable.")
-    print('-' * 50)
-
-
 def fix_recipe(args, constraints):
     """
     If a constraint is violated, override the value in `args` with the first valid option

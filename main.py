@@ -6,15 +6,19 @@ from model.lib.data import get_dataset
 import warnings
 warnings.filterwarnings("ignore")
 import sys
+import datetime
 expand_keys = ['dataset', 'model_type']
 
 def main():
     
+    ### ----------- Load Config/Prepare Logger ------------
     config_file = 'config.yaml'
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+    log_filename = f"results_{timestamp}.log"
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        filename='training_results.log',
+        filename=log_filename,
         filemode='w'
     )
     logger = logging.getLogger(__name__)
@@ -30,12 +34,16 @@ def main():
         print(f"Dataset: {args.dataset}")
         print(f"Model: {args.model_type}")
         
+        ### ----------- Tuning Hyperparameters ------------
         train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
         if args.tune:
             args = tune_hyper_parameters(args,opt_space,train_val_data,info)
-        ## Training Stage over different random seeds
-        
+
+        ### ----------- Training and Testing ------------
         for seed in tqdm(range(args.seed_num)):
+            # get dataset
+            train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
+            
             args.seed = seed    # update seed  
             set_seeds(args.seed)
             method = get_method(args.model_type)(args, info['task_type'] == 'regression')
@@ -46,6 +54,7 @@ def main():
             results_list.append(vres)
             time_list.append(time_cost)
 
+        ### ----------- Show Results ------------
         mean_metrics, std_metrics, metric_arrays, m_names = show_results(
             args,
             info,
