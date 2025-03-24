@@ -17,7 +17,6 @@ BINCLASS = 'binclass'
 MULTICLASS = 'multiclass'
 REGRESSION = 'regression'
 THIS_PATH = os.path.dirname(__file__)
-DATA_PATH = os.path.abspath(os.path.join(THIS_PATH, '..', '..', '..'))
 
 ArrayDict = ty.Dict[str, np.ndarray]
 
@@ -83,7 +82,7 @@ def dataname_to_numpy(dataset_name, dataset_path):
     :param dataset_path: str
     :return: Tuple[ArrayDict, ArrayDict, ArrayDict, Dict[str, Any]]
     """
-    dir_ = Path(os.path.join(DATA_PATH, dataset_path, dataset_name))
+    dir_ = Path(os.path.join(dataset_path, dataset_name))
 
     def load(item) -> ArrayDict:
         return {

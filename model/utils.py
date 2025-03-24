@@ -910,3 +910,28 @@ def get_method(_model):
         return LinearRegressionMethod
     else:
         raise NotImplementedError("Model \"" + _model + "\" not yet implemented")
+
+def get_logger(logger_name: str, log_file: str = None, level: int = __import__('logging').INFO):
+    import logging
+    import datetime
+    if log_file is None:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        log_file = f"results_{timestamp}.log"
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(level)
+    # Clear any existing handlers to avoid duplicate logs
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    # Create console handler for printing to the terminal
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(level)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    
+    return logger

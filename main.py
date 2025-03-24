@@ -1,5 +1,5 @@
 from tqdm import tqdm
-from model.utils import (load_recipes_from_yaml, tune_hyper_parameters,
+from model.utils import (load_recipes_from_yaml, tune_hyper_parameters, get_logger,
                          set_seeds, get_method, show_results, show_cross_dataset_results)
 import logging
 from model.lib.data import get_dataset
@@ -13,15 +13,7 @@ def main():
     
     ### ----------- Load Config/Prepare Logger ------------
     config_file = 'config.yaml'
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-    log_filename = f"results_{timestamp}.log"
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        filename=log_filename,
-        filemode='w'
-    )
-    logger = logging.getLogger(__name__)
+    logger = get_logger(__name__)
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
     recipes = load_recipes_from_yaml(config_file, expand_keys)

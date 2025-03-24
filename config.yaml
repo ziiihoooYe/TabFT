@@ -43,23 +43,33 @@ dataset:
   # - boston
 
 transform_list:
+  # ----------------------------------------------------------------
+  # standard proprocess: nan, label
   - nan:
       policy: mean # mean, median
   - label: {}
+  # ----------------------------------------------------------------
+  # numerical encoding process
   - num_binning:
       policy: Q
   - num_bin: {}
-  - cat_indice: {}
+  # ----------------------------------------------------------------
+  # categorical encoding process
+  # - cat_indice: {}
+  # - cat_targetindice: {}
+  - cat_target: {}
+  # ----------------------------------------------------------------
+  # normalization process
   - norm: 
       policy: standard # none, standard, minmax, robust, power, quantile, maxabs
   
 model_type:
-  - xgboost
-  - lightgbm
-  - mlp
+  # - xgboost
+  # - lightgbm
+  # - mlp
   - resnet
-  - realmlp
-  - catboost
+  # - realmlp
+  # - catboost
   # - tabpfn
   # - PFN-v2
 

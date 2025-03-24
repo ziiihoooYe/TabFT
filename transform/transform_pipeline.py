@@ -56,6 +56,8 @@ class DataTransformPipeline:
                 pipeline.append(TargetTransform(transform_config))
             elif transform_name == 'cat_catboost':
                 pipeline.append(CatBoostTransform(transform_config))
+            elif transform_name == 'cat_targetindice':
+                pipeline.append(TargetRankingIndiceTransform(transform_config))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline

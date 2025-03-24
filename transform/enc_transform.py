@@ -406,3 +406,73 @@ class CatBoostTransform(BaseTransform):
             arr = self.encoder_.transform(C_data[part].astype(str)).values
             C_data[part] = arr
         return N_data, C_data, y_data 
+    
+
+class TargetRankingIndiceTransform(BaseTransform):
+    """
+    Indice transform that ranks categories based on their mean target values.
+    """
+    def __init__(self, args):
+        super().__init__()
+        self.unknown_index = args.get('unknown_index', -1)
+        self.mapping_ = {}
+
+    def fit(self, N_data, C_data, y_data=None, shared_state=None):
+        """
+        Have to use y_data to compute the mean of each category.
+        """
+        if C_data and 'train' in C_data and y_data and 'train' in y_data:
+            X_train = C_data['train']  # shape = (n_samples, n_features)
+            y_train = y_data['train']  # shape = (n_samples, )
+            if len(X_train.shape) != 2:
+                raise ValueError("C_data['train'] must be a 2D numpy array.")
+            if len(y_train) != X_train.shape[0]:
+                raise ValueError("X_train and y_train must have the same number of samples.")
+            
+            n_samples, n_features = X_train.shape
+            self.mapping_ = {}
+
+            for col_idx in range(n_features):
+                cat_to_sum = {}
+                cat_to_count = {}
+                for row_idx in range(n_samples):
+                    cat_val = X_train[row_idx, col_idx]
+                    cat_to_sum[cat_val] = cat_to_sum.get(cat_val, 0.0) + y_train[row_idx]
+                    cat_to_count[cat_val] = cat_to_count.get(cat_val, 0) + 1
+
+                cat_means = []
+                for cat_val, total_sum in cat_to_sum.items():
+                    mean_val = total_sum / cat_to_count[cat_val]
+                    cat_means.append((cat_val, mean_val))
+
+                # Sort categories by their mean values
+                cat_means.sort(key=lambda x: x[1])
+
+                # Create a rank mapping
+                rank_map = {}
+                for rank, (cat_val, _) in enumerate(cat_means):
+                    rank_map[cat_val] = rank
+
+                self.mapping_[col_idx] = rank_map
+
+        return self
+
+    def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        if not C_data or not self.mapping_:
+            return N_data, C_data, y_data
+
+        for part_name, data in C_data.items():
+            if len(data.shape) != 2:
+                raise ValueError(f"C_data[{part_name}] must be a 2D numpy array")
+            n_samples, n_features = data.shape
+
+            transformed = np.empty((n_samples, n_features), dtype=np.int64)
+            for col_idx in range(n_features):
+                rank_map = self.mapping_.get(col_idx, {})
+                for i in range(n_samples):
+                    cat_val = data[i, col_idx]
+                    transformed[i, col_idx] = rank_map.get(cat_val, self.unknown_index)
+
+            C_data[part_name] = transformed
+        
+        return N_data, C_data, y_data
