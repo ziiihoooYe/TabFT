@@ -410,7 +410,7 @@ class Metrics:
                 y_pred[torch.any(invalid, dim=-1), :] = 0.0
             else:
                 # classification
-                # y_pred[invalid] = -np.Inf  # leads to NaN after softmax()
+                # y_pred[invalid] = -np.inf  # leads to NaN after softmax()
                 y_pred = torch.clone(y_pred)
                 not_invalid = y_pred[~invalid]
                 if len(not_invalid) == 0:

@@ -36,6 +36,7 @@ dataset:
   - Fitness_Club_c
   - heloc
   - ringnorm
+
   # reg
   # - cpu_small
   # - CPS1988
@@ -64,14 +65,15 @@ transform_list:
       policy: standard # none, standard, minmax, robust, power, quantile, maxabs
   
 model_type:
-  # - xgboost
-  # - lightgbm
-  # - mlp
+  - xgboost
+  - lightgbm
+  - mlp
   - resnet
-  # - realmlp
+  - realmlp
   # - catboost
   # - tabpfn
   # - PFN-v2
 
 seed_num: 5
+gpu: 1
 

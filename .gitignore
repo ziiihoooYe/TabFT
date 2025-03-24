@@ -1,4 +1,11 @@
-*/__pycache__/
+# python cache
+__pycache__/
+
+# results model
 results_model/
+
+# log files
 *.log
+
+# data folder
 data/

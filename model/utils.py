@@ -48,6 +48,8 @@ def set_gpu(x):
     
     :x: str, GPU id
     """
+    if isinstance(x, int):
+        x = str(x)
     os.environ['CUDA_VISIBLE_DEVICES'] = x
     # print('using gpu:', x)
 
