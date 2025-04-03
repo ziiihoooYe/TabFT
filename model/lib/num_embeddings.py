@@ -48,55 +48,19 @@ def _check_bins(bins: List[Tensor]) -> None:
                 ' but it is the same as using sklearn.preprocessing.MinMaxScaler'
             )
 
+
 def compute_bins(
     X: torch.Tensor,
     n_bins: int = 48,
     *,
     tree_kwargs: Optional[Dict[str, Any]] = None,
-    y: Optional[Tensor] = None,
+    y: Optional[torch.Tensor] = None,
     regression: Optional[bool] = None,
     verbose: bool = False,
-) -> List[Tensor]:
-    # Source: https://github.com/yandex-research/rtdl-num-embeddings/blob/main/package/rtdl_num_embeddings.py
-    """Compute bin edges for `PiecewiseLinearEmbeddings`.
+) -> List[torch.Tensor]:
 
-    **Usage**
-
-    Computing the quantile-based bins (Section 3.2.1 in the paper):
-
-    >>> X_train = torch.randn(10000, 2)
-    >>> bins = compute_bins(X_train)
-
-    Computing the tree-based bins (Section 3.2.2 in the paper):
-
-    >>> X_train = torch.randn(10000, 2)
-    >>> y_train = torch.randn(len(X_train))
-    >>> bins = compute_bins(
-    ...     X_train,
-    ...     y=y_train,
-    ...     regression=True,
-    ...     tree_kwargs={'min_samples_leaf': 64, 'min_impurity_decrease': 1e-4},
-    ... )
-
-    Args:
-        X: the training features.
-        n_bins: the number of bins.
-        tree_kwargs: keyword arguments for `sklearn.tree.DecisionTreeRegressor`
-            (if ``regression`` is `True`) or `sklearn.tree.DecisionTreeClassifier`
-            (if ``regression`` is `False`).
-            NOTE: requires ``scikit-learn>=1.0,>2`` to be installed.
-        y: the training labels (must be provided if ``tree`` is not None).
-        regression: whether the labels are regression labels
-            (must be provided if ``tree`` is not None).
-        verbose: if True and ``tree_kwargs`` is not None, than ``tqdm``
-            (must be installed) will report the progress while fitting trees.
-    Returns:
-        A list of bin edges for all features. For one feature:
-
-        - the maximum possible number of bin edges is ``n_bins + 1``.
-        - the minumum possible number of bin edges is ``1``.
-    """
-    if not isinstance(X, Tensor):
+    # Check input types and dimensions
+    if not isinstance(X, torch.Tensor):
         raise ValueError(f'X must be a PyTorch tensor, however: {type(X)=}')
     if X.ndim != 2:
         raise ValueError(f'X must have exactly two dimensions, however: {X.ndim=}')
@@ -106,52 +70,18 @@ def compute_bins(
         raise ValueError(f'X must have at least one column, however: {X.shape[1]=}')
     if not X.isfinite().all():
         raise ValueError('X must not contain nan/inf/-inf.')
-    if (X == X[0]).all(dim=0).any():
-        raise ValueError(
-            'All columns of X must have at least two distinct values.'
-            ' However, X contains columns with just one distinct value.'
-        )
     if n_bins <= 1 or n_bins >= len(X):
-        raise ValueError(
-            'n_bins must be more than 1, but less than len(X), however:'
-            f' {n_bins=}, {len(X)=}'
-        )
+        raise ValueError(f"Number of bins must be greater than 1 and less than the number of samples in X. However, n_bins={n_bins} and len(X)={len(X)}.")
 
-    if tree_kwargs is None:
-        if y is not None or regression is not None or verbose:
-            raise ValueError(
-                'If tree_kwargs is None, then y must be None, regression must be None'
-                ' and verbose must be False'
-            )
+    constant_cols = (X == X[0]).all(dim=0)
 
-        # NOTE[DIFF]
-        # The original implementation in the official paper repository has an
-        # unintentional divergence from what is written in the paper.
-        # This package implements the algorithm described in the paper,
-        # and it is recommended for future work
-        # (this may affect the optimal number of bins
-        #  reported in the official repository).
-        #
-        # Additional notes:
-        # - this is the line where the divergence happens:
-        #   (the thing is that limiting the number of quantiles by the number of
-        #   distinct values is NOT the same as removing identical quantiles
-        #   after computing them)
-        #   https://github.com/yandex-research/tabular-dl-num-embeddings/blob/c1d9eb63c0685b51d7e1bc081cdce6ffdb8886a8/bin/train4.py#L612C30-L612C30
-        # - for the tree-based bins, there is NO such divergence;
-        bins = [
-            q.unique()
-            for q in torch.quantile(
-                X, torch.linspace(0.0, 1.0, n_bins + 1).to(X), dim=0
-            ).T
-        ]
-        _check_bins(bins)
-        return bins
-    else:
+    bins = []
+    eps = 1e-5 # for interval of constant cols
+
+    if tree_kwargs is not None:
         if sklearn_tree is None:
             raise RuntimeError(
-                'The scikit-learn package is missing.'
-                ' See README.md for installation instructions'
+                'The scikit-learn package is missing. ...'
             )
         if y is None or regression is None:
             raise ValueError(
@@ -163,53 +93,58 @@ def compute_bins(
             raise ValueError(
                 f'len(y) must be equal to len(X), however: {len(y)=}, {len(X)=}'
             )
-        if y is None or regression is None:
-            raise ValueError(
-                'If tree_kwargs is not None, then y and regression must not be None'
-            )
-        if 'max_leaf_nodes' in tree_kwargs:
-            raise ValueError(
-                'tree_kwargs must not contain the key "max_leaf_nodes"'
-                ' (it will be set to n_bins automatically).'
-            )
 
-        if verbose:
-            if tqdm is None:
-                raise ImportError('If verbose is True, tqdm must be installed')
-            tqdm_ = tqdm
+    for col_idx in range(X.shape[1]):
+        col_data = X[:, col_idx]
+
+        # Determine distinct edges for the column
+        if constant_cols[col_idx]:
+            # Constant column: only one distinct value
+            c = col_data[0].item()
+            distinct_edges = torch.tensor([c], device=X.device, dtype=X.dtype)
         else:
-            tqdm_ = lambda x: x  # noqa: E731
+            if tree_kwargs is None:
+                # ----------- Q-Binning -----------
+                q = torch.quantile(
+                    col_data, torch.linspace(0.0, 1.0, n_bins + 1, device=X.device), dim=0
+                )
+                distinct_edges = q.unique()
+            else:
+                # ---------- T-Binning ------------
+                from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 
-        if X.device.type != 'cpu' or y.device.type != 'cpu':
-            warnings.warn(
-                'Computing tree-based bins involves the conversion of the input PyTorch'
-                ' tensors to NumPy arrays. The provided PyTorch tensors are not'
-                ' located on CPU, so the conversion has some overhead.',
-                UserWarning,
-            )
-        X_numpy = X.cpu().numpy()
-        y_numpy = y.cpu().numpy()
-        bins = []
-        for column in tqdm_(X_numpy.T):
-            feature_bin_edges = [float(column.min()), float(column.max())]
-            tree = (
-                (
-                    sklearn_tree.DecisionTreeRegressor
-                    if regression
-                    else sklearn_tree.DecisionTreeClassifier
-                )(max_leaf_nodes=n_bins, **tree_kwargs)
-                .fit(column.reshape(-1, 1), y_numpy)
-                .tree_
-            )
-            for node_id in range(tree.node_count):
-                # The following condition is True only for split nodes. Source:
-                # https://scikit-learn.org/1.0/auto_examples/tree/plot_unveil_tree_structure.html#tree-structure
-                if tree.children_left[node_id] != tree.children_right[node_id]:
-                    feature_bin_edges.append(float(tree.threshold[node_id]))
-            bins.append(torch.as_tensor(feature_bin_edges).unique())
-        _check_bins(bins)
-        return [x.to(device=X.device, dtype=X.dtype) for x in bins]
+                column_np = col_data.cpu().numpy()
+                y_np = y.cpu().numpy()
+
+                TreeModel = DecisionTreeRegressor if regression else DecisionTreeClassifier
+
+                tree_model = TreeModel(max_leaf_nodes=n_bins, **tree_kwargs)
+                tree_model.fit(column_np.reshape(-1, 1), y_np)
+                tree_ = tree_model.tree_
+
+                edges_list = [float(column_np.min()), float(column_np.max())]
+                for node_id in range(tree_.node_count):
+                    if tree_.children_left[node_id] != tree_.children_right[node_id]:
+                        edges_list.append(float(tree_.threshold[node_id]))
+
+                distinct_edges = torch.as_tensor(edges_list, device=X.device, dtype=X.dtype).unique(sorted=True)
+
+        if distinct_edges.numel() < n_bins + 1:
+            if distinct_edges.numel() == 1:
+                # For constant column, expand around c so that c is roughly centered
+                c = distinct_edges[0].item()
+                edges = torch.linspace(c - eps * n_bins//2, c + eps * (- n_bins//2 + n_bins + 1), steps=n_bins + 1, device=X.device, dtype=X.dtype)
+            else:
+                edges = torch.linspace(distinct_edges[0], distinct_edges[-1], steps=n_bins + 1, device=X.device, dtype=X.dtype)
+        else:
+            edges = distinct_edges
+
+        bins.append(edges)
+
+    _check_bins(bins)
+    return bins
     
+
 class _PiecewiseLinearEncodingImpl(nn.Module):
     # NOTE
     # 1. DO NOT USE THIS CLASS DIRECTLY (ITS OUTPUT CONTAINS INFINITE VALUES).
@@ -434,6 +369,7 @@ class UnaryEncoding(nn.Module):
         x = self.impl(x)
         return x.flatten(-2) if self.impl._same_bin_count else x[:, self.impl.mask]
 
+
 class _JohnsonEncodingImpl(nn.Module):
     edges: Tensor
     mask: Tensor
@@ -531,6 +467,7 @@ class JohnsonEncoding(nn.Module):
         x = self.impl(x)
         return x.flatten(-2) # if self.impl._same_bin_count else x[:, self.impl.mask]
     
+
 class _BinsEncodingImpl(nn.Module):
     edges: Tensor
     mask: Tensor
@@ -584,16 +521,15 @@ class _BinsEncodingImpl(nn.Module):
 
         return bin_indices
 
-class BinsEncoding(nn.Module):
-    """Bins encoding.
 
+class BinsEncoding(nn.Module): 
+    """
+    Bins encoding.
     **Shape**
-
     - Input: ``(*, n_features)``
     - Output: ``(*, n_features, total_n_bins)``,
       where ``total_n_bins`` is the total number of bins for all features.
     """
-
     def __init__(self, bins: List[Tensor]) -> None:
         """
         Args:

@@ -37,9 +37,10 @@ class NanTransform(BaseTransform):
             for part, arr in C_data.items():
                 if arr.dtype.kind in ['U','S','O']:  # string or object
                     mask = (arr == '') | (arr == 'nan') | (arr == 'NaN')
+                    arr[mask] = self.cat_new_token
                 else:
                     mask = np.isnan(arr)
-                arr[mask] = self.cat_new_token
+                    arr[mask] = -1
 
         return N_data, C_data, y_data
 

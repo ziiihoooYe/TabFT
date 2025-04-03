@@ -24,6 +24,10 @@ from model.lib.realmlp.torch_utils import get_available_device_names
 from model.lib.realmlp.training.logging import StdoutLogger
 
 
+@property
+def __sklearn_tags__(self):
+    return self._more_tags() if hasattr(self, '_more_tags') else {}
+
 def to_df(x) -> pd.DataFrame:
     try:
         return pd.DataFrame(x)
@@ -349,6 +353,7 @@ class AlgInterfaceEstimator(BaseEstimator):
 
 
 class AlgInterfaceClassifier(AlgInterfaceEstimator, ClassifierMixin):
+    
     def _is_classification(self) -> bool:
         return True
 

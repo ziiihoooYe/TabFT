@@ -5,6 +5,8 @@ import logging
 from model.lib.data import get_dataset
 import warnings
 warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 import sys
 import datetime
 expand_keys = ['dataset', 'model_type']
@@ -22,9 +24,9 @@ def main():
     for recipe in recipes:
         args, default_para, opt_space = recipe
         loss_list, results_list, time_list = [], [], []
-        print("------------------------------------")
-        print(f"Dataset: {args.dataset}")
-        print(f"Model: {args.model_type}")
+        logger.info("------------------------------------")
+        logger.info(f"Dataset: {args.dataset}")
+        logger.info(f"Model: {args.model_type}")
         
         ### ----------- Tuning Hyperparameters ------------
         train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)

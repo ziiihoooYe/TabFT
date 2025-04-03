@@ -33,7 +33,7 @@ class DataTransformPipeline:
             elif transform_name == 'num_binning':
                 pipeline.append(BinningTransform(transform_config, self.is_regression))
             elif transform_name == 'num_ple':
-                pipeline.append(PLETransform(transform_config))
+                 pipeline.append(PLETransform(transform_config))
             elif transform_name == 'num_unary':
                 pipeline.append(UnaryTransform(transform_config))
             elif transform_name == 'num_bin':
@@ -68,8 +68,7 @@ class DataTransformPipeline:
         """
         for transform_obj in self.pipeline:
             transform_obj.fit(N_data, C_data, y_data, self.shared_state)
-            # Note: many transforms only need train data, but 
-            # we pass the entire dict for consistency.
+
         return self
 
     def transform(self, N_data, C_data, y_data=None):
@@ -78,6 +77,7 @@ class DataTransformPipeline:
         """
         for transform_obj in self.pipeline:
             N_data, C_data, y_data = transform_obj.transform(N_data, C_data, y_data, self.shared_state)
+
         return N_data, C_data, y_data
 
     def fit_transform(self, N_data, C_data, y_data=None):
@@ -89,6 +89,7 @@ class DataTransformPipeline:
             transform_obj.fit(N_data, C_data, y_data, self.shared_state)
             # 2) Transform the data in place
             N_data, C_data, y_data = transform_obj.transform(N_data, C_data, y_data, self.shared_state)
+        
         return N_data, C_data, y_data
 
     # def save(self, path):

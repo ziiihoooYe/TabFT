@@ -458,7 +458,7 @@ def transformer_predict(model, eval_xs, eval_ys, eval_position,
             if device == 'cpu':
                 output_batch = checkpoint(predict, batch_input, batch_label, style_, softmax_temperature_, True)
             else:
-                with torch.cuda.amp.autocast(enabled=fp16_inference):
+                with torch.amp.autocast('cuda', enabled=fp16_inference):
                     output_batch = checkpoint(predict, batch_input, batch_label, style_, softmax_temperature_, True)
         outputs += [output_batch]
     #print('MODEL INFERENCE TIME ('+str(batch_input.device)+' vs '+device+', '+str(fp16_inference)+')', str(time.time()-start))

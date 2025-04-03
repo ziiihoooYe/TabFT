@@ -30,12 +30,50 @@
 # classification dataset: [bank]
 # --------------------------------------------------------------------------------
 dataset:
+  # Tiny benchmark 1
+  # - ASP-POTASSCO-classification
+  # - Ailerons
+  # - Bias_correction_r_2
+  # - electricity
+  # - estimation_of_obesity_levels
+  # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
+  # - Diamonds
+  # - E-CommereShippingData
+  # - FOREX_audjpy-day-High
+  # - Fitness_Club_c
+  # - IEEE80211aa-GATS
+  # - Intersectional-Bias-Assessment
+  # - Job_Profitability
+  # - Kaggle_bike_sharing_demand_challange
+  # - Mobile_Price_Classification
+  # - NHANES_age_prediction
+  # - Shop_Customer_Data
+  # - VulNoneVul
+  # - Waterstress
+  # - htru
+  # - ibm-employee-performance
+  # - internet_firewall
+  # - jungle_chess_2pcs_raw_endgame_complete
+  # - kc1
+  # - okcupid_stem
+  # - optdigits
+  # - pol
+  # - pol_reg
+  # - pole
+  # - socmob
+  # - archive_r56_Portuguese
+  # - compass
+  # - thyroid-dis
+  # - wine
+  # - yeast
+
+
   # cls
+  - kc1
   - bank 
   - Bank_Customer_Churn_Dataset
   - Fitness_Club_c
   - heloc
-  - ringnorm
 
   # reg
   # - cpu_small
@@ -52,25 +90,30 @@ transform_list:
   # ----------------------------------------------------------------
   # numerical encoding process
   - num_binning:
+      n_bins: 10
       policy: Q
-  - num_bin: {}
+  # - num_bin: {}
+  # - num_ple: {}
+  - num_johnson: {}
   # ----------------------------------------------------------------
   # categorical encoding process
-  # - cat_indice: {}
+  - cat_indice: {}
   # - cat_targetindice: {}
-  - cat_target: {}
+  # - cat_target: {}
   # ----------------------------------------------------------------
   # normalization process
-  - norm: 
-      policy: standard # none, standard, minmax, robust, power, quantile, maxabs
+  # - norm: 
+  #     policy: standard # none, standard, minmax, robust, power, quantile, maxabs
   
 model_type:
+  - realmlp
+  - tabnet
+  - tabtransformer
   - xgboost
   - lightgbm
   - mlp
   - resnet
-  - realmlp
-  # - catboost
+  - catboost
   # - tabpfn
   # - PFN-v2
 
