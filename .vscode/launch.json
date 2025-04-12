@@ -13,6 +13,14 @@
             "args": [
                 "config.yaml"
             ]
-        }
+        },
+        // {
+        //     "name": "Run Current File",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "program": "${file}",
+        //     "console": "integratedTerminal",
+        //     "args": [],
+        // }
     ]
 }

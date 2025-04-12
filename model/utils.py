@@ -21,7 +21,7 @@ deep_model_list = ['mlp', 'resnet', 'ftt', 'node', 'autoint',
                    'dnnr', 'switchtab', 'grownet', 'tabr', 'modernNCA',
                    'hyperfast', 'bishop', 'realmlp', 'protogate', 'mlp_plr',
                    'excelformer', 'grande','amformer','tabptm','trompt','tabm',
-                   'PFN-v2', 't2gformer']
+                   'PFN-v2', 't2gformer', 'tab']
 classical_model_list = ['LogReg', 'NCM', 'RandomForest', 
                         'xgboost', 'catboost', 'lightgbm',
                         'svm','knn', 'NaiveBayes',"dummy","LinearRegression"]
@@ -910,6 +910,9 @@ def get_method(_model):
     elif _model == 'LinearRegression':
         from model.classical_methods.lr import LinearRegressionMethod
         return LinearRegressionMethod
+    elif _model == 'tab':
+        from model.methods.Tab import TabMethod
+        return TabMethod
     else:
         raise NotImplementedError("Model \"" + _model + "\" not yet implemented")
 

@@ -5,7 +5,11 @@ __pycache__/
 results_model/
 
 # log files
+log/
 *.log
 
 # data folder
 data/
+
+# figures
+*.png

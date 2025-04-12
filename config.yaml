@@ -30,17 +30,24 @@
 # classification dataset: [bank]
 # --------------------------------------------------------------------------------
 dataset:
+  # - shrutime
+  # - Credit_c
+  # - airlines_seed_0_nrows_2000_nclasses_10_ncols_100_stratify_True
+  # - dabetes_130-us_hospitals
+  # - internet_firewall
+
   # Tiny benchmark 1
-  # - ASP-POTASSCO-classification
-  # - Ailerons
-  # - Bias_correction_r_2
-  # - electricity
-  # - estimation_of_obesity_levels
-  # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
-  # - Diamonds
-  # - E-CommereShippingData
-  # - FOREX_audjpy-day-High
-  # - Fitness_Club_c
+  - ASP-POTASSCO-classification
+  - Ailerons
+  - Bias_correction_r_2
+  - electricity
+  - estimation_of_obesity_levels
+  - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
+  - Diamonds
+  - E-CommereShippingData
+  - FOREX_audjpy-day-High
+  - Fitness_Club_c
+
   # - IEEE80211aa-GATS
   # - Intersectional-Bias-Assessment
   # - Job_Profitability
@@ -69,11 +76,11 @@ dataset:
 
 
   # cls
-  - kc1
-  - bank 
-  - Bank_Customer_Churn_Dataset
-  - Fitness_Club_c
-  - heloc
+  # - kc1
+  # - bank 
+  # - Bank_Customer_Churn_Dataset
+  # - Fitness_Club_c
+  # - heloc
 
   # reg
   # - cpu_small
@@ -89,12 +96,21 @@ transform_list:
   - label: {}
   # ----------------------------------------------------------------
   # numerical encoding process
-  - num_binning:
-      n_bins: 10
-      policy: Q
+  # - num_hard_tree: 
+  #     max_depth: 2
+  # - num_hard_ggm: {}
+  # - num_binning:
+  #     n_bins: 10
+  #     policy: Q
+  # - num_binindex: {}
   # - num_bin: {}
+  # - num_bin0: {}
   # - num_ple: {}
-  - num_johnson: {}
+
+  # - num_quantiletransform:
+  #     output_distribution: uniform
+  # - num_qt0: 
+  #     output_distribution: normal
   # ----------------------------------------------------------------
   # categorical encoding process
   - cat_indice: {}
@@ -102,21 +118,26 @@ transform_list:
   # - cat_target: {}
   # ----------------------------------------------------------------
   # normalization process
-  # - norm: 
-  #     policy: standard # none, standard, minmax, robust, power, quantile, maxabs
+  - norm: 
+      policy: standard # none, standard, minmax, robust, power, quantile, maxabs
   
-model_type:
-  - realmlp
-  - tabnet
-  - tabtransformer
+model_type: 
+  # - ftt
+  # - saint
+  # - realmlp
+  # - tabnet
+  # - tabtransformer
   - xgboost
   - lightgbm
-  - mlp
-  - resnet
+  # - mlp
+  # - resnet
   - catboost
   # - tabpfn
   # - PFN-v2
+  # - tab
+
 
 seed_num: 5
 gpu: 1
+tune: false
 

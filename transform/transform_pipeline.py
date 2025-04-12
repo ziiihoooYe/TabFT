@@ -38,8 +38,22 @@ class DataTransformPipeline:
                 pipeline.append(UnaryTransform(transform_config))
             elif transform_name == 'num_bin':
                 pipeline.append(BinsTransform(transform_config))
+            elif transform_name == 'num_binindex':
+                pipeline.append(BinIndexTransform(transform_config))
             elif transform_name == 'num_johnson':
                 pipeline.append(JohnsonTransform(transform_config))
+            elif transform_name == 'num_quantiletransform':
+                pipeline.append(QuantileTransform(transform_config))
+            elif transform_name == 'num_hard_ggm':
+                pipeline.append(HardAssignmentGMMTransform(transform_config))
+            elif transform_name == 'num_hard_tree':
+                pipeline.append(HardAssignmentTreeTransform(transform_config))
+            elif transform_name == 'num_qt0':
+                pipeline.append(Quantile0Transform(transform_config))
+            elif transform_name == 'num_bin0':
+                pipeline.append(Bins0Transform(transform_config))
+            elif transform_name == 'num_bin1':
+                pipeline.append(Bins1Transform(transform_config))
             elif transform_name == 'cat_ordinal':
                 pipeline.append(OrdinalTransform(transform_config))
             elif transform_name == 'cat_indice':

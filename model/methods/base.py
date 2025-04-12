@@ -138,10 +138,11 @@ class Method(object, metaclass=abc.ABCMeta):
         self.D = Dataset(N, C, y, info)
         self.N, self.C, self.y = self.D.N, self.D.C, self.D.y
         self.is_binclass, self.is_multiclass, self.is_regression = self.D.is_binclass, self.D.is_multiclass, self.D.is_regression
-        self.n_num_features, self.n_cat_features = self.D.n_num_features, self.D.n_cat_features
+        self.n_num_features, self.n_cat_features = self.D.n_num_features, self.D.n_cat_features 
         if config is not None:
             self.reset_stats_withconfig(config)
         self.data_format(is_train = True)
+        self.n_num_features = N['train'].shape[1] if N is not None else self.n_num_features
         self.construct_model()
         self.optimizer = torch.optim.AdamW(
             self.model.parameters(), 
@@ -241,7 +242,7 @@ class Method(object, metaclass=abc.ABCMeta):
             
             # if (i-1) % 50 == 0 or i == len(self.train_loader):
             #     print('epoch {}, train {}/{}, loss={:.4f} lr={:.4g}'.format(
-                    # epoch, i, len(self.train_loader), loss.item(), self.optimizer.param_groups[0]['lr']))
+            #         epoch, i, len(self.train_loader), loss.item(), self.optimizer.param_groups[0]['lr']))
             del loss
         tl = tl.item()
         self.trlog['train_loss'].append(tl)    

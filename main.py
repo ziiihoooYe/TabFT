@@ -15,7 +15,7 @@ def main():
     
     ### ----------- Load Config/Prepare Logger ------------
     config_file = 'config.yaml'
-    logger = get_logger(__name__)
+    logger = get_logger(__name__, sys.argv[2] if len(sys.argv) > 2 else None)
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
     recipes = load_recipes_from_yaml(config_file, expand_keys)
