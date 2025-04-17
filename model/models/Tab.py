@@ -40,6 +40,19 @@ class PositionalEmbedding(nn.Module):
         return self.pe[positions.long()]
     
 
+class CLSHead(nn.Module):
+    def __init__(self, d_model, out_features, head_dropout=0):
+        super().__init__()
+        self.linear = nn.Linear(d_model, out_features)
+        self.dropout = nn.Dropout(head_dropout)
+
+    def forward(self, x):  # x: [bs x nvars x d_model x patch_num]
+        x = x[:, 0, :]
+        x = self.linear(x)
+        # x = self.dropout(x)
+        return x
+
+
 class MaxPoolingHead(nn.Module):
     def __init__(self, d_model, out_features, head_dropout=0):
         super().__init__()
@@ -70,18 +83,20 @@ class FlattenHead(nn.Module):
 
 
 class RegressionHead(nn.Module):
-    def __init__(self, num_col, d_model, out_features=1):
+    def __init__(self, d_model, out_features=1):
         super(RegressionHead, self).__init__()
-        self.head = MaxPoolingHead(d_model, out_features)
+        # self.head = MaxPoolingHead(d_model, out_features)
+        self.head = CLSHead(d_model, out_features)
         
     def forward(self, x):
         return self.head(x)
     
 
 class ClassificationHead(nn.Module):
-    def __init__(self, num_col, d_model, classes_num):
+    def __init__(self, d_model, classes_num):
         super(ClassificationHead, self).__init__()
-        self.head = MaxPoolingHead(d_model, classes_num)
+        # self.head = MaxPoolingHead(d_model, classes_num)
+        self.head = CLSHead(d_model, classes_num)
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
@@ -137,6 +152,9 @@ class TabEncoder(nn.Module):
         self.lut_cat = nn.Embedding(sum(categories), d_model)
         nn_init.kaiming_uniform_(self.lut_cat.weight, a=math.sqrt(5))
         
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
+        nn_init.kaiming_uniform_(self.cls_token, a=math.sqrt(5))
+        
         self.dropout = nn.Dropout(dropout)
     
 
@@ -184,9 +202,10 @@ class TabEncoder(nn.Module):
         else:
             raise ValueError("At least one of x_cont or x_categ must be provided")
 
-        out, _ = self.encoder(x_emb)  # (batch_size, num_continuous, d_model)
+        x_emb = torch.cat((self.cls_token.expand(x_emb.shape[0], -1, -1), x_emb), dim=1)
+        out, _ = self.encoder(x_emb)  # (batch_size, num_continuous + num_category + 1, d_model)
         
-        return out
+        return out  # CLS token
 
 
 class Tab(nn.Module):
@@ -208,13 +227,11 @@ class Tab(nn.Module):
         )
         if is_regression:
             self.head = RegressionHead(
-                num_col=num_continuous+len(categories), 
                 d_model=d_model, 
                 out_features=d_out
             )
         else:
             self.head = ClassificationHead(
-                num_col=num_continuous+len(categories), 
                 d_model=d_model, 
                 classes_num=d_out  # Number of classes for classification
             )
@@ -371,3 +388,5 @@ class Transpose(nn.Module):
     def forward(self, x):
         if self.contiguous: return x.transpose(*self.dims).contiguous()
         else: return x.transpose(*self.dims)
+
+

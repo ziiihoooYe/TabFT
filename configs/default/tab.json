@@ -1,7 +1,7 @@
 {
     "tab": {
         "model": {
-            "d_model": 32,
+            "d_model": 512,
             "n_head": 8,
             "num_enc_layers": 8
         },

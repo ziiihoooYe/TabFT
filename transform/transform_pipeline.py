@@ -44,16 +44,14 @@ class DataTransformPipeline:
                 pipeline.append(JohnsonTransform(transform_config))
             elif transform_name == 'num_quantiletransform':
                 pipeline.append(QuantileTransform(transform_config))
-            elif transform_name == 'num_hard_ggm':
-                pipeline.append(HardAssignmentGMMTransform(transform_config))
-            elif transform_name == 'num_hard_tree':
-                pipeline.append(HardAssignmentTreeTransform(transform_config))
-            elif transform_name == 'num_qt0':
-                pipeline.append(Quantile0Transform(transform_config))
-            elif transform_name == 'num_bin0':
-                pipeline.append(Bins0Transform(transform_config))
-            elif transform_name == 'num_bin1':
-                pipeline.append(Bins1Transform(transform_config))
+            elif transform_name == 'num_robustscale':
+                pipeline.append(RobustScaleTransform(transform_config))
+            elif transform_name == 'num_smoothclip':
+                pipeline.append(SmoothClipTransform(transform_config))
+            elif transform_name == 'num_dpgmmcdf':
+                pipeline.append(DPGMMCdfTransform(transform_config))
+            elif transform_name == 'num_dpgmmcdf1':
+                pipeline.append(DPGMMCdfSkipDiscreteTransform(transform_config))
             elif transform_name == 'cat_ordinal':
                 pipeline.append(OrdinalTransform(transform_config))
             elif transform_name == 'cat_indice':
@@ -72,6 +70,8 @@ class DataTransformPipeline:
                 pipeline.append(CatBoostTransform(transform_config))
             elif transform_name == 'cat_targetindice':
                 pipeline.append(TargetRankingIndiceTransform(transform_config))
+            elif transform_name == 'cat_qt':
+                pipeline.append(CatQuantileTransform(transform_config))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline

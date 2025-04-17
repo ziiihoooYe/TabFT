@@ -100,22 +100,24 @@ transform_list:
   #     max_depth: 2
   # - num_hard_ggm: {}
   # - num_binning:
-  #     n_bins: 10
+  #     n_bins: 100
   #     policy: Q
-  # - num_binindex: {}
   # - num_bin: {}
-  # - num_bin0: {}
   # - num_ple: {}
+  # - num_robustscale: {}
+  # - num_smoothclip: {}
 
+  # - num_dpgmmcdf: {}
+  # - num_dpgmmcdf1: {}
+  # - num_dpgmmcdfnorm: {}
   # - num_quantiletransform:
   #     output_distribution: uniform
-  # - num_qt0: 
-  #     output_distribution: normal
   # ----------------------------------------------------------------
   # categorical encoding process
   - cat_indice: {}
   # - cat_targetindice: {}
   # - cat_target: {}
+  # - cat_qt: {}
   # ----------------------------------------------------------------
   # normalization process
   - norm: 
@@ -124,20 +126,20 @@ transform_list:
 model_type: 
   # - ftt
   # - saint
-  # - realmlp
-  # - tabnet
-  # - tabtransformer
+  - realmlp
+  - tabnet
+  - tabtransformer
   - xgboost
   - lightgbm
-  # - mlp
-  # - resnet
+  - mlp
+  - resnet
   - catboost
   # - tabpfn
   # - PFN-v2
   # - tab
 
 
-seed_num: 5
-gpu: 1
-tune: false
+seed_num: 15
+gpu: 7
 
+tune: false

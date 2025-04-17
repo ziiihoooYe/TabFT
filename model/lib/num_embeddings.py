@@ -129,14 +129,12 @@ def compute_bins(
 
                 distinct_edges = torch.as_tensor(edges_list, device=X.device, dtype=X.dtype).unique(sorted=True)
 
-        if distinct_edges.numel() < n_bins + 1:
-            if distinct_edges.numel() == 1:
-                # For constant column, expand around c so that c is roughly centered
-                c = distinct_edges[0].item()
-                edges = torch.linspace(c - eps * n_bins//2, c + eps * (- n_bins//2 + n_bins + 1), steps=n_bins + 1, device=X.device, dtype=X.dtype)
-            else:
-                edges = torch.linspace(distinct_edges[0], distinct_edges[-1], steps=n_bins + 1, device=X.device, dtype=X.dtype)
+        if distinct_edges.numel() == 1:
+            # For constant column, ensure at least two edges
+            c = distinct_edges[0].item()
+            edges = torch.tensor([c, c + eps], device=X.device, dtype=X.dtype)
         else:
+            # Use the distinct edges as-is, without filling to n_bins + 1
             edges = distinct_edges
 
         bins.append(edges)
