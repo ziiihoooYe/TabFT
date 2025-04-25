@@ -4,7 +4,7 @@ import category_encoders
 from transform.base import BaseTransform
 import torch
 from model.lib.num_embeddings import (
-    PiecewiseLinearEncoding, UnaryEncoding, BinsEncoding, JohnsonEncoding
+    PiecewiseLinearEncoding, UnaryEncoding, BinsEncoding, JohnsonEncoding, _check_bins
 )
 
 
@@ -394,7 +394,6 @@ class OneHotTransform(BaseTransform):
         if C_data and 'train' in C_data:
             self.ohe_ = sklearn.preprocessing.OneHotEncoder(
                 handle_unknown='ignore',
-                sparse=False,  # new param name in recent sklearn is sparse_output=False
                 dtype='float64'
             )
             self.ohe_.fit(C_data['train'])
@@ -406,6 +405,7 @@ class OneHotTransform(BaseTransform):
 
         for part in C_data:
             arr_enc = self.ohe_.transform(C_data[part])
+            arr_enc = arr_enc.toarray()  # Convert sparse matrix to dense
             C_data[part] = arr_enc
         return N_data, C_data, y_data
 
@@ -734,15 +734,18 @@ from transform.base import BaseTransform
 class DPGMMCdfTransform(BaseTransform):
     def __init__(self, args):
         super().__init__()
-        self.n_components = args.get('n_components', 10)
+        self.n_components = args.get('n_components', 100)
         self.max_iter = args.get('max_iter', 500)
         self.random_state = args.get('random_state', 0)
-        self.weight_concentration_prior = args.get('weight_concentration_prior', 0.1)
-        self.weight_threshold = args.get('weight_threshold', 0.05)
-
+        self.weight_concentration_prior = args.get('weight_concentration_prior', 0.01)
+        self.weight_threshold = args.get('weight_threshold', 0)
+        self.reg_covar = args.get('reg_covar', 0.001)
+ 
         self.cov_type = args.get('covariance_type', 'full') 
         self.bgmm_list_ = []  
         self.active_components_info_ = []  
+        # mapping from original → generated columns
+        self.feature_map_ = None
 
     def fit(self, N_data, C_data, y_data=None, shared_state=None):
         if not N_data or 'train' not in N_data:
@@ -761,6 +764,7 @@ class DPGMMCdfTransform(BaseTransform):
                 max_iter=self.max_iter,
                 random_state=self.random_state,
                 covariance_type=self.cov_type,
+                reg_covar= max(self.reg_covar * np.var(col_values), 1e-8),
                 weight_concentration_prior_type='dirichlet_process'
             )
             bgmm.fit(col_values)
@@ -769,32 +773,35 @@ class DPGMMCdfTransform(BaseTransform):
 
             # Identify active mixture components (weight > threshold, else pick the heaviest)
             weights = bgmm.weights_
-            valid_comp_inds = np.where(weights > self.weight_threshold)[0]
-            if len(valid_comp_inds) == 0:
-                valid_comp_inds = np.array([np.argmax(weights)], dtype=int)
+            valid_idx = np.where(weights > self.weight_threshold)[0]
+            if valid_idx.size == 0:
+                valid_idx = np.array([np.argmax(weights)], dtype=int)
 
-            # Gather means / variances of the active comps
-            means = bgmm.means_.ravel()[valid_comp_inds]
+            means = bgmm.means_[valid_idx].ravel()
+
             if bgmm.covariances_.ndim == 2:
-                vars_ = bgmm.covariances_[valid_comp_inds, 0]
+                vars_ = bgmm.covariances_[valid_idx, 0]
             elif bgmm.covariances_.ndim == 3:
-                vars_ = bgmm.covariances_[valid_comp_inds, 0, 0]
+                vars_ = bgmm.covariances_[valid_idx, 0, 0]
             else:
-                vars_ = bgmm.covariances_[valid_comp_inds]
-            stds = np.sqrt(vars_)
+                vars_ = bgmm.covariances_[valid_idx]
+            stds = np.sqrt(vars_).ravel()
 
-            # ---- sort components by mean (small → large) ----
+            # ==== sort base on mean ====
             order = np.argsort(means)
-            valid_comp_inds = valid_comp_inds[order]
-            means = means[order]
-            stds = stds[order]
+            valid_idx     = valid_idx[order]
+            means         = means[order]
+            stds          = stds[order]
+            weights_valid = weights[valid_idx]
 
-            # Save
+            # ==== 存储 ====
             self.active_components_info_.append({
-                'valid_comp_inds': valid_comp_inds,
-                'means': means,
-                'stds': stds,
+                "valid_comp_inds": valid_idx,
+                "means":   means.astype(np.float64),
+                "stds":    stds.astype(np.float64),
+                "weights": weights_valid.astype(np.float64),
             })
+
 
         return self
 
@@ -832,6 +839,17 @@ class DPGMMCdfTransform(BaseTransform):
 
                 transformed_cols.append(out_col)
 
+            # ---------- build feature_map once ----------
+            if self.feature_map_ is None:
+                mapping, offset = [], 0
+                for j, info in enumerate(self.active_components_info_):
+                    k_j = len(info['means'])
+                    mapping.append({"orig_idx": j,
+                                    "new_start": offset,
+                                    "size": int(k_j)})
+                    offset += k_j
+                self.feature_map_ = mapping
+
             # concatenate all transformed columns
             new_part_data = np.hstack(transformed_cols)  # shape: (n_samples, sum_of_all_k)
             N_data[part_name] = new_part_data
@@ -839,94 +857,254 @@ class DPGMMCdfTransform(BaseTransform):
         return N_data, C_data, y_data  
     
 
-class DPGMMCdfSkipDiscreteTransform(DPGMMCdfTransform):
-    def __init__(self, args):
-        super().__init__(args)
-        self.min_unique_values = args.get('min_unique_values', 10)
-        self.skip_mask_ = []          # True → skip
+from typing import Dict, List, Tuple
+from scipy.cluster.hierarchy import linkage, fcluster
+from scipy.signal import argrelextrema
+from scipy.stats import gaussian_kde, norm
 
-    # ------------------------------------------------------------------ #
-    # override fit
-    # ------------------------------------------------------------------ #
-    def fit(self, N_data, C_data=None, y_data=None, shared_state=None):
-        if not N_data or 'train' not in N_data:
+class ClusterCdfTransform(BaseTransform):
+    """Adaptive binning + selectable CDF encoding for numerical features."""
+
+    # --------------------------- init ----------------------------------
+    def __init__(self, args: Dict):
+        super().__init__()
+
+        # --- binning parameters ---
+        self.binning_method: str   = args.get("binning_method", "hierarchical")
+        self.linkage_method: str   = args.get("linkage_method", "ward")
+        self.n_bins: int | None    = args.get("n_bins")
+        self.distance_threshold: float | None = args.get("distance_threshold")
+        self.elbow_gap_pct: float  = args.get("elbow_gap_pct", 1.0)
+        self.inconsistency_threshold: float | None = args.get(
+            "inconsistency_threshold", None
+        )
+        self.inconsistency_depth: int = args.get("inconsistency_depth", 2)
+        self.kde_min_prom: float   = args.get("kde_min_prom", 0.0)   # minima threshold
+        self.min_cluster_size: int = args.get("min_cluster_size", 20) # for HDBSCAN
+
+        # --- encoding parameters ---
+        self.encoding_type: str    = args.get("encoding_type", "uniform")  # uniform | gaussian
+        self.min_sigma: float      = args.get("min_sigma", 1e-6)
+
+        # --- learned state ---
+        self.bin_edges_: List[np.ndarray]      = []  # per column edges (k+1,)
+        self.bin_stats_: List[np.ndarray]      = []  # per column (k,2) mean/sigma for gaussian
+        self.feature_map_: List[Dict]          = []
+
+    # --------------------------- fit ----------------------------------
+    def fit(self, N_data: Dict, C_data: Dict, y_data=None, shared_state=None):
+        if not N_data or "train" not in N_data:
             return self
 
-        X_train = N_data['train']          # shape = (n_samples, n_features)
+        X_train = N_data["train"]
+        if X_train.ndim != 2:
+            raise ValueError("N_data['train'] must be 2-D array (n_samples, n_features)")
         n_samples, n_features = X_train.shape
 
-        self.bgmm_list_, self.active_components_info_, self.skip_mask_ = [], [], []
+        self.bin_edges_.clear()
+        self.bin_stats_.clear()
+        self.feature_map_.clear()
 
         for col_idx in range(n_features):
             col_vals = X_train[:, col_idx]
-            if np.unique(col_vals).size < self.min_unique_values:
-                self.bgmm_list_.append(None)
-                self.active_components_info_.append(None)
-                self.skip_mask_.append(True)
-                continue
+            edges = self._find_bins_1d(col_vals)
+            self.bin_edges_.append(edges)
 
-            bgmm = BayesianGaussianMixture(
-                n_components=self.n_components,
-                max_iter=self.max_iter,
-                random_state=self.random_state,
-                covariance_type=self.cov_type,
-                weight_concentration_prior_type='dirichlet_process'
-            ).fit(col_vals.reshape(-1, 1))
-            self.bgmm_list_.append(bgmm)
-            self.skip_mask_.append(False)
+            # stats for gaussian encoding
+            stats = []
+            for j in range(len(edges) - 1):
+                mask = (col_vals >= edges[j]) & (col_vals <= edges[j + 1])
+                if mask.any():
+                    mu = col_vals[mask].mean()
+                    sigma = col_vals[mask].std(ddof=0)
+                    if sigma < self.min_sigma:
+                        sigma = max(col_vals.std(ddof=0), self.min_sigma)
+                else:
+                    # empty bin – fallback to mid + global std
+                    mu = 0.5 * (edges[j] + edges[j + 1])
+                    sigma = max(col_vals.std(ddof=0), self.min_sigma)
+                stats.append((mu, sigma))
+            self.bin_stats_.append(np.asarray(stats, dtype=np.float64))
+            self.feature_map_.append({
+                "orig_idx": col_idx,
+                "new_start": None,  # placeholder
+                "size": len(edges) - 1,
+            })
 
-            w = bgmm.weights_
-            valid = np.where(w > self.weight_threshold)[0]
-            if valid.size == 0:
-                valid = [w.argmax()]
-
-            means = bgmm.means_.ravel()[valid]
-            if bgmm.covariances_.ndim == 2:
-                vars_ = bgmm.covariances_[valid, 0]
-            elif bgmm.covariances_.ndim == 3:
-                vars_ = bgmm.covariances_[valid, 0, 0]
-            else:
-                vars_ = bgmm.covariances_[valid]
-            stds = np.sqrt(vars_)
-
-            self.active_components_info_.append(
-                dict(valid_comp_inds=valid, means=means, stds=stds)
-            )
+        # assign new_start offsets
+        offset = 0
+        for m in self.feature_map_:
+            m["new_start"] = offset
+            offset += m["size"]
 
         return self
 
-    # ------------------------------------------------------------------ #
-    # override transform
-    # ------------------------------------------------------------------ #
-    def transform(self, N_data, C_data=None, y_data=None, shared_state=None):
-        if not self.bgmm_list_:          # 尚未 fit
+    # ------------------------- transform ------------------------------
+    def transform(self, N_data: Dict, C_data: Dict, y_data=None, shared_state=None):
+        if not self.bin_edges_:
             return N_data, C_data, y_data
 
-        for part, X in N_data.items():
-            if X.ndim != 2:
-                raise ValueError(f"N_data[{part}] has to be 2D array.")
-            if X.shape[1] != len(self.bgmm_list_):
-                raise ValueError("feature number mismatch between fit and transform.")
+        for part_name, data_array in N_data.items():
+            if data_array.ndim != 2:
+                raise ValueError(f"N_data[{part_name}] must be 2-D array")
+            n_samples, n_features = data_array.shape
+            if n_features != len(self.bin_edges_):
+                raise ValueError("Feature number mismatch between fit and transform")
 
-            out_cols = []
-            for j, col_vals in enumerate(X.T):
-                if self.skip_mask_[j]:
-                    out_cols.append(col_vals.reshape(-1, 1))
-                    continue
+            transformed_cols = []
+            for col_idx in range(n_features):
+                v = data_array[:, col_idx]
+                edges = self.bin_edges_[col_idx]
+                k = len(edges) - 1
 
-                info = self.active_components_info_[j]
-                means, stds = info['means'], info['stds']
-                k = len(means)
-                col_out = np.empty((len(col_vals), k), np.float32)
-                for k_idx in range(k):
-                    m, s = means[k_idx], stds[k_idx]
-                    if s < 1e-14:
-                        col_out[:, k_idx] = 0.5
-                    else:
-                        z = (col_vals - m) / s
-                        col_out[:, k_idx] = norm.cdf(z)
-                out_cols.append(col_out)
+                if self.encoding_type == "uniform":
+                    denom = edges[1:] - edges[:-1]
+                    denom[denom == 0] = 1.0
+                    f = (v[:, None] - edges[:-1]) / denom
+                    f = np.clip(f, 0.0, 1.0)
+                elif self.encoding_type == "gaussian":
+                    mu_sigma = self.bin_stats_[col_idx]  # (k,2)
+                    mu = mu_sigma[:, 0]
+                    sigma = mu_sigma[:, 1]
+                    z = (v[:, None] - mu) / sigma
+                    f = norm.cdf(z)
+                    # clamp outside bin → 0 / 1 to keep monotone
+                    f[v[:, None] < edges[:-1]] = 0.0
+                    f[v[:, None] > edges[1:]] = 1.0
+                else:
+                    raise NotImplementedError(f"encoding_type={self.encoding_type} not supported")
 
-            N_data[part] = np.hstack(out_cols)
+                transformed_cols.append(f.astype(np.float32))
+
+            N_data[part_name] = np.hstack(transformed_cols)
 
         return N_data, C_data, y_data
+
+    # ----------------------- helpers ----------------------------------
+    def _find_bins_1d(self, x: np.ndarray) -> np.ndarray:
+        """Return monotonically increasing edges for 1-D array *x*."""
+        x = x.ravel()
+        if np.unique(x).size <= 2 or np.isclose(np.var(x), 0.0):
+            return np.array([x.min(), x.max()], dtype=np.float64)
+
+        match self.binning_method:
+            case "hierarchical":
+                return self._bins_hierarchical(x)
+            case "kde":
+                return self._bins_kde_minima(x)
+            case "bic":
+                return self._bins_bic_dp(x)
+            case "hdbscan":
+                return self._bins_hdbscan(x)
+            case "manual":
+                nb = self.n_bins or 5
+                return np.percentile(x, np.linspace(0, 100, nb + 1))
+            case _:
+                raise NotImplementedError(f"binning_method={self.binning_method} not implemented")
+
+    # ------------------ 1) hierarchical -------------------------------
+    def _bins_hierarchical(self, x: np.ndarray) -> np.ndarray:
+        Z = linkage(x[:, None], method=self.linkage_method)
+
+        # 1-A 固定簇数 / 距离阈值
+        if self.n_bins is not None:
+            labels = fcluster(Z, t=self.n_bins, criterion="maxclust")
+
+        elif self.distance_threshold is not None:
+            labels = fcluster(Z, t=self.distance_threshold, criterion="distance")
+
+        # 1-C Inconsistency
+        elif self.inconsistency_threshold is not None:
+            from scipy.cluster.hierarchy import inconsistent
+            labels = fcluster(
+                Z,
+                t=self.inconsistency_threshold,
+                criterion="inconsistent",
+                depth=self.inconsistency_depth,
+            )
+
+        # 1-B 最大跳跃 (Elbow)
+        else:
+            d = Z[:, 2]
+            lookback = min(30, len(d) - 1)
+            gaps = np.diff(d[-lookback - 1 :])
+            idx = np.argmax(gaps)
+            tau = d[-lookback - 1 + idx] * self.elbow_gap_pct
+            labels = fcluster(Z, t=tau, criterion="distance")
+
+        # -------- labels → edges --------
+        uniq  = np.unique(labels)
+        mins  = np.array([x[labels == u].min() for u in uniq])
+        maxs  = np.array([x[labels == u].max() for u in uniq])
+        order = np.argsort(mins)
+        mins  = mins[order]
+        maxs  = maxs[order]
+
+        edges = [x.min()] + [(mins[i+1] + maxs[i])/2 for i in range(len(maxs)-1)] + [x.max()]
+
+        return np.asarray(edges, dtype=np.float64)
+
+
+    # ------------------ 2) KDE minima ---------------------------------
+    def _bins_kde_minima(self, x: np.ndarray) -> np.ndarray:
+        kde = gaussian_kde(x)
+        grid = np.linspace(x.min(), x.max(), max(200, x.size))
+        dens = kde(grid)
+        minima_idx = argrelextrema(dens, np.less)[0]
+        if minima_idx.size == 0:
+            return np.array([x.min(), x.max()])
+        edges = [x.min()]
+        for idx in minima_idx:
+            if dens[idx] < dens.max() * (1 - self.kde_min_prom):
+                edges.append(grid[idx])
+        edges.append(x.max())
+        return np.unique(np.asarray(edges, dtype=np.float64))
+
+    # ------------------ 3) BIC dynamic‑programming --------------------
+    def _bins_bic_dp(self, x: np.ndarray) -> np.ndarray:
+        try:
+            import ruptures as rpt
+        except ModuleNotFoundError:
+            # Fallback to hierarchical elbow
+            return self._bins_hierarchical(x)
+        x_sorted = np.sort(x)
+        # `bkps` gives the indices (1‑based) where each segment *ends*; the last
+        # element is always `len(x_sorted)`.  Use the midpoint between adjacent
+        # segments as the internal bin boundaries.
+        algo = rpt.Pelt(model="l2").fit(x_sorted)
+        beta = 3 * np.log(x.size)  # ≈ BIC penalty
+        bkps = algo.predict(pen=beta)
+        inner_edges = [
+            0.5 * (x_sorted[i - 1] + x_sorted[i]) for i in bkps[:-1]
+        ]
+        edges = [x.min(), *inner_edges, x.max()]
+        edges = np.asarray(edges, dtype=np.float64)
+        return edges
+
+    # ------------------ 4) HDBSCAN density‑based ----------------------
+    def _bins_hdbscan(self, x: np.ndarray) -> np.ndarray:
+        try:
+            import hdbscan
+        except ModuleNotFoundError:
+            # Fallback
+            return self._bins_hierarchical(x)
+        clusterer = hdbscan.HDBSCAN(min_cluster_size=self.min_cluster_size)
+        labels = clusterer.fit_predict(x[:, None])
+        if np.all(labels == -1):
+            return np.array([x.min(), x.max()])
+        uniq = np.unique(labels[labels >= 0])
+        mins = np.array([x[labels == u].min() for u in uniq])
+        maxs = np.array([x[labels == u].max() for u in uniq])
+        # order clusters by their minimum value
+        order = np.argsort(mins)
+        mins  = mins[order]
+        maxs  = maxs[order]
+
+        # Use the mid‑point between the current cluster's max and the next
+        # cluster's min as the internal bin boundary.  This keeps edges
+        # strictly increasing and better reflects the gap between clusters.
+        inner_edges = [
+            0.5 * (maxs[i] + mins[i + 1]) for i in range(len(maxs) - 1)
+        ]
+        edges = [x.min(), *inner_edges, x.max()]
+        return np.asarray(edges, dtype=np.float64)

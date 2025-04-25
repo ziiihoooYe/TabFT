@@ -83,6 +83,10 @@ class ResNet(nn.Module):
         self.head = nn.Linear(d, d_out)
 
     def forward(self, x: Tensor, x_cat: Tensor) -> Tensor:
+        if x is not None:
+            x = torch.cat((x, x_cat.to(dtype=x.dtype)), dim=-1) if x_cat is not None else x
+        else:
+            x = x_cat.to(dtype=torch.float32)
 
         x = self.first_layer(x)
         for layer in self.layers:

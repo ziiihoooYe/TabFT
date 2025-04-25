@@ -10,7 +10,7 @@
     "use_float": true,
     "cat_min_frequency": 0.0,
     "n_trials": 100,
-    "seed": 15,
+    "seed": 2015,
     "seed_num": 15,
     "workers": 0,
     "gpu": "0",

@@ -51,7 +51,8 @@ class CatBoostMethod(classical_methods):
         if not train:
             return
         fit_config = deepcopy(self.args.config['fit'])
-        fit_config.pop('n_bins')
+        if 'n_bins' in fit_config:
+            fit_config.pop('n_bins')
         fit_config['eval_set'] = (X_val, self.y['val'])
         tic = time.time()
         self.model.fit(X_train, self.y['train'],**fit_config)

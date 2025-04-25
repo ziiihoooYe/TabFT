@@ -7,6 +7,7 @@ import warnings
 warnings.filterwarnings("ignore")
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
+import argparse
 import sys
 import datetime
 expand_keys = ['dataset', 'model_type']
@@ -14,29 +15,36 @@ expand_keys = ['dataset', 'model_type']
 def main():
     
     ### ----------- Load Config/Prepare Logger ------------
-    config_file = 'config.yaml'
-    logger = get_logger(__name__, sys.argv[2] if len(sys.argv) > 2 else None)
-    if len(sys.argv) > 1:
-        config_file = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Run model training and evaluation with specified configurations.")
+    parser.add_argument('--config', type=str, default='config.yaml', help='Path to the configuration YAML file.')
+    parser.add_argument('--log', type=str, default=None, help='Path to the log file. If not provided, logs will be printed to console.')
+    parser.add_argument('--suffix', type=str, default=None, help='Suffix for preprocessed dataset files.')
+    args = parser.parse_args() 
+    config_file = args.config
+    suffix = args.suffix
+    logger = get_logger(__name__, args.log)
+
     recipes = load_recipes_from_yaml(config_file, expand_keys)
     all_results_summary = {}  # e.g., {dataset_name: {model_name: mean_metrics, ...}, ...}
     
     for recipe in recipes:
         args, default_para, opt_space = recipe
+        args.is_preprocessed = bool(suffix)  # Check if suffix is provided for preprocessed datasets
         loss_list, results_list, time_list = [], [], []
         logger.info("------------------------------------")
         logger.info(f"Dataset: {args.dataset}")
         logger.info(f"Model: {args.model_type}")
         
         ### ----------- Tuning Hyperparameters ------------
-        train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
+        dataset = args.dataset + f"_{suffix}" if suffix else args.dataset
+        train_val_data,test_data,info = get_dataset(dataset,args.dataset_path)
         if args.tune:
             args = tune_hyper_parameters(args,opt_space,train_val_data,info)
 
         ### ----------- Training and Testing ------------
-        for seed in tqdm(range(args.seed_num)):
-            # get dataset
-            train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
+        for seed in tqdm(range(args.seed, args.seed + args.seed_num)):
+            # get unmodified dataset 
+            train_val_data,test_data,info = get_dataset(dataset,args.dataset_path)
             
             args.seed = seed    # update seed  
             set_seeds(args.seed)

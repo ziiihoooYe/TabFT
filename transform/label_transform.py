@@ -48,4 +48,10 @@ class LabelTransform(BaseTransform):
         else:
             for part, arr in y_data.items():
                 y_data[part] = self.label_encoder_.transform(arr)
+
+        # Convert any object-dtype label arrays to float32
+        for part, arr in y_data.items():
+            if arr.dtype == object:
+                y_data[part] = arr.astype(np.float32)
+
         return N_data, C_data, y_data

@@ -13,8 +13,7 @@ class MLP(nn.Module):
         d_in: int,
         d_out: int, 
         d_layers: ty.List[int],    
-        dropout: float,
-        
+        dropout: float, 
         ) -> None:
         super().__init__()
         self.dropout = dropout
@@ -29,6 +28,10 @@ class MLP(nn.Module):
 
 
     def forward(self, x, x_cat = None):
+        if x is not None:
+            x = torch.cat((x, x_cat.to(dtype=x.dtype)), dim=-1) if x_cat is not None else x
+        else:
+            x = x_cat.to(dtype=torch.float32)
 
         for layer in self.layers:
             x = layer(x)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import yaml
 import shutil
@@ -12,6 +13,11 @@ import itertools
 import json
 import os.path as osp
 from argparse import Namespace
+import os.path as osp
+from typing import Dict, Any, Tuple
+
+import torch
+import optuna
 
 
 THIS_PATH = os.path.dirname(__file__)
@@ -124,7 +130,6 @@ _utils_pp = pprint.PrettyPrinter()
 def pprint(x):
     _utils_pp.pprint(x)
 
-
 #  ---- import from lib.util -----------
 def set_seeds(base_seed: int, one_cuda_seed: bool = False) -> None:
     """
@@ -150,10 +155,8 @@ def set_seeds(base_seed: int, one_cuda_seed: bool = False) -> None:
             default_generator = torch.cuda.default_generators[i]
             default_generator.manual_seed(cuda_seed + i)
 
-
 def get_device() -> torch.device:
     return torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
 
 import sklearn.metrics as skm
 def rmse(y, prediction, y_info):
@@ -551,7 +554,6 @@ def show_cross_dataset_results(all_results_summary, logger=None):
     import numpy as np
     model_aggregates = {}  # { model_name: { metric_name: [val1, val2, ...], ... }, ...}
 
-    # 1. 收集每个模型在每个数据集的metrics
     for dataset_name, model_results in all_results_summary.items():
         for model_name, metrics_dict in model_results.items():
             if model_name not in model_aggregates:
@@ -561,7 +563,6 @@ def show_cross_dataset_results(all_results_summary, logger=None):
                     model_aggregates[model_name][met_name] = []
                 model_aggregates[model_name][met_name].append(val)
 
-    # 2. 汇总并输出
     lines = ["\nCross-Dataset Averages for Each Model\n---------------------------------------"]
     for model_name, metrics_per_model in model_aggregates.items():
         lines.append(f"Model: {model_name}")
@@ -577,198 +578,257 @@ def show_cross_dataset_results(all_results_summary, logger=None):
         for line in lines:
             print(line)
 
+# ============================ Hyperparameter Search ============================
+# Central registry of **static** default hyper‑parameters for every `model_type`.
+"""hyperparam_tuning.py
+A **single‑file** implementation that contains:
+  • MODEL_DEFAULTS – static hyper‑parameter presets for each `model_type`
+  • deep_update – recursive dict merge helper
+  • apply_model_defaults – fills static + dynamic defaults into a config
+  • tune_hyper_parameters – Optuna‑based HPO entrypoint
 
-def tune_hyper_parameters(args,opt_space,train_val_data,info):
+All docstrings & inline comments are now **English‑only** for clarity.
+"""
+
+
+# -----------------------------------------------------------------------------
+# 1. Static defaults for each model_type
+# -----------------------------------------------------------------------------
+MODEL_DEFAULTS: Dict[str, Dict[str, Any]] = {
+    # === Classical models =====================================================
+    "xgboost": {  # CPU defaults; GPU overrides applied later
+        "fit":   {"verbose": False},
+        "model": {"tree_method": "hist"},
+    },
+    "catboost": {},  # dynamic defaults handled later
+    "RandomForest": {"model": {"max_depth": 12}},
+
+    # === CNN‑style ============================================================
+    "resnet": {
+        "model": {"activation": "relu", "normalization": "batchnorm"},
+    },
+
+    # === Transformer family ===================================================
+    "ftt": {
+        "model": {
+            "prenormalization": False,
+            "initialization": "xavier",
+            "activation": "reglu",
+            "n_heads": 8,
+            "d_token": 64,
+            "token_bias": True,
+            "kv_compression": None,
+            "kv_compression_sharing": None,
+        },
+    },
+    "t2gformer": {
+        "model": {
+            "prenormalization": False,
+            "initialization": "xavier",
+            "activation": "reglu",
+            "n_heads": 8,
+            "d_token": 64,
+            "token_bias": True,
+            "kv_compression": None,
+            "kv_compression_sharing": None,
+        },
+    },
+    "excelformer": {
+        "model": {
+            "prenormalization": False,
+            "kv_compression": None,
+            "kv_compression_sharing": None,
+            "token_bias": True,
+            "init_scale": 0.01,
+            "n_heads": 8,
+        },
+    },
+    "autoint": {
+        "model": {
+            "prenormalization": False,
+            "initialization": "xavier",
+            "activation": "relu",
+            "n_heads": 8,
+            "d_token": 64,
+            "kv_compression": None,
+            "kv_compression_sharing": None,
+        },
+    },
+
+    # === Other neural architectures ==========================================
+    "node": {"model": {"choice_function": "sparsemax", "bin_function": "sparsemoid"}},
+
+    "tabr": {
+        "model": {
+            "num_embeddings": {"type": "PLREmbeddings", "lite": True},
+            "d_multiplier": 2.0,
+            "mixer_normalization": "auto",
+            "dropout1": 0.0,
+            "normalization": "LayerNorm",
+            "activation": "ReLU",
+        },
+    },
+    "mlp_plr": {
+        "model": {"num_embeddings": {"type": "PLREmbeddings", "lite": True}},
+    },
+
+    "ptarl": {
+        "model": {"n_clusters": 20, "regularize": "True"},
+        "general": {
+            "diversity": "True",
+            "ot_weight": 0.25,
+            "diversity_weight": 0.25,
+            "r_weight": 0.25,
+        },
+    },
+
+    "modernNCA": {
+        "model": {"num_embeddings": {"type": "PLREmbeddings", "lite": True}},
+    },
+    "tabm": {
+        "model": {
+            "num_embeddings": {"type": "PLREmbeddings", "lite": True},
+            "backbone": {"type": "MLP"},
+            "arch_type": "tabm",
+            "k": 32,
+        },
+    },
+
+    "danets": {"general": {"k": 5, "virtual_batch_size": 256}},
+    "dcn2": {"model": {"stacked": False}},
+
+    "grownet": {
+        "ensemble_model": {"lr": 1.0},
+        "model": {"sparse": False},
+        "training": {"lr_scaler": 3},
+    },
+
+    "protogate": {
+        "training": {
+            "lam": 1e-3,
+            "pred_coef": 1,
+            "sorting_tau": 16,
+            "feature_selection": True,
+        },
+        "model": {"a": 1, "sigma": 0.5},
+    },
+
+    "grande": {
+        "model": {
+            "from_logits": True,
+            "use_class_weights": True,
+            "bootstrap": False,
+        },
+    },
+
+    "amformer": {
+        "model": {
+            "heads": 8,
+            "groups": [54, 54, 54, 54],
+            "sum_num_per_group": [32, 16, 8, 4],
+            "prod_num_per_group": [6, 6, 6, 6],
+            "cluster": True,
+            "target_mode": "mix",
+            "token_descent": False,
+        },
+    },
+}
+
+# -----------------------------------------------------------------------------
+# 2. Helper utilities
+# -----------------------------------------------------------------------------
+__all__ = [
+    "deep_update",
+    "apply_model_defaults",
+    "tune_hyper_parameters",
+]
+
+
+def deep_update(dst: Dict[str, Any], src: Dict[str, Any], *, overwrite: bool = True) -> None:
+    """Recursively merge *src* into *dst*.
+    When *overwrite* is False, existing keys in *dst* are kept.
     """
-    Tune hyper-parameters.
-
-    :args: argparse.Namespace, arguments
-    :opt_space: dict, search space
-    :train_val_data: tuple, training and validation data
-    :info: dict, information about the dataset
-    :return: argparse.Namespace, arguments
-    """
-    import optuna
-    import optuna.samplers
-    import optuna.trial
-    def objective(trial):
-        config = {}
-        try:
-            opt_space[args.model_type]['training']['n_bins'] = [
-                    "int",
-                    2, 
-                    256
-            ]
-        except:
-            opt_space[args.model_type]['fit']['n_bins'] = [
-                    "int",
-                    2, 
-                    256
-            ]
-        merge_sampled_parameters(
-            config, sample_parameters(trial, opt_space[args.model_type], config)
-        )    
-        if args.model_type == 'xgboost' and torch.cuda.is_available():
-            config['model']['tree_method'] = 'gpu_hist' 
-            config['model']['gpu_id'] = args.gpu
-            config['fit']["verbose"] = False
-        elif args.model_type == 'catboost' and torch.cuda.is_available():
-            config['fit']["logging_level"] = "Silent"
-        
-        elif args.model_type == 'RandomForest':
-            config['model']['max_depth'] = 12
-            
-        if args.model_type in ['resnet']:
-            config['model']['activation'] = 'relu'
-            config['model']['normalization'] = 'batchnorm'    
-
-        if args.model_type in ['ftt','t2gformer']:
-            config['model'].setdefault('prenormalization', False)
-            config['model'].setdefault('initialization', 'xavier')
-            config['model'].setdefault('activation', 'reglu')
-            config['model'].setdefault('n_heads', 8)
-            config['model'].setdefault('d_token', 64)
-            config['model'].setdefault('token_bias', True)
-            config['model'].setdefault('kv_compression', None)
-            config['model'].setdefault('kv_compression_sharing', None)    
-
-        if args.model_type in ['excelformer']:
-            config['model'].setdefault('prenormalization', False)
-            config['model'].setdefault('kv_compression', None)
-            config['model'].setdefault('kv_compression_sharing', None)  
-            config['model'].setdefault('token_bias', True)
-            config['model'].setdefault('init_scale', 0.01)
-            config['model'].setdefault('n_heads', 8)
-
-        if args.model_type in ["node"]:
-            config["model"].setdefault("choice_function", "sparsemax")
-            config["model"].setdefault("bin_function", "sparsemoid")
-
-        if args.model_type in ['tabr']:
-            config['model']["num_embeddings"].setdefault('type', 'PLREmbeddings')
-            config['model']["num_embeddings"].setdefault('lite', True)
-            config['model'].setdefault('d_multiplier', 2.0)
-            config['model'].setdefault('mixer_normalization', 'auto')
-            config['model'].setdefault('dropout1', 0.0)
-            config['model'].setdefault('normalization', "LayerNorm")
-            config['model'].setdefault('activation', "ReLU")
-        
-        if args.model_type in ['mlp_plr']:
-            config['model']["num_embeddings"].setdefault('type', 'PLREmbeddings')
-            config['model']["num_embeddings"].setdefault('lite', True)
-            
-        if args.model_type in ['ptarl']:
-            config['model']['n_clusters'] = 20
-            config['model']["regularize"]="True"
-            config['general']["diversity"]="True"
-            config['general']["ot_weight"]=0.25
-            config['general']["diversity_weight"]=0.25
-            config['general']["r_weight"]=0.25
-
-        if args.model_type in ['modernNCA','tabm']:
-            config['model']["num_embeddings"].setdefault('type', 'PLREmbeddings')
-            config['model']["num_embeddings"].setdefault('lite', True)
-        
-        if args.model_type in ['tabm']:
-            config['model']['backbone'].setdefault('type' , 'MLP')
-            config['model'].setdefault("arch_type", "tabm")
-            config['model'].setdefault("k", 32)
-        
-        
-        if args.model_type in ['danets']:
-            config['general']['k'] = 5
-            config['general']['virtual_batch_size'] = 256
-        
-        if args.model_type in ['dcn2']:
-            config['model']['stacked'] = False
-
-        if args.model_type in ['grownet']:
-            config["ensemble_model"]["lr"] = 1.0
-            config['model']["sparse"] = False
-            config["training"]['lr_scaler'] = 3
-
-        if args.model_type in ['autoint']:
-            config['model'].setdefault('prenormalization', False)
-            config['model'].setdefault('initialization', 'xavier')
-            config['model'].setdefault('activation', 'relu')
-            config['model'].setdefault('n_heads', 8)
-            config['model'].setdefault('d_token', 64)
-            config['model'].setdefault('kv_compression', None)
-            config['model'].setdefault('kv_compression_sharing', None)
-
-        if args.model_type in ['protogate']:
-            config['training'].setdefault('lam', 1e-3)
-            config['training'].setdefault('pred_coef', 1)
-            config['training'].setdefault('sorting_tau', 16)
-            config['training'].setdefault('feature_selection', True)
-            config['model'].setdefault('a',1)
-            config['model'].setdefault('sigma',0.5)
-        
-        if args.model_type in ['grande']:
-            config['model'].setdefault('from_logits', True)
-            config['model'].setdefault('use_class_weights', True)
-            config['model'].setdefault('bootstrap', False)
-
-        if args.model_type in ['amformer']:
-            config['model'].setdefault('heads', 8)
-            config['model'].setdefault('groups', [54,54,54,54])
-            config['model'].setdefault('sum_num_per_group', [32,16,8,4])
-            config['model'].setdefault("prod_num_per_group", [6,6,6,6])
-            config['model'].setdefault("cluster", True)
-            config['model'].setdefault("target_mode", "mix")
-            config['model'].setdefault("token_descent", False)
-
-        if config.get('config_type') == 'trv4':
-            if config['model']['activation'].endswith('glu'):
-                # This adjustment is needed to keep the number of parameters roughly in the
-                # same range as for non-glu activations
-                config['model']['d_ffn_factor'] *= 2 / 3
-
-        trial_configs.append(config)
-        # method.fit(train_val_data, info, train=True, config=config)  
-        # run with this config
-        try:
-            method.fit(train_val_data, info, train=True, config=config)    
-            return method.trlog['best_res']
-        except Exception as e:
-            print(e)
-            return 1e9 if info['task_type'] == 'regression' else 0.0
-    
-    if osp.exists(osp.join(args.save_path, '{}-tuned.json'.format(args.model_type))) and args.retune == False:
-        with open(osp.join(args.save_path, '{}-tuned.json'.format(args.model_type)), 'rb') as fp:
-            args.config = json.load(fp)
-    else:
-        # get data property
-        if info['task_type'] == 'regression':
-            direction = 'minimize'
-            for key in opt_space[args.model_type]['model'].keys():
-                if 'dropout' in key and '?' not in opt_space[args.model_type]['model'][key][0]:
-                    opt_space[args.model_type]['model'][key][0] = '?'+ opt_space[args.model_type]['model'][key][0]
-                    opt_space[args.model_type]['model'][key].insert(1, 0.0)
+    for k, v in src.items():
+        if isinstance(v, dict):
+            dst.setdefault(k, {})
+            deep_update(dst[k], v, overwrite=overwrite)
         else:
-            direction = 'maximize'  
-        
-        method = get_method(args.model_type)(args, info['task_type'] == 'regression')      
+            if overwrite or k not in dst:
+                dst[k] = v
 
-        trial_configs = []
-        study = optuna.create_study(
-                direction=direction,
-                sampler=optuna.samplers.TPESampler(seed=0),
-            )        
-        study.optimize(
-            objective,
-            **{'n_trials': args.n_trials},
-            show_progress_bar=True,
-        ) 
-        # get best configs
-        best_trial_id = study.best_trial.number
-        # update config files        
-        print('Best Hyper-Parameters')
-        print(trial_configs[best_trial_id])
-        args.config = trial_configs[best_trial_id]
-        with open(osp.join(args.save_path, '{}-tuned.json'.format(args.model_type)), 'w') as fp:
-            json.dump(args.config, fp, sort_keys=True, indent=4)
+
+def apply_model_defaults(config: Dict[str, Any], model_type: str, *, gpu_id: int | None = None) -> None:
+    """Fill *config* with static defaults and GPU‑dependent overrides."""
+    # 1) static defaults
+    deep_update(config, copy.deepcopy(MODEL_DEFAULTS.get(model_type, {})), overwrite=False)
+
+    # 2) dynamic defaults
+    if model_type == "xgboost" and torch.cuda.is_available():
+        deep_update(config, {"model": {"tree_method": "gpu_hist", "gpu_id": gpu_id or 0}}, overwrite=True)
+    if model_type == "catboost" and torch.cuda.is_available():
+        deep_update(config, {"fit": {"logging_level": "Silent"}}, overwrite=False)
+
+
+def tune_hyper_parameters(
+    args,
+    opt_space: Dict[str, Any],
+    train_val_data: Tuple[Any, Any, Any],
+    info: Dict[str, Any],
+):
+    """Run Optuna search and return *args* with the best config injected.
+
+    Parameters
+    ----------
+    args        : argparse.Namespace  – must contain model_type / save_path / n_trials / gpu
+    opt_space   : dict               – search‑space definition (same schema as before)
+    train_val_data : tuple           – (train, valid) data used by `method.fit`
+    info        : dict               – dataset metadata; needs `task_type`
+    """
+    # 0) tweak search space (once, not inside objective)
+    if info["task_type"] == "regression":
+        direction = "minimize"
+        for k, v in opt_space[args.model_type]["model"].items():
+            if "dropout" in k and not v[0].startswith("?"):
+                opt_space[args.model_type]["model"][k] = ["?" + v[0], 0.0] + v[1:]
+    else:
+        direction = "maximize"
+
+    # 1) define objective
+    def objective(trial: optuna.trial.Trial):
+        # skeleton config
+        config = {"model": {}, "fit": {}, "training": {}, "general": {}, "ensemble_model": {}}
+
+        # (a) defaults
+        apply_model_defaults(config, args.model_type, gpu_id=args.gpu)
+        # (b) optuna‑sampled overrides
+        local_space = copy.deepcopy(opt_space[args.model_type])
+        merge_sampled_parameters(config, sample_parameters(trial, local_space, config))
+
+        method = get_method(args.model_type)(args, info["task_type"] == "regression")
+        try:
+            method.fit(train_val_data, info, train=True, config=config)
+            score = method.trlog["best_res"]
+        except Exception as e:
+            print("Trial failed:", e)
+            score = float("inf") if direction == "minimize" else float("-inf")
+
+        trial.set_user_attr("config", copy.deepcopy(config))
+        return score
+
+    # 2) run Optuna
+    study = optuna.create_study(direction=direction, sampler=optuna.samplers.TPESampler(seed=0))
+    study.optimize(objective, n_trials=args.n_trials, show_progress_bar=True)
+
+    best_config = study.best_trial.user_attrs["config"]
+    args.config = best_config
+
+    # 3) persist
+    os.makedirs(args.save_path, exist_ok=True)
+    with open(osp.join(args.save_path, f"{args.model_type}-tuned.json"), "w") as fp:
+        json.dump(best_config, fp, indent=4)
+
     return args
+
 
 
 def get_method(_model):
@@ -920,8 +980,7 @@ def get_logger(logger_name: str, log_file: str = None, level: int = __import__('
     import logging
     import datetime
     if log_file is None:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        log_file = f"results_{timestamp}.log"
+        log_file = f"log/defalt_log.log"
     logger = logging.getLogger(logger_name)
     logger.setLevel(level)
     # Clear any existing handlers to avoid duplicate logs

@@ -9,7 +9,7 @@ class ResNetMethod(Method):
         if model_config is None:
             model_config = self.args.config['model']
         self.model = ResNet(
-            d_in=self.d_in,
+            d_in=self.d_in+len(self.categories) if self.categories else self.d_in,
             d_out=self.d_out,
             **model_config
         ).to(self.args.device)

@@ -71,7 +71,8 @@ def compute_bins(
     if not X.isfinite().all():
         raise ValueError('X must not contain nan/inf/-inf.')
     if n_bins <= 1 or n_bins >= len(X):
-        raise ValueError(f"Number of bins must be greater than 1 and less than the number of samples in X. However, n_bins={n_bins} and len(X)={len(X)}.")
+        n_bins = int(len(X) / 2)
+        # raise ValueError(f"Number of bins must be greater than 1 and less than the number of samples in X. However, n_bins={n_bins} and len(X)={len(X)}.")
 
     constant_cols = (X == X[0]).all(dim=0)
 

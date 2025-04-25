@@ -37,56 +37,82 @@ dataset:
   # - internet_firewall
 
   # Tiny benchmark 1
+  # -------------------------------------------------------- DPGMM ----------------------------------------------------
+  # - ASP-POTASSCO-classification_DPGMM
+  # - Ailerons_DPGMM
+  # - Bias_correction_r_2_DPGMM
+  # - electricity_DPGMM
+  # - estimation_of_obesity_levels_DPGMM
+  # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)_DPGMM
+  # - Diamonds_DPGMM
+  # - E-CommereShippingData_DPGMM
+  # - FOREX_audjpy-day-High_DPGMM
+  # - Fitness_Club_c_DPGMM
+  # - IEEE80211aa-GATS_DPGMM
+  # - Intersectional-Bias-Assessment_DPGMM
+  # - Job_Profitability_DPGMM
+  # - Kaggle_bike_sharing_demand_challange_DPGMM
+  # - Mobile_Price_Classification_DPGMM
+  # - NHANES_age_prediction_DPGMM
+  # - Shop_Customer_Data_DPGMM
+  # - VulNoneVul_DPGMM
+  # 
+  # --------------------------------------------------------- PLE ---------------------------------------------------
+  # - ASP-POTASSCO-classification_PLE
+  # - Ailerons_PLE
+  # - Bias_correction_r_2_PLE
+  # - electricity_PLE
+  # - estimation_of_obesity_levels_PLE
+  # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)_PLE
+  # - Diamonds_PLE
+  # - E-CommereShippingData_PLE
+  # - FOREX_audjpy-day-High_PLE
+  # - Fitness_Club_c_PLE
+  #
+  # ---------------------------------------------------
+  #
   - ASP-POTASSCO-classification
+  - Amazon_employee_access
   - Ailerons
+  - BNG(tic-tac-toe)
   - Bias_correction_r_2
+  - Click_prediction_small
   - electricity
   - estimation_of_obesity_levels
   - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   - Diamonds
   - E-CommereShippingData
   - FOREX_audjpy-day-High
+  - FOREX_audsgd-hour-High
   - Fitness_Club_c
-
-  # - IEEE80211aa-GATS
-  # - Intersectional-Bias-Assessment
-  # - Job_Profitability
-  # - Kaggle_bike_sharing_demand_challange
-  # - Mobile_Price_Classification
-  # - NHANES_age_prediction
-  # - Shop_Customer_Data
-  # - VulNoneVul
-  # - Waterstress
-  # - htru
-  # - ibm-employee-performance
-  # - internet_firewall
-  # - jungle_chess_2pcs_raw_endgame_complete
-  # - kc1
-  # - okcupid_stem
-  # - optdigits
-  # - pol
-  # - pol_reg
-  # - pole
-  # - socmob
-  # - archive_r56_Portuguese
-  # - compass
-  # - thyroid-dis
-  # - wine
-  # - yeast
-
-
-  # cls
-  # - kc1
-  # - bank 
-  # - Bank_Customer_Churn_Dataset
-  # - Fitness_Club_c
-  # - heloc
-
-  # reg
-  # - cpu_small
-  # - CPS1988
-  # - CookbookReviews
-  # - boston
+  - IEEE80211aa-GATS
+  - Intersectional-Bias-Assessment
+  - Job_Profitability
+  - Kaggle_bike_sharing_demand_challange
+  - Mobile_Price_Classification
+  - NHANES_age_prediction
+  - Shop_Customer_Data
+  - VulNoneVul
+  - Waterstress
+  - htru
+  - ibm-employee-performance
+  - internet_firewall
+  - jungle_chess_2pcs_raw_endgame_complete
+  - kc1
+  - led24
+  - okcupid_stem
+  - optdigits
+  - page-blocks
+  - pol
+  - pol_reg
+  - pole
+  - socmob
+  - splice
+  - archive_r56_Portuguese
+  - compass
+  - thyroid-dis
+  - wine
+  - yeast
 
 transform_list:
   # ----------------------------------------------------------------
@@ -106,7 +132,14 @@ transform_list:
   # - num_ple: {}
   # - num_robustscale: {}
   # - num_smoothclip: {}
-
+  - num_clustercdf: 
+      binning_method: hdbscan # hierarchical, kde, bic, hdbscan, manual
+      linkage_method: ward # ward, single, complete, average
+      encoding_type: uniform # uniform, gaussian
+      # elbow_gap_pct: 0.4
+      # n_bins: 10
+  
+  # - num_hybridcdf: {}
   # - num_dpgmmcdf: {}
   # - num_dpgmmcdf1: {}
   # - num_dpgmmcdfnorm: {}
@@ -114,7 +147,8 @@ transform_list:
   #     output_distribution: uniform
   # ----------------------------------------------------------------
   # categorical encoding process
-  - cat_indice: {}
+  - cat_onehot: {}
+  # - cat_indice: {}
   # - cat_targetindice: {}
   # - cat_target: {}
   # - cat_qt: {}
@@ -126,20 +160,21 @@ transform_list:
 model_type: 
   # - ftt
   # - saint
-  - realmlp
-  - tabnet
-  - tabtransformer
-  - xgboost
-  - lightgbm
+  # - realmlp
+  # - tabnet
+  # - tabtransformer
+  # - xgboost
+  # - lightgbm
   - mlp
   - resnet
-  - catboost
+  # - catboost
   # - tabpfn
   # - PFN-v2
   # - tab
 
-
+model_path: results_model/default_path
+seed: 15
 seed_num: 15
-gpu: 7
-
-tune: false
+gpu: 6
+# tune: true
+# n_trials: 100

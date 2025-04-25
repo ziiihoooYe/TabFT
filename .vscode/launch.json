@@ -4,23 +4,30 @@
     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Run Deep Model",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "main.py",
-            "console": "integratedTerminal",
-            "args": [
-                "config.yaml"
-            ]
-        },
         // {
-        //     "name": "Run Current File",
+        //     "name": "Run Deep Model",
         //     "type": "debugpy",
         //     "request": "launch",
-        //     "program": "${file}",
+        //     "program": "main.py",
         //     "console": "integratedTerminal",
-        //     "args": [],
-        // }
+        //     "args": [
+        //         "--config",
+        //         "config.yaml",
+        //         // "--suffix",
+        //         // "DPGMM_dynamic1",
+        //     ]
+        // },
+        {
+            "name": "Run Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "cache.yaml",
+                "TEST__",
+                // "gmm"
+            ],
+        }
     ]
 }
