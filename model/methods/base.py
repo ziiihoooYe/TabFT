@@ -98,6 +98,7 @@ class Method(object, metaclass=abc.ABCMeta):
         if is_train:
             N_data, C_data, y_data = self.D.N, self.D.C, self.D.y
             N_data, C_data, y_data = self.data_transform_pipeline.fit_transform(N_data, C_data, y_data)
+            self.args.feature_map_ = self.data_transform_pipeline.shared_state.get('feature_map_', None)
             self.N, self.C, self.y = N_data, C_data, y_data
             self.y_info = self.data_transform_pipeline.shared_state.get('y_info', {'policy': 'none'})
  

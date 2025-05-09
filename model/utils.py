@@ -15,7 +15,7 @@ import os.path as osp
 from argparse import Namespace
 import os.path as osp
 from typing import Dict, Any, Tuple
-
+import copy
 import torch
 import optuna
 
@@ -226,11 +226,22 @@ def sample_parameters(trial, space, base_config):
 
             if distribution.startswith('?'):
                 default_value = args[0]
-                result[label] = (
-                    get_distribution(distribution.lstrip('?'))(label, *args[1:])
-                    if trial.suggest_categorical(f'optional_{label}', [False, True])
-                    else default_value
-                )
+                underlying = distribution.lstrip('?')
+                enabled = trial.suggest_categorical(f'optional_{label}', [False, True])
+                if not enabled:
+                    result[label] = default_value
+                    continue
+
+                # enabled – perform real sampling
+                if underlying == 'categorical':
+                    choices = args[1:]
+                    result[label] = trial.suggest_categorical(label, choices)
+                else:
+                    result[label] = get_distribution(underlying)(label, *args[1:])
+
+            elif distribution == 'categorical':
+                # `args` is the list of candidate choices
+                result[label] = trial.suggest_categorical(label, args)
 
             elif distribution == '$mlp_d_layers':
                 min_n_layers, max_n_layers, d_min, d_max = args
@@ -264,6 +275,7 @@ def sample_parameters(trial, space, base_config):
     return result
 
 
+
 def merge_sampled_parameters(config, sampled_parameters):
     """
     Merge the sampled hyper-parameters.
@@ -277,6 +289,40 @@ def merge_sampled_parameters(config, sampled_parameters):
         else:
             # If there are parameters in the default config, the value of the parameter will be overwritten.
             config[k] = v
+
+
+# --- update_transform_list helper ---
+def update_transform_list(transform_list: list, updates: dict) -> list:
+    """
+    Return a **new** transform_list whose internal parameter dicts are
+    updated according to *updates*.
+
+    `updates` follows the same nesting structure as transform_list, e.g.:
+
+        updates = {
+            "num_cdf": {          # block name
+                "cdf_type": "uniform",
+                "n_components": 50,
+            },
+            "norm": {
+                "policy": "minmax",
+            },
+        }
+    """
+    new_list = copy.deepcopy(transform_list)
+
+    def deep_merge(dst, src):
+        for k, v in src.items():
+            if isinstance(v, dict) and isinstance(dst.get(k), dict):
+                deep_merge(dst[k], v)
+            else:
+                dst[k] = v
+
+    for block in new_list:
+        name = next(iter(block))          # each block is {"blk_name": {...}}
+        if name in updates:
+            deep_merge(block[name], updates[name])
+    return new_list
 
 
 def fix_recipe(args, constraints):
@@ -769,6 +815,7 @@ def apply_model_defaults(config: Dict[str, Any], model_type: str, *, gpu_id: int
         deep_update(config, {"fit": {"logging_level": "Silent"}}, overwrite=False)
 
 
+
 def tune_hyper_parameters(
     args,
     opt_space: Dict[str, Any],
@@ -796,23 +843,43 @@ def tune_hyper_parameters(
     # 1) define objective
     def objective(trial: optuna.trial.Trial):
         # skeleton config
-        config = {"model": {}, "fit": {}, "training": {}, "general": {}, "ensemble_model": {}}
+        config = {"transform": {},"model": {}, "fit": {}, "training": {}, "general": {}, "ensemble_model": {}}
 
         # (a) defaults
         apply_model_defaults(config, args.model_type, gpu_id=args.gpu)
         # (b) optuna‑sampled overrides
         local_space = copy.deepcopy(opt_space[args.model_type])
-        merge_sampled_parameters(config, sample_parameters(trial, local_space, config))
 
-        method = get_method(args.model_type)(args, info["task_type"] == "regression")
+        # --- 1) sample everything (model + training + transform) ---
+        sampled_all = sample_parameters(trial, local_space, config)
+
+        # --- 2) peel off transform‑related hyper‑params -------------
+        sampled_transform = sampled_all.pop("transform", None)
+
+        # --- 3) merge the rest into `config` ------------------------
+        merge_sampled_parameters(config, sampled_all)
+
+        # --- 4) clone args and apply transform updates --------------
+        trial_args = copy.deepcopy(args)
+        if sampled_transform:
+            trial_args.transform_list = update_transform_list(
+                trial_args.transform_list, sampled_transform
+            )
+
+        method = get_method(trial_args.model_type)(
+            trial_args, info["task_type"] == "regression"
+        )
         try:
-            method.fit(train_val_data, info, train=True, config=config)
+            method.fit(copy.deepcopy(train_val_data), info, train=True, config=config)
             score = method.trlog["best_res"]
         except Exception as e:
             print("Trial failed:", e)
             score = float("inf") if direction == "minimize" else float("-inf")
 
-        trial.set_user_attr("config", copy.deepcopy(config))
+        full_cfg = copy.deepcopy(config)
+        if sampled_transform:
+            full_cfg["transform"] = sampled_transform
+        trial.set_user_attr("config", full_cfg)
         return score
 
     # 2) run Optuna
@@ -821,6 +888,10 @@ def tune_hyper_parameters(
 
     best_config = study.best_trial.user_attrs["config"]
     args.config = best_config
+
+    best_transform = best_config.pop("transform", None)
+    if best_transform:
+        args.transform_list = update_transform_list(args.transform_list, best_transform)
 
     # 3) persist
     os.makedirs(args.save_path, exist_ok=True)

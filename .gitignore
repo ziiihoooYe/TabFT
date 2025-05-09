@@ -4,6 +4,9 @@ __pycache__/
 # results model
 results_model/
 
+# transform cache
+fit_cache/
+
 # log files
 log/
 *.log

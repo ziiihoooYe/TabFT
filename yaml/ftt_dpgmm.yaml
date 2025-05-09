@@ -43,16 +43,29 @@ dataset:
   - yeast
 
 transform_list:
+  # ----------------------------------------------------------------
+  # standard proprocess: nan, label
+  - nan:
+      policy: mean # mean, median
+  - label: {}
+  - num_cdf: 
+      cdf_type: gaussian # uniform, gaussian
+      cache_path: fit_cache
+      n_components: 100
+  # ----------------------------------------------------------------
+  # categorical encoding process
+  - cat_indice: {}
+  # ----------------------------------------------------------------
+  # normalization process
   - norm: 
       policy: standard # none, standard, minmax, robust, power, quantile, maxabs
-  
+   
 model_type: 
-  - mlp
-  - resnet
+  - ftt
 
-model_path: results_model/dpgmm_dynamic1
-seed: 15
+model_path: results_model/ftt_dpgmm
+seed: 1
 seed_num: 15
-gpu: 7
+gpu: 1
 tune: true
 n_trials: 100

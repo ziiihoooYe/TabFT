@@ -1,16 +1,16 @@
 dataset:
-  # - ASP-POTASSCO-classification
-  # - Amazon_employee_access
-  # - Ailerons
-  # - BNG(tic-tac-toe)
-  # - Bias_correction_r_2
-  # - Click_prediction_small
-  # - electricity
-  # - estimation_of_obesity_levels
-  # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
-  # - Diamonds
-  # - E-CommereShippingData
-  # - FOREX_audjpy-day-High
+  - ASP-POTASSCO-classification
+  - Amazon_employee_access
+  - Ailerons
+  - BNG(tic-tac-toe)
+  - Bias_correction_r_2
+  - Click_prediction_small
+  - electricity
+  - estimation_of_obesity_levels
+  - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
+  - Diamonds
+  - E-CommereShippingData
+  - FOREX_audjpy-day-High
   - FOREX_audsgd-hour-High
   - Fitness_Club_c
   - IEEE80211aa-GATS
@@ -43,6 +43,23 @@ dataset:
   - yeast
 
 transform_list:
+  # ----------------------------------------------------------------
+  # standard proprocess: nan, label
+  - nan:
+      policy: mean # mean, median
+  - label: {}
+  # ----------------------------------------------------------------
+  # numerical encoding process
+  - num_cdf: 
+      cdf_type: uniform # uniform, gaussian
+      cache_path: fit_cache
+      n_components: 100
+      binning_method: hdbscan # quantile, hdbscan, hierarchical
+  # ----------------------------------------------------------------
+  # categorical encoding process
+  - cat_onehot: {}
+  # ----------------------------------------------------------------
+  # normalization process
   - norm: 
       policy: standard # none, standard, minmax, robust, power, quantile, maxabs
   
@@ -51,8 +68,8 @@ model_type:
   - resnet
 
 model_path: results_model/hdbscan
-seed: 15
+seed: 1
 seed_num: 15
-gpu: 3
+gpu: 5
 tune: true
-n_trials: 100
+n_trials: 20

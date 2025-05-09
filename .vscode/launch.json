@@ -5,29 +5,29 @@
     "version": "0.2.0",
     "configurations": [
         // {
-        //     "name": "Run Deep Model",
+        //     "name": "Run Current File",
         //     "type": "debugpy",
         //     "request": "launch",
-        //     "program": "main.py",
+        //     "program": "cache_dataset.py",
         //     "console": "integratedTerminal",
         //     "args": [
-        //         "--config",
-        //         "config.yaml",
-        //         // "--suffix",
-        //         // "DPGMM_dynamic1",
-        //     ]
+        //         "cache.yaml",
+        //         "TEST__",
+        //         // "gmm"
+        //     ],
         // },
         {
-            "name": "Run Current File",
+            "name": "Run Deep Model",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "main.py",
             "console": "integratedTerminal",
             "args": [
-                "cache.yaml",
-                "TEST__",
-                // "gmm"
-            ],
+                "--config",
+                "config.yaml",
+                // "--suffix",
+                // "TEST__",
+            ]
         }
     ]
 }

@@ -43,16 +43,25 @@ dataset:
   - yeast
 
 transform_list:
+  # ----------------------------------------------------------------
+  # standard proprocess: nan, label
+  - nan:
+      policy: mean # mean, median
+  - label: {}
+  # ----------------------------------------------------------------
+  # categorical encoding process
+  - cat_indice: {}
+  # ----------------------------------------------------------------
+  # normalization process
   - norm: 
       policy: standard # none, standard, minmax, robust, power, quantile, maxabs
-  
+   
 model_type: 
-  - mlp
-  - resnet
+  - ftt
 
-model_path: results_model/dpgmm_0.001
-seed: 15
+model_path: results_model/ftt_no_transform
+seed: 1
 seed_num: 15
-gpu: 7
+gpu: 5
 tune: true
 n_trials: 100

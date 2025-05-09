@@ -50,19 +50,11 @@ transform_list:
   - label: {}
   # ----------------------------------------------------------------
   # numerical encoding process
-  #
-  - num_binning:
-      n_bins: 1000
-      policy: Q
-  - num_ple: {}
-
-  # - numcdf: {}
-  # - num_clustercdf: 
-  #     binning_method: hierarchical # hierarchical, kde, bic, hdbscan, manual
-  #     linkage_method: ward # ward, single, complete, average
-  #     encoding_type: uniform # uniform, gaussian
-  #     elbow_gap_pct: 0.4
-      # n_bins: 10
+  - num_cdf: 
+      cdf_type: dynamic # uniform, gaussian
+      cache_path: fit_cache
+      n_components: 100
+      binning_method: quantile # quantile, hdbscan, hierarchical
   # ----------------------------------------------------------------
   # categorical encoding process
   - cat_onehot: {}
@@ -73,3 +65,11 @@ transform_list:
   
 model_type: 
   - mlp
+  - resnet
+
+model_path: results_model/dynamic
+seed: 1
+seed_num: 15
+gpu: 2
+tune: true
+n_trials: 20

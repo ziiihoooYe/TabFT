@@ -51,11 +51,11 @@ transform_list:
   # ----------------------------------------------------------------
   # numerical encoding process
   - num_cdf: 
-      cdf_type: uniform # uniform, gaussian
+      cdf_type: gaussian # uniform, gaussian
       cache_path: fit_cache
       n_components: 100
-      binning_method: hierarchical # quantile, hdbscan, hierarchical
-      linkage_method: ward # ward, single, complete, average
+      weight_threshold: 0.0001
+      posterior: false
   # ----------------------------------------------------------------
   # categorical encoding process
   - cat_onehot: {}
@@ -68,9 +68,9 @@ model_type:
   - mlp
   - resnet
 
-model_path: results_model/hc100
+model_path: results_model/dpgmm_0.0001
 seed: 1
 seed_num: 15
-gpu: 3
+gpu: 2
 tune: true
 n_trials: 20

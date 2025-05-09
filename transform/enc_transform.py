@@ -6,6 +6,8 @@ import torch
 from model.lib.num_embeddings import (
     PiecewiseLinearEncoding, UnaryEncoding, BinsEncoding, JohnsonEncoding, _check_bins
 )
+# ----------- added for cache support -----------
+import os, json, hashlib
 
 
 # numeric encoding transforms
@@ -726,385 +728,724 @@ class SmoothClipTransform:
 
     def smooth_clip(self, X):
         return X / np.sqrt(1.0 + (X / 3.0)**2)
-    
+     
 
 from sklearn.mixture import BayesianGaussianMixture
 from scipy.stats import norm
-from transform.base import BaseTransform
-class DPGMMCdfTransform(BaseTransform):
-    def __init__(self, args):
+import numpy as np, os, json, hashlib, pickle
+from typing import Dict, List
+from transform.base import BaseTransform   # 保持与原工程一致
+
+
+class CdfTransform(BaseTransform):
+    """
+    Cluster‑CDF ('uniform') / DPGMM‑CDF ('gaussian') / 自适应 ('dynamic').
+
+    Args (*args*)
+    -------------
+    cdf_type         : 'uniform' | 'gaussian' | 'dynamic'
+    n_components     : int
+    binning_method   : quantile | hdbscan | hierarchical   (uniform)
+    linkage_method   : ward | single | average | complete
+    min_cluster_size : int (hdbscan)
+    min_sigma        : float
+    weight_threshold : float
+    cache_path       : str | None
+    # dynamic‑mode extra
+    dynamic_ks_thresh: float   – KS 阈值 (≤ 0.05 越严格)
+    """
+
+    # -------------------- init --------------------
+    def __init__(self, args: Dict, dataset=None):
         super().__init__()
-        self.n_components = args.get('n_components', 100)
-        self.max_iter = args.get('max_iter', 500)
-        self.random_state = args.get('random_state', 0)
-        self.weight_concentration_prior = args.get('weight_concentration_prior', 0.01)
-        self.weight_threshold = args.get('weight_threshold', 0)
-        self.reg_covar = args.get('reg_covar', 0.001)
- 
-        self.cov_type = args.get('covariance_type', 'full') 
-        self.bgmm_list_ = []  
-        self.active_components_info_ = []  
-        # mapping from original → generated columns
-        self.feature_map_ = None
+        # --- basic ---
+        self.cdf_type  = args.get("cdf_type", "uniform").lower()
+        self.cdf_path  = args.get("cache_path", None)
+        self.dataset   = dataset
 
-    def fit(self, N_data, C_data, y_data=None, shared_state=None):
-        if not N_data or 'train' not in N_data:
-            return self
+        # uniform
+        self.binning_method   = args.get("binning_method", "quantile")
+        self.linkage_method   = args.get("linkage_method", "ward")
+        self.min_cluster_size = args.get("min_cluster_size", 20)
 
-        X_train = N_data['train']  # shape = (n_samples, n_features)
-        n_samples, n_features = X_train.shape
+        # shared
+        self.n_components = args.get("n_components", 100)
+        self.min_sigma    = args.get("min_sigma", 1e-6)
 
-        self.bgmm_list_ = []
-        self.active_components_info_ = []
-
-        for col_idx in range(n_features):
-            col_values = X_train[:, col_idx].reshape(-1, 1)
-            bgmm = BayesianGaussianMixture(
-                n_components=self.n_components,
-                max_iter=self.max_iter,
-                random_state=self.random_state,
-                covariance_type=self.cov_type,
-                reg_covar= max(self.reg_covar * np.var(col_values), 1e-8),
-                weight_concentration_prior_type='dirichlet_process'
-            )
-            bgmm.fit(col_values)
-
-            self.bgmm_list_.append(bgmm)
-
-            # Identify active mixture components (weight > threshold, else pick the heaviest)
-            weights = bgmm.weights_
-            valid_idx = np.where(weights > self.weight_threshold)[0]
-            if valid_idx.size == 0:
-                valid_idx = np.array([np.argmax(weights)], dtype=int)
-
-            means = bgmm.means_[valid_idx].ravel()
-
-            if bgmm.covariances_.ndim == 2:
-                vars_ = bgmm.covariances_[valid_idx, 0]
-            elif bgmm.covariances_.ndim == 3:
-                vars_ = bgmm.covariances_[valid_idx, 0, 0]
-            else:
-                vars_ = bgmm.covariances_[valid_idx]
-            stds = np.sqrt(vars_).ravel()
-
-            # ==== sort base on mean ====
-            order = np.argsort(means)
-            valid_idx     = valid_idx[order]
-            means         = means[order]
-            stds          = stds[order]
-            weights_valid = weights[valid_idx]
-
-            # ==== 存储 ====
-            self.active_components_info_.append({
-                "valid_comp_inds": valid_idx,
-                "means":   means.astype(np.float64),
-                "stds":    stds.astype(np.float64),
-                "weights": weights_valid.astype(np.float64),
-            })
-
-
-        return self
-
-    def transform(self, N_data, C_data, y_data=None, shared_state=None):
-        if not self.bgmm_list_:
-            return N_data, C_data, y_data
-
-        for part_name, data_array in N_data.items():
-            if data_array.ndim != 2:
-                raise ValueError(f"N_data[{part_name}] has to be  2D array.")
-
-            n_samples, n_features = data_array.shape
-            if n_features != len(self.bgmm_list_):
-                raise ValueError("feature number mismatch between fit and transform.")
-
-            transformed_cols = []
-
-            for col_idx in range(n_features):
-                col_values = data_array[:, col_idx]
-                info = self.active_components_info_[col_idx]
-                means = info['means']
-                stds = info['stds']
-
-                k_i = len(means)
-                out_col = np.empty((n_samples, k_i), dtype=np.float32)
-
-                for comp_idx in range(k_i):
-                    m = means[comp_idx]
-                    s = stds[comp_idx]
-                    if s < 1e-14:
-                        out_col[:, comp_idx] = 0.5
-                    else:
-                        z = (col_values - m) / s
-                        out_col[:, comp_idx] = norm.cdf(z)
-
-                transformed_cols.append(out_col)
-
-            # ---------- build feature_map once ----------
-            if self.feature_map_ is None:
-                mapping, offset = [], 0
-                for j, info in enumerate(self.active_components_info_):
-                    k_j = len(info['means'])
-                    mapping.append({"orig_idx": j,
-                                    "new_start": offset,
-                                    "size": int(k_j)})
-                    offset += k_j
-                self.feature_map_ = mapping
-
-            # concatenate all transformed columns
-            new_part_data = np.hstack(transformed_cols)  # shape: (n_samples, sum_of_all_k)
-            N_data[part_name] = new_part_data
-
-        return N_data, C_data, y_data  
-    
-
-from typing import Dict, List, Tuple
-from scipy.cluster.hierarchy import linkage, fcluster
-from scipy.signal import argrelextrema
-from scipy.stats import gaussian_kde, norm
-
-class ClusterCdfTransform(BaseTransform):
-    """Adaptive binning + selectable CDF encoding for numerical features."""
-
-    # --------------------------- init ----------------------------------
-    def __init__(self, args: Dict):
-        super().__init__()
-
-        # --- binning parameters ---
-        self.binning_method: str   = args.get("binning_method", "hierarchical")
-        self.linkage_method: str   = args.get("linkage_method", "ward")
-        self.n_bins: int | None    = args.get("n_bins")
-        self.distance_threshold: float | None = args.get("distance_threshold")
-        self.elbow_gap_pct: float  = args.get("elbow_gap_pct", 1.0)
-        self.inconsistency_threshold: float | None = args.get(
-            "inconsistency_threshold", None
+        # gaussian
+        self.weight_threshold = float(args.get("weight_threshold", 1e-4))
+        self.weight_concentration_prior_type = args.get(
+            "weight_concentration_prior_type", "dirichlet_process"
         )
-        self.inconsistency_depth: int = args.get("inconsistency_depth", 2)
-        self.kde_min_prom: float   = args.get("kde_min_prom", 0.0)   # minima threshold
-        self.min_cluster_size: int = args.get("min_cluster_size", 20) # for HDBSCAN
+        self.reg_covar = args.get("reg_covar", 1e-6)
 
-        # --- encoding parameters ---
-        self.encoding_type: str    = args.get("encoding_type", "uniform")  # uniform | gaussian
-        self.min_sigma: float      = args.get("min_sigma", 1e-6)
+        # dynamic
+        self.dynamic_ks_thresh      = args.get("dynamic_ks_thresh", 0.05)
+        self.feature_types_: List[str] = []     # per‑column decision
 
-        # --- learned state ---
-        self.bin_edges_: List[np.ndarray]      = []  # per column edges (k+1,)
-        self.bin_stats_: List[np.ndarray]      = []  # per column (k,2) mean/sigma for gaussian
-        self.feature_map_: List[Dict]          = []
+        # misc
+        self.concat_raw = args.get("concat_raw", False)
 
-    # --------------------------- fit ----------------------------------
-    def fit(self, N_data: Dict, C_data: Dict, y_data=None, shared_state=None):
+        # learned
+        self.bin_edges_, self.bin_stats_, self.bin_weights_ = [], [], []
+        self.feature_map_: List[Dict] = []
+
+        # --- config used for cache key ---
+        self.config = (
+            "dataset", "cdf_type", "binning_method", "n_components",
+            "linkage_method", "min_cluster_size", "min_sigma"
+        ) if self.cdf_type == "uniform" else (
+            "dataset", "cdf_type", "n_components",
+            "weight_threshold", "weight_concentration_prior_type",
+            "reg_covar"
+        )
+        if self.cdf_type == "dynamic":
+            self.config += ("dynamic_ks_thresh",)
+
+    # ---------------- cache helpers ----------------
+    def _cfg(self):  # dict used for hashing
+        return {k: getattr(self, k) for k in self.config}
+
+    def _hash(self):
+        return hashlib.md5(json.dumps(self._cfg(), sort_keys=True).encode()).hexdigest()[:16]
+
+    def _cache_file(self):
+        if not self.cdf_path:
+            return None
+        return os.path.join(self.cdf_path, f"{self._hash()}.pkl")
+
+    # ---------------- fit --------------------------
+    def fit(self, N_data, C_data, y_data=None, shared_state=None):
         if not N_data or "train" not in N_data:
             return self
+        shared_state = shared_state or {}
 
-        X_train = N_data["train"]
-        if X_train.ndim != 2:
-            raise ValueError("N_data['train'] must be 2-D array (n_samples, n_features)")
-        n_samples, n_features = X_train.shape
+        # ---------- try cache ----------
+        cfile = self._cache_file()
+        if cfile and os.path.exists(cfile):
+            state = pickle.load(open(cfile, "rb"))
+            if state.get("config") == self._cfg():
+                if "feature_types_" in state:
+                    self.feature_types_ = state["feature_types_"]
+                self.__dict__.update({k: state[k] for k in (
+                    "bin_edges_", "bin_stats_", "bin_weights_", "feature_map_"
+                )})
+                shared_state["feature_map_"] = self.feature_map_
+                return self
 
-        self.bin_edges_.clear()
-        self.bin_stats_.clear()
-        self.feature_map_.clear()
+        X = N_data["train"]
+        n, d = X.shape
+        self.bin_edges_, self.bin_stats_, self.bin_weights_, self.feature_map_ = [], [], [], []
+        if self.cdf_type == "dynamic":
+            self.feature_types_.clear()
 
-        for col_idx in range(n_features):
-            col_vals = X_train[:, col_idx]
-            edges = self._find_bins_1d(col_vals)
-            self.bin_edges_.append(edges)
+        for j in range(d):
+            col = X[:, j]
 
-            # stats for gaussian encoding
-            stats = []
-            for j in range(len(edges) - 1):
-                mask = (col_vals >= edges[j]) & (col_vals <= edges[j + 1])
-                if mask.any():
-                    mu = col_vals[mask].mean()
-                    sigma = col_vals[mask].std(ddof=0)
-                    if sigma < self.min_sigma:
-                        sigma = max(col_vals.std(ddof=0), self.min_sigma)
-                else:
-                    # empty bin – fallback to mid + global std
-                    mu = 0.5 * (edges[j] + edges[j + 1])
-                    sigma = max(col_vals.std(ddof=0), self.min_sigma)
-                stats.append((mu, sigma))
-            self.bin_stats_.append(np.asarray(stats, dtype=np.float64))
-            self.feature_map_.append({
-                "orig_idx": col_idx,
-                "new_start": None,  # placeholder
-                "size": len(edges) - 1,
-            })
+            # --------------- gaussian path ---------------
+            if self.cdf_type == "gaussian":
+                self._fit_gaussian(col)
+            # --------------- uniform path ----------------
+            elif self.cdf_type == "uniform":
+                self._fit_uniform(col)
+            # --------------- dynamic path ----------------
+            elif self.cdf_type == "dynamic":
+                self._fit_dynamic(col)
+            else:
+                raise ValueError(f"Unknown cdf_type: {self.cdf_type}")
 
-        # assign new_start offsets
+            # feature map bookkeeping
+            size = len(self.bin_weights_[-1])
+            if self.concat_raw:
+                size += 1
+            self.feature_map_.append({"orig_idx": j, "new_start": None, "size": size})
+
+        # assign start indices
         offset = 0
-        for m in self.feature_map_:
-            m["new_start"] = offset
-            offset += m["size"]
+        for meta in self.feature_map_:
+            meta["new_start"] = offset
+            offset += meta["size"]
+        shared_state["feature_map_"] = self.feature_map_
+
+        # ---------- save cache ----------
+        if cfile:
+            os.makedirs(os.path.dirname(cfile), exist_ok=True)
+            pickle.dump(
+                {
+                    "config": self._cfg(),
+                    "bin_edges_": self.bin_edges_,
+                    "bin_stats_": self.bin_stats_,
+                    "bin_weights_": self.bin_weights_,
+                    "feature_map_": self.feature_map_,
+                    "feature_types_": self.feature_types_,
+                },
+                open(cfile, "wb"),
+            )
+        return self
+
+    # ============ helper sub‑fit methods =============
+    def _fit_gaussian(self, col):
+        bgmm = BayesianGaussianMixture(
+            n_components=self.n_components,
+            weight_concentration_prior_type=self.weight_concentration_prior_type,
+            random_state=0,
+            reg_covar=max(col.var() * 1e-6, 1e-8),
+        ).fit(col.reshape(-1, 1))
+        w, m, c = bgmm.weights_, bgmm.means_.ravel(), bgmm.covariances_
+        idx = np.where(w > self.weight_threshold)[0]
+        if not idx.size:
+            idx = np.array([np.argmax(w)])
+        w, m, c = w[idx], m[idx], c[idx]
+        order = np.argsort(m)
+        m, w, c = m[order], w[order], c[order]
+        s = np.sqrt(np.atleast_1d(c).ravel())
+
+        self.bin_edges_.append(m.astype(float))
+        self.bin_stats_.append(np.vstack([m, s]).T.astype(float))
+        self.bin_weights_.append(w.astype(float))
+
+    def _fit_uniform(self, col):
+        edges = self._sort_bins(self._find_bins_1d(col))
+        cnt, _ = np.histogram(col, bins=edges)
+        w = cnt / cnt.sum() if cnt.sum() else np.full(len(cnt), 1 / len(cnt))
+        stats = []
+        for k in range(len(edges) - 1):
+            mask = (col >= edges[k]) & (col <= edges[k + 1])
+            mu = col[mask].mean() if mask.any() else 0.5 * (edges[k] + edges[k + 1])
+            sg = col[mask].std(ddof=0) if mask.any() else self.min_sigma
+            stats.append((mu, max(sg, self.min_sigma)))
+
+        self.bin_edges_.append(edges.astype(float))
+        self.bin_stats_.append(np.asarray(stats, float))
+        self.bin_weights_.append(w.astype(float))
+
+    def _fit_dynamic(self, col):
+        # single BGMM fit
+        bgmm = BayesianGaussianMixture(
+            n_components=self.n_components,
+            weight_concentration_prior_type=self.weight_concentration_prior_type,
+            random_state=0,
+            reg_covar=max(col.var() * 1e-6, 1e-8),
+        ).fit(col.reshape(-1, 1))
+
+        w_all, m_all, c_all = bgmm.weights_, bgmm.means_.ravel(), bgmm.covariances_
+        idx = np.where(w_all > self.weight_threshold)[0]
+        if not idx.size:
+            idx = np.array([np.argmax(w_all)])
+        w, m, c = w_all[idx], m_all[idx], c_all[idx]
+        order = np.argsort(m)
+        w, m, c = w[order], m[order], c[order]
+        s = np.sqrt(np.atleast_1d(c).ravel())
+
+        # KS distance
+        xs = np.sort(col)
+        emp_cdf = np.arange(1, len(xs) + 1) / len(xs)
+        mix_cdf = (norm.cdf((xs[:, None] - m) / s) * w).sum(axis=1)
+        ks_D = np.max(np.abs(emp_cdf - mix_cdf))
+
+        if ks_D <= self.dynamic_ks_thresh:
+            self.bin_edges_.append(m.astype(float))
+            self.bin_stats_.append(np.vstack([m, s]).T.astype(float))
+            self.bin_weights_.append(w.astype(float))
+            self.feature_types_.append("gaussian")
+        else:
+            self._fit_uniform(col)
+            self.feature_types_.append("uniform")
+
+    # ---------------- transform ----------------------
+    def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        if not self.feature_map_:
+            return N_data, C_data, y_data
+
+        for part, arr in N_data.items():
+            cols_out = []
+            for j, meta in enumerate(self.feature_map_):
+                v = arr[:, meta["orig_idx"]]
+
+                is_gauss = (
+                    self.cdf_type == "gaussian" or
+                    (self.cdf_type == "dynamic" and self.feature_types_[j] == "gaussian")
+                )
+                if is_gauss:
+                    m = self.bin_stats_[j][:, 0]
+                    s = self.bin_stats_[j][:, 1]
+                    w = self.bin_weights_[j]
+                    z = (v[:, None] - m) / s
+                    out = norm.cdf(z) * w
+                else:
+                    edges = self.bin_edges_[j]
+                    denom = edges[1:] - edges[:-1]
+                    denom[denom == 0] = 1
+                    out = np.clip((v[:, None] - edges[:-1]) / denom, 0, 1) * self.bin_weights_[j]
+
+                if self.concat_raw:
+                    out = np.concatenate([out, v[:, None]], axis=1)
+                cols_out.append(out.astype(np.float32))
+
+            N_data[part] = np.hstack(cols_out)
+        return N_data, C_data, y_data
+
+    # ========== helper for uniform binning ==========
+    def _find_bins_1d(self, x):
+        x = x.ravel()
+        if np.unique(x).size <= 2 or np.var(x) == 0:
+            return np.array([x.min(), x.max()])
+        if self.binning_method == "quantile":
+            nb = self.n_components or 5
+            return np.percentile(x, np.linspace(0, 100, nb + 1))
+        if self.binning_method=="hdbscan":
+            try:
+                import hdbscan
+                lab=hdbscan.HDBSCAN(min_cluster_size=self.min_cluster_size).fit_predict(x[:,None])
+                if np.all(lab==-1): raise ModuleNotFoundError
+                uniq=np.unique(lab[lab>=0])
+                mins=np.array([x[lab==u].min() for u in uniq])
+                maxs=np.array([x[lab==u].max() for u in uniq])
+                order=np.argsort(mins); mins,maxs=mins[order],maxs[order]
+                inner=[0.5*(maxs[i]+mins[i+1]) for i in range(len(maxs)-1)]
+                return np.array([x.min(),*inner,x.max()])
+            except ModuleNotFoundError: self.binning_method="hierarchical"
+        # hierarchical fallback
+        from scipy.cluster.hierarchy import linkage,fcluster
+        Z=linkage(x[:,None],method=self.linkage_method)
+        labels=fcluster(Z,t=self.n_components,criterion="maxclust")
+        uniq=np.unique(labels)
+        mins=np.array([x[labels==u].min() for u in uniq])
+        maxs=np.array([x[labels==u].max() for u in uniq])
+        order=np.argsort(mins); mins,maxs=mins[order],maxs[order]
+        inner=[0.5*(maxs[i]+mins[i+1]) for i in range(len(maxs)-1)]
+        return np.array([x.min(),*inner,x.max()])
+    
+    @staticmethod
+    def _sort_bins(edges):
+        edges = np.sort(edges)
+        return edges
+
+"""
+================================================================================
+HomoTransform modular refactor
+------------------------------
+Extending:
+    • Add a new projector: subclass BaseProjector, register in PROJECTOR_REG
+    • Add a new info‑loss : subclass BaseInfoLoss,  register in INFO_LOSS_REG
+    • Add a new smooth‑loss: subclass BaseSmoothLoss, register in SMOOTH_LOSS_REG
+The transform can be configured at runtime with
+    HomoTransform({'projector':'myproj', 'info_loss':'myloss', ...})
+================================================================================
+"""
+
+import math
+import torch, numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
+from transform.base import BaseTransform
+from typing import Dict, List
+
+# ---------------------------------------------------------------------
+#  SIMILARITY‑PRESERVING LINEAR TRANSFORM (feature‑level version)
+# ---------------------------------------------------------------------
+
+# ---------------------------------------------------------------------
+#  STRATEGY INTERFACES & REGISTRIES
+# ---------------------------------------------------------------------
+from abc import ABC, abstractmethod
+
+# ===== Projector =====
+class BaseProjector(torch.nn.Module, ABC):
+    r"""Projector interface.
+    Sub‑classes must implement:
+        • forward(x)              – shape: (*, k) → (*, d)
+        • inverse(z) (optional)   – approximate inverse for testing
+    """
+    def inverse(self, z: torch.Tensor) -> torch.Tensor:     # pragma: no cover
+        raise NotImplementedError("Inverse not implemented for this projector")
+
+class MLPProjector(BaseProjector):
+    r"""2‑layer MLP with ReLU."""
+    def __init__(self, k: int, d: int | None = None, hidden: int | None = None):
+        super().__init__()
+        d = k if d is None else d
+        hidden = 2 * k if hidden is None else hidden
+        self.net = torch.nn.Sequential(
+            torch.nn.Linear(k, hidden),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden, hidden),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden, d),
+        )
+        nn.init.kaiming_uniform_(self.net[0].weight, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.net[2].weight, a=math.sqrt(5))
+        nn.init.kaiming_uniform_(self.net[4].weight, a=math.sqrt(5))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
+
+
+PROJECTOR_REG: dict[str, type[BaseProjector]] = {
+    "mlp":    MLPProjector,
+}
+
+# ===== Information‑preservation losses =====
+class BaseInfoLoss(ABC):
+    @abstractmethod
+    def __call__(self, x: torch.Tensor, z: torch.Tensor) -> torch.Tensor: ...
+
+class ReconLoss(BaseInfoLoss):
+    """L2 reconstruction; 若 projector.inverse 未实现则返回 0."""
+    def __init__(self, projector):
+        self.proj = projector
+    def __call__(self, x, z):
+        if not hasattr(self.proj, "inverse"):
+            return torch.tensor(0.0, device=x.device)
+        try:
+            x_rec = self.proj.inverse(z)
+            return F.mse_loss(x_rec, x)
+        except NotImplementedError:
+            return torch.tensor(0.0, device=x.device)
+
+class InfoNCELoss(BaseInfoLoss):
+    """
+    InfoNCE where *anchor* is each feature‑vector z[b, f] (b ∈ [0,B), f ∈ [0,n)).
+    Positive set  :   all other samples' vectors with the **same feature index**
+                      →  (b' ≠ b, f)  ∀ b'
+    Negative set  :   every vector whose feature index differs
+                      →  ( *, f' ≠ f )
+
+    Input shapes
+    ------------
+    • 2‑D (B·n, d)   – pre‑flattened (B,n,d) into feature rows.
+    • 3‑D (B, n, d)  – will be internally flattened the same way.
+
+    The loss for anchor i is
+        L_i = −log ( Σ_{p∈P(i)} exp(sim_{ip}/τ) /
+                     Σ_{k∈N(i)} exp(sim_{ik}/τ) )
+    and the final loss is the mean over all anchors.
+    """
+    def __init__(self, temperature: float = 0.1, eps: float = 1e-12):
+        super().__init__()
+        self.tau = temperature
+        self.eps = eps
+
+    def forward(self, z: torch.Tensor) -> torch.Tensor:     # alias for __call__
+        return self.__call__(z)
+
+    def __call__(self, z: torch.Tensor) -> torch.Tensor:
+        # -------- flatten to (B·n, d) ---------------------------------
+        B, n, d = z.shape
+        z = z.reshape(B * n, d)
+        feature_labels = torch.arange(B * n, device=z.device) % n
+
+        # -------- similarity matrix -----------------------------------
+        z = F.normalize(z, dim=-1)                           # (B·n,d)
+        sim = z @ z.T / self.tau                             # (B·n, B·n)
+
+        # -------- masks ----------------------------------------------
+        # positives: same feature, different row
+        pos_mask = feature_labels.unsqueeze(0).eq(feature_labels.unsqueeze(1))
+        pos_mask.fill_diagonal_(False)
+
+        # negatives: feature label differs
+        neg_mask = ~pos_mask
+
+        # -------- numerator / denominator ----------------------------
+        exp_sim = torch.exp(sim)
+        numer = exp_sim.masked_select(pos_mask).reshape(z.size(0), -1).sum(dim=1)
+        denom = exp_sim.masked_select(neg_mask).reshape(z.size(0), -1).sum(dim=1)
+
+        # avoid NaN if a feature appears only once in batch
+        valid = numer > 0
+        loss = torch.zeros_like(numer)
+        loss[valid] = -torch.log((numer[valid] + self.eps) /
+                                 (denom[valid] + self.eps))
+
+        return loss.mean()
+
+class HSICLoss(BaseInfoLoss):
+    """
+    Unbiased HSIC between raw scalars x (B,d_x) and projection z (B,d_z).
+    """
+    def __init__(self):
+        self.sx, self.sz = 1.0, 1.0  # bandwidths for RBF kernel
+
+    def _rbf(self, v, s):
+        pd = torch.cdist(v, v) ** 2
+        return torch.exp(-pd / (2 * s ** 2))
+
+    def __call__(self, x, z):
+        assert x.dim() == 2 and z.dim() == 3, "x:(B,n), z:(B,n,d)"
+        B, n = x.shape
+        assert z.shape[:2] == (B, n)
+
+        H = torch.eye(B, device=x.device) - 1.0 / B
+        hsic_sum = 0.0
+        for j in range(n):
+            xj = x[:, j:j+1]           # (B,1)
+            zj = z[:, j, :]            # (B,d)
+
+            K = self._rbf(xj, self.sx)
+            L = self._rbf(zj, self.sz)
+            hsic_j = torch.trace((K @ H) @ (L @ H)) / ((B - 1) ** 2 + 1e-12)
+            hsic_sum += hsic_j
+
+        return -hsic_sum / n           # 取平均 → 越小越好
+
+INFO_LOSS_REG: dict[str, type[BaseInfoLoss]] = {
+    "recon":   ReconLoss,
+    "infonce": InfoNCELoss,
+    "hsic":    HSICLoss,
+}
+
+# ===== Smoothness losses =====
+class BaseSmoothLoss(ABC):
+    @abstractmethod
+    def __call__(self, z: torch.Tensor, L: torch.Tensor) -> torch.Tensor: ...
+
+class LaplacianSmooth(BaseSmoothLoss):
+    r"""Graph Laplacian quadratic form Σ_i zᵢᵀ L zᵢ ."""
+    def __call__(self, z: torch.Tensor, L: torch.Tensor) -> torch.Tensor:
+        # z : (B,n,d)  → mean across batch
+        H = z.mean(dim=0).T                       # (d,n)
+        return 2.0 * torch.trace(H @ L @ H.T)
+
+class TotalVariationSmooth(BaseSmoothLoss):
+    r"""TV = Σ_{edges} ‖z_i − z_j‖₁"""
+    def __call__(self, z: torch.Tensor, L: torch.Tensor) -> torch.Tensor:
+        # approximate via Laplacian with L1 norm
+        H = z.mean(dim=0)                         # (n,d)
+        diff = torch.abs(H[:, None, :] - H[None, :, :])
+        mask = (L != 0).unsqueeze(-1)             # edges
+        return diff[mask.expand_as(diff)].mean()
+
+SMOOTH_LOSS_REG: dict[str, type[BaseSmoothLoss]] = {
+    "laplacian": LaplacianSmooth,
+    "tv":        TotalVariationSmooth,
+}
+
+class HomoTransform(BaseTransform):
+    r"""
+    Learn one linear map W_j (k_j × d) for every original feature so that the
+    Pearson‑correlation matrix between **features** after projection matches the
+    correlation matrix of the raw scalar features.
+
+    Workflow
+    --------
+    1. During *fit*:
+       * Use the already‑generated ClusterCDF representation `N_data['train']`
+         together with `feature_map_` to extract a scalar value per feature
+         (mean over its k_j bin columns) and compute the n×n target matrix
+         S_target (Pearson).
+       * Optimise all {W_j} with mini‑batch SGD:
+            L = MSE( S_batch(Z), S_target ) +
+                λ Σ_j  ortho_loss(W_j)
+         where S_batch is the feature‑correlation matrix computed on the
+         current batch after projection.
+    2. After training, the frozen W_j are stored in numpy form and applied
+       inside *transform* to every partition.
+
+    Args in *args* dict
+    -------------------
+    output_dim : int | None   target dimension d (≥1). None ⇒ d=k_j
+    epochs     : int          default 200
+    batch_size : int          default 1024
+    lr         : float        default 1e‑3
+    lam_ortho  : float        orthogonality regulariser, default 1e‑3
+    device     : str          "cuda" / "cpu", default "cpu"
+    """
+
+    # ----------------------------- init ------------------------------
+    def __init__(self, args: Dict):
+        super().__init__()
+        # ---- look‑ups ----
+        proj_name   = args.get("projector", "linear").lower()
+        info_name   = args.get("info_loss", "recon").lower()
+        smooth_name = args.get("smooth_loss", "laplacian").lower()
+
+        self.output_dim = args.get("output_dim", None)
+        self.epochs     = int(args.get("epochs", 200))
+        self.batch_size = int(args.get("batch_size", 1024))
+        self.lr         = float(args.get("lr", 1e-3))
+        self.lam_info   = float(args.get("lam_info", 1.0))
+        self.lam_smooth = float(args.get("lam_smooth", 1.0))
+        self.lam_ortho  = float(args.get("lam_ortho", 1e-3))
+        self.device     = args.get("device", "cpu")
+
+        # info‑loss selection string kept for later logic
+        self.info_name  = info_name
+        # per‑feature decoders (z → x) for auto‑encoder reconstruction
+        self.decoders_: Dict[int, nn.Module] = {}
+
+        # ----- runtime‑determined after `fit` -----
+        self.projectors_: Dict[int, BaseProjector] = {}
+        self.is_decoder = info_name == "recon"
+        self.info_loss = INFO_LOSS_REG.get(info_name, None)()
+        self.X_scalar_all: torch.Tensor | None = None  # raw scalar values for HSIC
+        self.smooth_loss   = SMOOTH_LOSS_REG[smooth_name]()
+        self.proj_name     = proj_name  # keep for logging
+
+        # kept from original implementation
+        self.L_  = None
+        self.fmap_: List[Dict] | None = None
+        self.weight_raw_: Dict[int, torch.nn.Parameter] = {}
+        self.W_np_: Dict[int, np.ndarray] = {}
+        self.S_target_: torch.Tensor | None = None
+
+        # --- constant-feature bookkeeping ---
+        self.constant_feats_: set[int] = set()   # indices with only one distinct value
+        self.const_dims_: dict[int, int] = {}    # idx → projected dim d
+
+    # ----------------------------- fit -------------------------------
+    def fit(self, N_data, C_data, y_data=None, shared_state=None):
+        # ------- sanity checks -------
+        if not (N_data and "train" in N_data):
+            return self
+        assert shared_state and "feature_map_" in shared_state, \
+            "feature_map_ must be produced by ClusterCdfTransform before this transform."
+
+        self.fmap_ = shared_state["feature_map_"]
+        # ----- constant features -----
+        const_mask = shared_state.get('const_mask', None)
+        if const_mask is not None:
+            self.constant_feats_ = set(np.where(const_mask)[0].tolist())
+        else:
+            self.constant_feats_.clear()
+        if self.info_name == "hsic":
+            self.X_scalar_all = torch.as_tensor(
+                shared_state['raw_scalar_train'], dtype=torch.float32, device=self.device
+            )
+        X_train = torch.as_tensor(N_data["train"], dtype=torch.float32,
+                                  device=self.device)                # (N, Σ k_j)
+        N_samples = X_train.size(0)
+
+        # -------- target similarity (only if not provided) ---------
+        # if shared_state and 'scalar_similarity' in shared_state:
+        assert 'scalar_similarity' in shared_state, \
+            "scalar_similarity must be produced before this transform."
+        self.S_target_ = torch.as_tensor(
+            shared_state['scalar_similarity'],
+            dtype=torch.float32,
+            device=self.device
+        )
+
+        # ---------------- build graph Laplacian ----------------
+        S_abs = torch.abs(self.S_target_).clone()
+        S_abs.fill_diagonal_(0.0)
+        D = torch.diag(S_abs.sum(dim=1))
+        self.L_ = (D - S_abs).detach()            # (n,n)  graph Laplacian
+
+        # build per‑feature Projector objects / and decoders
+        for meta in self.fmap_:
+            k   = meta["size"]
+            d   = k if self.output_dim is None else self.output_dim
+            idx = meta["orig_idx"]
+
+            if idx in self.constant_feats_:
+                self.const_dims_[idx] = d
+                continue
+
+            if idx not in self.projectors_:
+                self.projectors_[idx] = PROJECTOR_REG[self.proj_name](k, d).to(self.device)
+
+            if self.is_decoder and idx not in self.constant_feats_:
+                dec = nn.Sequential(
+                    nn.Linear(d, 2*d), 
+                    nn.ReLU(), 
+                    nn.Linear(2*d, 2*d),
+                    nn.ReLU(),
+                    nn.Linear(2*d, k)
+                ).to(self.device)
+                nn.init.kaiming_uniform_(dec[0].weight, a=math.sqrt(5))
+                nn.init.kaiming_uniform_(dec[2].weight, a=math.sqrt(5))
+                nn.init.kaiming_uniform_(dec[4].weight, a=math.sqrt(5))
+                self.decoders_[idx] = dec
+
+        # aggregate parameters from all projectors for optimiser
+        parameters = []
+        for p in self.projectors_.values():
+            parameters += list(p.parameters())
+        for dec in self.decoders_.values():
+            parameters += list(dec.parameters())
+
+        optimiser = torch.optim.AdamW(parameters, lr=self.lr)
+
+        # ------------- training loop -------------
+        for _epoch in range(self.epochs):
+            optimiser.zero_grad()
+            perm  = torch.randperm(N_samples, device=self.device)[: self.batch_size]
+            batch = X_train[perm]                                   # (B, Σk)
+
+            # ========= projection =========
+            proj_chunks = []
+            for meta in self.fmap_:
+                s, k = meta["new_start"], meta["size"]
+                idx  = meta["orig_idx"]
+                if idx in self.constant_feats_:
+                    d = self.const_dims_[idx]
+                    z_j = torch.zeros(batch.size(0), d, device=self.device)
+                    proj_chunks.append(z_j)
+                    continue
+                P    = self.projectors_[idx]
+                x_j  = batch[:, s:s+k]                            # (B,k)
+                z_j  = P(x_j)                                    # (B,d)
+
+                proj_chunks.append(z_j)
+            Z_batch = torch.stack(proj_chunks, dim=1)            # (B,n,d)
+
+            # ---------- losses ----------
+            # 1) smoothness
+            loss_smooth = self.smooth_loss(Z_batch, self.L_)
+
+            # 2) information / reconstruction
+            loss_info = torch.tensor(0.0, device=self.device)
+            if self.is_decoder:
+                for i, meta in enumerate(self.fmap_):
+                    idx = meta["orig_idx"]                 # set first!
+                    if idx in self.constant_feats_:
+                        continue
+                    x_j  = batch[:, meta["new_start"]: meta["new_start"] + meta["size"]]  # (B,k)
+                    z_j  = proj_chunks[i]                                                # (B,d)
+
+                    if self.info_name == "recon":
+                        x_rec = self.decoders_[idx](z_j)
+                        loss_info += F.mse_loss(x_rec, x_j)
+                loss_info = loss_info / len(self.decoders_)
+            else:
+                if self.info_name == "infonce":
+                    loss_info = self.info_loss(Z_batch)
+                elif self.info_name == "hsic":
+                    x_batch = self.X_scalar_all[perm]          # (B, n_raw)
+                    loss_info = self.info_loss(x_batch, Z_batch)
+
+            # 3) orthogonality (already accumulated)
+            loss = (self.lam_smooth * loss_smooth +
+                    self.lam_info   * loss_info)
+
+            loss.backward()
+            optimiser.step()
 
         return self
 
-    # ------------------------- transform ------------------------------
-    def transform(self, N_data: Dict, C_data: Dict, y_data=None, shared_state=None):
-        if not self.bin_edges_:
+    # --------------------------- transform ----------------------------
+    def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        if not self.projectors_:
             return N_data, C_data, y_data
 
-        for part_name, data_array in N_data.items():
-            if data_array.ndim != 2:
-                raise ValueError(f"N_data[{part_name}] must be 2-D array")
-            n_samples, n_features = data_array.shape
-            if n_features != len(self.bin_edges_):
-                raise ValueError("Feature number mismatch between fit and transform")
+        for part_name, arr in N_data.items():
+            out_chunks = []
+            for meta in self.fmap_:
+                s, k = meta["new_start"], meta["size"]
+                idx  = meta["orig_idx"]
 
-            transformed_cols = []
-            for col_idx in range(n_features):
-                v = data_array[:, col_idx]
-                edges = self.bin_edges_[col_idx]
-                k = len(edges) - 1
-
-                if self.encoding_type == "uniform":
-                    denom = edges[1:] - edges[:-1]
-                    denom[denom == 0] = 1.0
-                    f = (v[:, None] - edges[:-1]) / denom
-                    f = np.clip(f, 0.0, 1.0)
-                elif self.encoding_type == "gaussian":
-                    mu_sigma = self.bin_stats_[col_idx]  # (k,2)
-                    mu = mu_sigma[:, 0]
-                    sigma = mu_sigma[:, 1]
-                    z = (v[:, None] - mu) / sigma
-                    f = norm.cdf(z)
-                    # clamp outside bin → 0 / 1 to keep monotone
-                    f[v[:, None] < edges[:-1]] = 0.0
-                    f[v[:, None] > edges[1:]] = 1.0
+                if idx in self.constant_feats_:
+                    out_chunks.append(
+                        np.zeros((arr.shape[0], self.const_dims_[idx]), dtype=np.float32)
+                    )
                 else:
-                    raise NotImplementedError(f"encoding_type={self.encoding_type} not supported")
-
-                transformed_cols.append(f.astype(np.float32))
-
-            N_data[part_name] = np.hstack(transformed_cols)
+                    P = self.projectors_[idx]
+                    out_chunks.append(
+                        P(torch.as_tensor(arr[:, s:s+k], dtype=torch.float32,
+                                          device=self.device)
+                          ).detach().cpu().numpy()
+                    )
+            N_data[part_name] = np.concatenate(out_chunks, axis=1).astype(np.float32)
 
         return N_data, C_data, y_data
-
-    # ----------------------- helpers ----------------------------------
-    def _find_bins_1d(self, x: np.ndarray) -> np.ndarray:
-        """Return monotonically increasing edges for 1-D array *x*."""
-        x = x.ravel()
-        if np.unique(x).size <= 2 or np.isclose(np.var(x), 0.0):
-            return np.array([x.min(), x.max()], dtype=np.float64)
-
-        match self.binning_method:
-            case "hierarchical":
-                return self._bins_hierarchical(x)
-            case "kde":
-                return self._bins_kde_minima(x)
-            case "bic":
-                return self._bins_bic_dp(x)
-            case "hdbscan":
-                return self._bins_hdbscan(x)
-            case "manual":
-                nb = self.n_bins or 5
-                return np.percentile(x, np.linspace(0, 100, nb + 1))
-            case _:
-                raise NotImplementedError(f"binning_method={self.binning_method} not implemented")
-
-    # ------------------ 1) hierarchical -------------------------------
-    def _bins_hierarchical(self, x: np.ndarray) -> np.ndarray:
-        Z = linkage(x[:, None], method=self.linkage_method)
-
-        # 1-A 固定簇数 / 距离阈值
-        if self.n_bins is not None:
-            labels = fcluster(Z, t=self.n_bins, criterion="maxclust")
-
-        elif self.distance_threshold is not None:
-            labels = fcluster(Z, t=self.distance_threshold, criterion="distance")
-
-        # 1-C Inconsistency
-        elif self.inconsistency_threshold is not None:
-            from scipy.cluster.hierarchy import inconsistent
-            labels = fcluster(
-                Z,
-                t=self.inconsistency_threshold,
-                criterion="inconsistent",
-                depth=self.inconsistency_depth,
-            )
-
-        # 1-B 最大跳跃 (Elbow)
-        else:
-            d = Z[:, 2]
-            lookback = min(30, len(d) - 1)
-            gaps = np.diff(d[-lookback - 1 :])
-            idx = np.argmax(gaps)
-            tau = d[-lookback - 1 + idx] * self.elbow_gap_pct
-            labels = fcluster(Z, t=tau, criterion="distance")
-
-        # -------- labels → edges --------
-        uniq  = np.unique(labels)
-        mins  = np.array([x[labels == u].min() for u in uniq])
-        maxs  = np.array([x[labels == u].max() for u in uniq])
-        order = np.argsort(mins)
-        mins  = mins[order]
-        maxs  = maxs[order]
-
-        edges = [x.min()] + [(mins[i+1] + maxs[i])/2 for i in range(len(maxs)-1)] + [x.max()]
-
-        return np.asarray(edges, dtype=np.float64)
-
-
-    # ------------------ 2) KDE minima ---------------------------------
-    def _bins_kde_minima(self, x: np.ndarray) -> np.ndarray:
-        kde = gaussian_kde(x)
-        grid = np.linspace(x.min(), x.max(), max(200, x.size))
-        dens = kde(grid)
-        minima_idx = argrelextrema(dens, np.less)[0]
-        if minima_idx.size == 0:
-            return np.array([x.min(), x.max()])
-        edges = [x.min()]
-        for idx in minima_idx:
-            if dens[idx] < dens.max() * (1 - self.kde_min_prom):
-                edges.append(grid[idx])
-        edges.append(x.max())
-        return np.unique(np.asarray(edges, dtype=np.float64))
-
-    # ------------------ 3) BIC dynamic‑programming --------------------
-    def _bins_bic_dp(self, x: np.ndarray) -> np.ndarray:
-        try:
-            import ruptures as rpt
-        except ModuleNotFoundError:
-            # Fallback to hierarchical elbow
-            return self._bins_hierarchical(x)
-        x_sorted = np.sort(x)
-        # `bkps` gives the indices (1‑based) where each segment *ends*; the last
-        # element is always `len(x_sorted)`.  Use the midpoint between adjacent
-        # segments as the internal bin boundaries.
-        algo = rpt.Pelt(model="l2").fit(x_sorted)
-        beta = 3 * np.log(x.size)  # ≈ BIC penalty
-        bkps = algo.predict(pen=beta)
-        inner_edges = [
-            0.5 * (x_sorted[i - 1] + x_sorted[i]) for i in bkps[:-1]
-        ]
-        edges = [x.min(), *inner_edges, x.max()]
-        edges = np.asarray(edges, dtype=np.float64)
-        return edges
-
-    # ------------------ 4) HDBSCAN density‑based ----------------------
-    def _bins_hdbscan(self, x: np.ndarray) -> np.ndarray:
-        try:
-            import hdbscan
-        except ModuleNotFoundError:
-            # Fallback
-            return self._bins_hierarchical(x)
-        clusterer = hdbscan.HDBSCAN(min_cluster_size=self.min_cluster_size)
-        labels = clusterer.fit_predict(x[:, None])
-        if np.all(labels == -1):
-            return np.array([x.min(), x.max()])
-        uniq = np.unique(labels[labels >= 0])
-        mins = np.array([x[labels == u].min() for u in uniq])
-        maxs = np.array([x[labels == u].max() for u in uniq])
-        # order clusters by their minimum value
-        order = np.argsort(mins)
-        mins  = mins[order]
-        maxs  = maxs[order]
-
-        # Use the mid‑point between the current cluster's max and the next
-        # cluster's min as the internal bin boundary.  This keeps edges
-        # strictly increasing and better reflects the gap between clusters.
-        inner_edges = [
-            0.5 * (maxs[i] + mins[i + 1]) for i in range(len(maxs) - 1)
-        ]
-        edges = [x.min(), *inner_edges, x.max()]
-        return np.asarray(edges, dtype=np.float64)

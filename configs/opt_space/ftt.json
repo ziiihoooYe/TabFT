@@ -1,5 +1,27 @@
 {
     "ftt": {
+        "transform": {
+            "num_cdf": {
+                "weight_concentration_prior_type": [
+                    "?categorical",
+                    "dirichlet_process",
+                    "dirichlet_process",
+                    "dirichlet_distribution"
+                ],
+                "weight_threshold": [
+                    "?loguniform",
+                    1e-6,
+                    1e-8,
+                    1e-5
+                ],
+                "reg_covar": [
+                    "?loguniform",
+                    1e-6,
+                    1e-7,
+                    1e-5
+                ]
+            }
+        },
         "model": {
             "n_layers": [
                 "int",
@@ -8,13 +30,11 @@
             ],
             "d_token": [
                 "categorical",
-                [
-                    8,
-                    16,
-                    32,
-                    64,
-                    128
-                ]
+                8,
+                16,
+                32,
+                64,
+                128
             ],
             "residual_dropout": [
                 "?uniform",
