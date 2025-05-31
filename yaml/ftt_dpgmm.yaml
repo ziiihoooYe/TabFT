@@ -52,9 +52,10 @@ transform_list:
       cdf_type: gaussian # uniform, gaussian
       cache_path: fit_cache
       n_components: 100
+      weight_threshold: 1e-6
   # ----------------------------------------------------------------
   # categorical encoding process
-  - cat_indice: {}
+  - cat_onehot: {}
   # ----------------------------------------------------------------
   # normalization process
   - norm: 
@@ -66,6 +67,6 @@ model_type:
 model_path: results_model/ftt_dpgmm
 seed: 1
 seed_num: 15
-gpu: 1
+gpu: 4
 tune: true
-n_trials: 100
+n_trials: 20

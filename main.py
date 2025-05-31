@@ -1,6 +1,10 @@
+import json
+import os
+import os.path as osp
 from tqdm import tqdm
 from model.utils import (load_recipes_from_yaml, tune_hyper_parameters, get_logger,
-                         set_seeds, get_method, show_results, show_cross_dataset_results)
+                         set_seeds, get_method, show_results, show_cross_dataset_results,
+                         load_tuned_config)
 import logging
 from model.lib.data import get_dataset
 import warnings
@@ -37,6 +41,8 @@ def main():
         train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
         if args.tune:
             args = tune_hyper_parameters(args,opt_space,train_val_data,info)
+        elif args.load_tune_config:
+            args = load_tuned_config(args, logger)
 
         ### ----------- Training and Testing ------------
         for seed in tqdm(range(args.seed, args.seed + args.seed_num)):

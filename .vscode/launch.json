@@ -8,12 +8,9 @@
         //     "name": "Run Current File",
         //     "type": "debugpy",
         //     "request": "launch",
-        //     "program": "cache_dataset.py",
+        //     "program": "${file}",
         //     "console": "integratedTerminal",
         //     "args": [
-        //         "cache.yaml",
-        //         "TEST__",
-        //         // "gmm"
         //     ],
         // },
         {

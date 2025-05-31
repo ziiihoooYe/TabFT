@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import sklearn.preprocessing
 import category_encoders
@@ -9,8 +10,6 @@ from model.lib.num_embeddings import (
 # ----------- added for cache support -----------
 import os, json, hashlib
 
-
-# numeric encoding transforms
 
 class BinningTransform(BaseTransform):
     """
@@ -766,7 +765,7 @@ class CdfTransform(BaseTransform):
         # uniform
         self.binning_method   = args.get("binning_method", "quantile")
         self.linkage_method   = args.get("linkage_method", "ward")
-        self.min_cluster_size = args.get("min_cluster_size", 20)
+        self.min_cluster_size = args.get("min_cluster_size", 10)
 
         # shared
         self.n_components = args.get("n_components", 100)
@@ -822,6 +821,7 @@ class CdfTransform(BaseTransform):
 
         # ---------- try cache ----------
         cfile = self._cache_file()
+        # os.remove(cfile) if cfile and os.path.exists(cfile) else None
         if cfile and os.path.exists(cfile):
             state = pickle.load(open(cfile, "rb"))
             if state.get("config") == self._cfg():
@@ -906,6 +906,7 @@ class CdfTransform(BaseTransform):
 
     def _fit_uniform(self, col):
         edges = self._sort_bins(self._find_bins_1d(col))
+        # edges = self._adjust_edges_max_samples(edges, col)
         cnt, _ = np.histogram(col, bins=edges)
         w = cnt / cnt.sum() if cnt.sum() else np.full(len(cnt), 1 / len(cnt))
         stats = []
@@ -971,12 +972,12 @@ class CdfTransform(BaseTransform):
                     s = self.bin_stats_[j][:, 1]
                     w = self.bin_weights_[j]
                     z = (v[:, None] - m) / s
-                    out = norm.cdf(z) * w
+                    out = norm.cdf(z)
                 else:
                     edges = self.bin_edges_[j]
                     denom = edges[1:] - edges[:-1]
                     denom[denom == 0] = 1
-                    out = np.clip((v[:, None] - edges[:-1]) / denom, 0, 1) * self.bin_weights_[j]
+                    out = np.clip((v[:, None] - edges[:-1]) / denom, 0, 1)
 
                 if self.concat_raw:
                     out = np.concatenate([out, v[:, None]], axis=1)
@@ -1016,436 +1017,125 @@ class CdfTransform(BaseTransform):
         inner=[0.5*(maxs[i]+mins[i+1]) for i in range(len(maxs)-1)]
         return np.array([x.min(),*inner,x.max()])
     
+    def _adjust_edges_max_samples(self, edges, col):
+        if self.binning_method == "quantile":
+            return edges
+        # ---------------- STEP-0 : installation -----------------
+        col = col.ravel()
+        edges = np.sort(np.unique(edges.astype(float)))
+        if edges.size < 2:
+            v = float(col[0]) if edges.size else float(np.mean(col))
+            edges = np.array([v - 1e-6, v + 1e-6], dtype=float)
+
+        quota  = int(math.ceil(len(col) / self.n_components) * 2)
+        min_sz = int(math.ceil(len(col) / self.n_components))
+
+        # ---------------- STEP-1 : split ----------------
+        extra_edges = []
+        for k in range(len(edges) - 1):
+            l, r = edges[k], edges[k + 1]
+            mask = (col >= l) & (col <= r)
+            cnt  = int(mask.sum())
+            if cnt <= quota:
+                continue
+
+            xs_bin = col[mask]
+            uniq_vals = np.unique(xs_bin)
+            ucnt = uniq_vals.size
+
+            if ucnt == 1:
+                continue
+
+            if ucnt == 2:
+                extra_edges.append(0.5 * (uniq_vals[0] + uniq_vals[1]))
+                continue
+
+            nb = int(math.ceil(cnt / quota))
+            if cnt / nb < min_sz:
+                nb = max(1, cnt // min_sz)
+            nb = min(nb, ucnt - 1)
+            if nb <= 1:
+                continue
+
+            sub_edges = np.percentile(xs_bin,
+                                      np.linspace(0, 100, nb + 1))[1:-1]
+            extra_edges.extend(sub_edges)
+
+        if extra_edges:
+            edges = np.sort(np.unique(np.concatenate([edges, extra_edges])))
+
+        # ---------------- STEP-2 : beyond cap → merge ----------------
+        counts, _ = np.histogram(col, bins=edges)
+        while (len(edges) - 1) > self.n_components or counts.min() < min_sz:
+            counts, _ = np.histogram(col, bins=edges)
+            idx_merge = int(np.argmin(counts[:-1] + counts[1:]))  # 最小相邻和
+            edges = np.delete(edges, idx_merge + 1)
+
+        return edges.astype(float)
+    
     @staticmethod
     def _sort_bins(edges):
         edges = np.sort(edges)
         return edges
 
-"""
-================================================================================
-HomoTransform modular refactor
-------------------------------
-Extending:
-    • Add a new projector: subclass BaseProjector, register in PROJECTOR_REG
-    • Add a new info‑loss : subclass BaseInfoLoss,  register in INFO_LOSS_REG
-    • Add a new smooth‑loss: subclass BaseSmoothLoss, register in SMOOTH_LOSS_REG
-The transform can be configured at runtime with
-    HomoTransform({'projector':'myproj', 'info_loss':'myloss', ...})
-================================================================================
-"""
 
-import math
-import torch, numpy as np
-import torch.nn as nn
-import torch.nn.functional as F
-from transform.base import BaseTransform
-from typing import Dict, List
-
-# ---------------------------------------------------------------------
-#  SIMILARITY‑PRESERVING LINEAR TRANSFORM (feature‑level version)
-# ---------------------------------------------------------------------
-
-# ---------------------------------------------------------------------
-#  STRATEGY INTERFACES & REGISTRIES
-# ---------------------------------------------------------------------
-from abc import ABC, abstractmethod
-
-# ===== Projector =====
-class BaseProjector(torch.nn.Module, ABC):
-    r"""Projector interface.
-    Sub‑classes must implement:
-        • forward(x)              – shape: (*, k) → (*, d)
-        • inverse(z) (optional)   – approximate inverse for testing
-    """
-    def inverse(self, z: torch.Tensor) -> torch.Tensor:     # pragma: no cover
-        raise NotImplementedError("Inverse not implemented for this projector")
-
-class MLPProjector(BaseProjector):
-    r"""2‑layer MLP with ReLU."""
-    def __init__(self, k: int, d: int | None = None, hidden: int | None = None):
+# -----------------------------------------------------------
+# Pair‑wise Mutual Information transform
+# -----------------------------------------------------------
+from sklearn.preprocessing import KBinsDiscretizer
+from sklearn.metrics import mutual_info_score
+class PairwiseMITransform(BaseTransform):
+    def __init__(self, args):
         super().__init__()
-        d = k if d is None else d
-        hidden = 2 * k if hidden is None else hidden
-        self.net = torch.nn.Sequential(
-            torch.nn.Linear(k, hidden),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden, hidden),
-            torch.nn.ReLU(),
-            torch.nn.Linear(hidden, d),
-        )
-        nn.init.kaiming_uniform_(self.net[0].weight, a=math.sqrt(5))
-        nn.init.kaiming_uniform_(self.net[2].weight, a=math.sqrt(5))
-        nn.init.kaiming_uniform_(self.net[4].weight, a=math.sqrt(5))
+        self.n_bins = args.get("n_bins", 100)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)
-
-
-PROJECTOR_REG: dict[str, type[BaseProjector]] = {
-    "mlp":    MLPProjector,
-}
-
-# ===== Information‑preservation losses =====
-class BaseInfoLoss(ABC):
-    @abstractmethod
-    def __call__(self, x: torch.Tensor, z: torch.Tensor) -> torch.Tensor: ...
-
-class ReconLoss(BaseInfoLoss):
-    """L2 reconstruction; 若 projector.inverse 未实现则返回 0."""
-    def __init__(self, projector):
-        self.proj = projector
-    def __call__(self, x, z):
-        if not hasattr(self.proj, "inverse"):
-            return torch.tensor(0.0, device=x.device)
-        try:
-            x_rec = self.proj.inverse(z)
-            return F.mse_loss(x_rec, x)
-        except NotImplementedError:
-            return torch.tensor(0.0, device=x.device)
-
-class InfoNCELoss(BaseInfoLoss):
-    """
-    InfoNCE where *anchor* is each feature‑vector z[b, f] (b ∈ [0,B), f ∈ [0,n)).
-    Positive set  :   all other samples' vectors with the **same feature index**
-                      →  (b' ≠ b, f)  ∀ b'
-    Negative set  :   every vector whose feature index differs
-                      →  ( *, f' ≠ f )
-
-    Input shapes
-    ------------
-    • 2‑D (B·n, d)   – pre‑flattened (B,n,d) into feature rows.
-    • 3‑D (B, n, d)  – will be internally flattened the same way.
-
-    The loss for anchor i is
-        L_i = −log ( Σ_{p∈P(i)} exp(sim_{ip}/τ) /
-                     Σ_{k∈N(i)} exp(sim_{ik}/τ) )
-    and the final loss is the mean over all anchors.
-    """
-    def __init__(self, temperature: float = 0.1, eps: float = 1e-12):
-        super().__init__()
-        self.tau = temperature
-        self.eps = eps
-
-    def forward(self, z: torch.Tensor) -> torch.Tensor:     # alias for __call__
-        return self.__call__(z)
-
-    def __call__(self, z: torch.Tensor) -> torch.Tensor:
-        # -------- flatten to (B·n, d) ---------------------------------
-        B, n, d = z.shape
-        z = z.reshape(B * n, d)
-        feature_labels = torch.arange(B * n, device=z.device) % n
-
-        # -------- similarity matrix -----------------------------------
-        z = F.normalize(z, dim=-1)                           # (B·n,d)
-        sim = z @ z.T / self.tau                             # (B·n, B·n)
-
-        # -------- masks ----------------------------------------------
-        # positives: same feature, different row
-        pos_mask = feature_labels.unsqueeze(0).eq(feature_labels.unsqueeze(1))
-        pos_mask.fill_diagonal_(False)
-
-        # negatives: feature label differs
-        neg_mask = ~pos_mask
-
-        # -------- numerator / denominator ----------------------------
-        exp_sim = torch.exp(sim)
-        numer = exp_sim.masked_select(pos_mask).reshape(z.size(0), -1).sum(dim=1)
-        denom = exp_sim.masked_select(neg_mask).reshape(z.size(0), -1).sum(dim=1)
-
-        # avoid NaN if a feature appears only once in batch
-        valid = numer > 0
-        loss = torch.zeros_like(numer)
-        loss[valid] = -torch.log((numer[valid] + self.eps) /
-                                 (denom[valid] + self.eps))
-
-        return loss.mean()
-
-class HSICLoss(BaseInfoLoss):
-    """
-    Unbiased HSIC between raw scalars x (B,d_x) and projection z (B,d_z).
-    """
-    def __init__(self):
-        self.sx, self.sz = 1.0, 1.0  # bandwidths for RBF kernel
-
-    def _rbf(self, v, s):
-        pd = torch.cdist(v, v) ** 2
-        return torch.exp(-pd / (2 * s ** 2))
-
-    def __call__(self, x, z):
-        assert x.dim() == 2 and z.dim() == 3, "x:(B,n), z:(B,n,d)"
-        B, n = x.shape
-        assert z.shape[:2] == (B, n)
-
-        H = torch.eye(B, device=x.device) - 1.0 / B
-        hsic_sum = 0.0
-        for j in range(n):
-            xj = x[:, j:j+1]           # (B,1)
-            zj = z[:, j, :]            # (B,d)
-
-            K = self._rbf(xj, self.sx)
-            L = self._rbf(zj, self.sz)
-            hsic_j = torch.trace((K @ H) @ (L @ H)) / ((B - 1) ** 2 + 1e-12)
-            hsic_sum += hsic_j
-
-        return -hsic_sum / n           # 取平均 → 越小越好
-
-INFO_LOSS_REG: dict[str, type[BaseInfoLoss]] = {
-    "recon":   ReconLoss,
-    "infonce": InfoNCELoss,
-    "hsic":    HSICLoss,
-}
-
-# ===== Smoothness losses =====
-class BaseSmoothLoss(ABC):
-    @abstractmethod
-    def __call__(self, z: torch.Tensor, L: torch.Tensor) -> torch.Tensor: ...
-
-class LaplacianSmooth(BaseSmoothLoss):
-    r"""Graph Laplacian quadratic form Σ_i zᵢᵀ L zᵢ ."""
-    def __call__(self, z: torch.Tensor, L: torch.Tensor) -> torch.Tensor:
-        # z : (B,n,d)  → mean across batch
-        H = z.mean(dim=0).T                       # (d,n)
-        return 2.0 * torch.trace(H @ L @ H.T)
-
-class TotalVariationSmooth(BaseSmoothLoss):
-    r"""TV = Σ_{edges} ‖z_i − z_j‖₁"""
-    def __call__(self, z: torch.Tensor, L: torch.Tensor) -> torch.Tensor:
-        # approximate via Laplacian with L1 norm
-        H = z.mean(dim=0)                         # (n,d)
-        diff = torch.abs(H[:, None, :] - H[None, :, :])
-        mask = (L != 0).unsqueeze(-1)             # edges
-        return diff[mask.expand_as(diff)].mean()
-
-SMOOTH_LOSS_REG: dict[str, type[BaseSmoothLoss]] = {
-    "laplacian": LaplacianSmooth,
-    "tv":        TotalVariationSmooth,
-}
-
-class HomoTransform(BaseTransform):
-    r"""
-    Learn one linear map W_j (k_j × d) for every original feature so that the
-    Pearson‑correlation matrix between **features** after projection matches the
-    correlation matrix of the raw scalar features.
-
-    Workflow
-    --------
-    1. During *fit*:
-       * Use the already‑generated ClusterCDF representation `N_data['train']`
-         together with `feature_map_` to extract a scalar value per feature
-         (mean over its k_j bin columns) and compute the n×n target matrix
-         S_target (Pearson).
-       * Optimise all {W_j} with mini‑batch SGD:
-            L = MSE( S_batch(Z), S_target ) +
-                λ Σ_j  ortho_loss(W_j)
-         where S_batch is the feature‑correlation matrix computed on the
-         current batch after projection.
-    2. After training, the frozen W_j are stored in numpy form and applied
-       inside *transform* to every partition.
-
-    Args in *args* dict
-    -------------------
-    output_dim : int | None   target dimension d (≥1). None ⇒ d=k_j
-    epochs     : int          default 200
-    batch_size : int          default 1024
-    lr         : float        default 1e‑3
-    lam_ortho  : float        orthogonality regulariser, default 1e‑3
-    device     : str          "cuda" / "cpu", default "cpu"
-    """
-
-    # ----------------------------- init ------------------------------
-    def __init__(self, args: Dict):
-        super().__init__()
-        # ---- look‑ups ----
-        proj_name   = args.get("projector", "linear").lower()
-        info_name   = args.get("info_loss", "recon").lower()
-        smooth_name = args.get("smooth_loss", "laplacian").lower()
-
-        self.output_dim = args.get("output_dim", None)
-        self.epochs     = int(args.get("epochs", 200))
-        self.batch_size = int(args.get("batch_size", 1024))
-        self.lr         = float(args.get("lr", 1e-3))
-        self.lam_info   = float(args.get("lam_info", 1.0))
-        self.lam_smooth = float(args.get("lam_smooth", 1.0))
-        self.lam_ortho  = float(args.get("lam_ortho", 1e-3))
-        self.device     = args.get("device", "cpu")
-
-        # info‑loss selection string kept for later logic
-        self.info_name  = info_name
-        # per‑feature decoders (z → x) for auto‑encoder reconstruction
-        self.decoders_: Dict[int, nn.Module] = {}
-
-        # ----- runtime‑determined after `fit` -----
-        self.projectors_: Dict[int, BaseProjector] = {}
-        self.is_decoder = info_name == "recon"
-        self.info_loss = INFO_LOSS_REG.get(info_name, None)()
-        self.X_scalar_all: torch.Tensor | None = None  # raw scalar values for HSIC
-        self.smooth_loss   = SMOOTH_LOSS_REG[smooth_name]()
-        self.proj_name     = proj_name  # keep for logging
-
-        # kept from original implementation
-        self.L_  = None
-        self.fmap_: List[Dict] | None = None
-        self.weight_raw_: Dict[int, torch.nn.Parameter] = {}
-        self.W_np_: Dict[int, np.ndarray] = {}
-        self.S_target_: torch.Tensor | None = None
-
-        # --- constant-feature bookkeeping ---
-        self.constant_feats_: set[int] = set()   # indices with only one distinct value
-        self.const_dims_: dict[int, int] = {}    # idx → projected dim d
-
-    # ----------------------------- fit -------------------------------
+    # ---------- fitting: compute & store MI ----------
     def fit(self, N_data, C_data, y_data=None, shared_state=None):
-        # ------- sanity checks -------
-        if not (N_data and "train" in N_data):
+        if shared_state is None:
+            shared_state = {}
+        # Require a training split to build statistics
+        if (not N_data or "train" not in N_data) and (not C_data or "train" not in C_data):
             return self
-        assert shared_state and "feature_map_" in shared_state, \
-            "feature_map_ must be produced by ClusterCdfTransform before this transform."
 
-        self.fmap_ = shared_state["feature_map_"]
-        # ----- constant features -----
-        const_mask = shared_state.get('const_mask', None)
-        if const_mask is not None:
-            self.constant_feats_ = set(np.where(const_mask)[0].tolist())
-        else:
-            self.constant_feats_.clear()
-        if self.info_name == "hsic":
-            self.X_scalar_all = torch.as_tensor(
-                shared_state['raw_scalar_train'], dtype=torch.float32, device=self.device
+        cols = []
+
+        # ---- numeric columns (→ discretised) ----
+        if N_data and "train" in N_data:
+            X_num = N_data["train"]                           # (n, d_num)
+            if X_num.ndim == 1:                               # edge case: single column
+                X_num = X_num[:, None]
+            kb = KBinsDiscretizer(
+                n_bins=self.n_bins, encode="ordinal", strategy="quantile"
             )
-        X_train = torch.as_tensor(N_data["train"], dtype=torch.float32,
-                                  device=self.device)                # (N, Σ k_j)
-        N_samples = X_train.size(0)
+            X_disc = kb.fit_transform(X_num)
+            cols.extend([X_disc[:, i].astype(int) for i in range(X_disc.shape[1])])
 
-        # -------- target similarity (only if not provided) ---------
-        # if shared_state and 'scalar_similarity' in shared_state:
-        assert 'scalar_similarity' in shared_state, \
-            "scalar_similarity must be produced before this transform."
-        self.S_target_ = torch.as_tensor(
-            shared_state['scalar_similarity'],
-            dtype=torch.float32,
-            device=self.device
-        )
+        # ---- categorical columns (already discrete) ----
+        if C_data and "train" in C_data:
+            X_cat = C_data["train"]                           # (n, d_cat)
+            if X_cat.ndim == 1:
+                X_cat = X_cat[:, None]
+            cols.extend([X_cat[:, i] for i in range(X_cat.shape[1])])
 
-        # ---------------- build graph Laplacian ----------------
-        S_abs = torch.abs(self.S_target_).clone()
-        S_abs.fill_diagonal_(0.0)
-        D = torch.diag(S_abs.sum(dim=1))
-        self.L_ = (D - S_abs).detach()            # (n,n)  graph Laplacian
+        L = len(cols)
+        if L == 0:                                           # no columns found
+            return self
 
-        # build per‑feature Projector objects / and decoders
-        for meta in self.fmap_:
-            k   = meta["size"]
-            d   = k if self.output_dim is None else self.output_dim
-            idx = meta["orig_idx"]
+        import numpy as np
+        mi_mat = np.zeros((L, L), dtype=np.float32)
+        for i in range(L):
+            for j in range(i + 1, L):
+                val = mutual_info_score(cols[i], cols[j])
+                mi_mat[i, j] = mi_mat[j, i] = val
 
-            if idx in self.constant_feats_:
-                self.const_dims_[idx] = d
-                continue
+        # min‑max scale to [0,1]  (avoid division by zero)
+        vmax = mi_mat.max()
+        if vmax > 0:
+            mi_mat /= vmax
 
-            if idx not in self.projectors_:
-                self.projectors_[idx] = PROJECTOR_REG[self.proj_name](k, d).to(self.device)
-
-            if self.is_decoder and idx not in self.constant_feats_:
-                dec = nn.Sequential(
-                    nn.Linear(d, 2*d), 
-                    nn.ReLU(), 
-                    nn.Linear(2*d, 2*d),
-                    nn.ReLU(),
-                    nn.Linear(2*d, k)
-                ).to(self.device)
-                nn.init.kaiming_uniform_(dec[0].weight, a=math.sqrt(5))
-                nn.init.kaiming_uniform_(dec[2].weight, a=math.sqrt(5))
-                nn.init.kaiming_uniform_(dec[4].weight, a=math.sqrt(5))
-                self.decoders_[idx] = dec
-
-        # aggregate parameters from all projectors for optimiser
-        parameters = []
-        for p in self.projectors_.values():
-            parameters += list(p.parameters())
-        for dec in self.decoders_.values():
-            parameters += list(dec.parameters())
-
-        optimiser = torch.optim.AdamW(parameters, lr=self.lr)
-
-        # ------------- training loop -------------
-        for _epoch in range(self.epochs):
-            optimiser.zero_grad()
-            perm  = torch.randperm(N_samples, device=self.device)[: self.batch_size]
-            batch = X_train[perm]                                   # (B, Σk)
-
-            # ========= projection =========
-            proj_chunks = []
-            for meta in self.fmap_:
-                s, k = meta["new_start"], meta["size"]
-                idx  = meta["orig_idx"]
-                if idx in self.constant_feats_:
-                    d = self.const_dims_[idx]
-                    z_j = torch.zeros(batch.size(0), d, device=self.device)
-                    proj_chunks.append(z_j)
-                    continue
-                P    = self.projectors_[idx]
-                x_j  = batch[:, s:s+k]                            # (B,k)
-                z_j  = P(x_j)                                    # (B,d)
-
-                proj_chunks.append(z_j)
-            Z_batch = torch.stack(proj_chunks, dim=1)            # (B,n,d)
-
-            # ---------- losses ----------
-            # 1) smoothness
-            loss_smooth = self.smooth_loss(Z_batch, self.L_)
-
-            # 2) information / reconstruction
-            loss_info = torch.tensor(0.0, device=self.device)
-            if self.is_decoder:
-                for i, meta in enumerate(self.fmap_):
-                    idx = meta["orig_idx"]                 # set first!
-                    if idx in self.constant_feats_:
-                        continue
-                    x_j  = batch[:, meta["new_start"]: meta["new_start"] + meta["size"]]  # (B,k)
-                    z_j  = proj_chunks[i]                                                # (B,d)
-
-                    if self.info_name == "recon":
-                        x_rec = self.decoders_[idx](z_j)
-                        loss_info += F.mse_loss(x_rec, x_j)
-                loss_info = loss_info / len(self.decoders_)
-            else:
-                if self.info_name == "infonce":
-                    loss_info = self.info_loss(Z_batch)
-                elif self.info_name == "hsic":
-                    x_batch = self.X_scalar_all[perm]          # (B, n_raw)
-                    loss_info = self.info_loss(x_batch, Z_batch)
-
-            # 3) orthogonality (already accumulated)
-            loss = (self.lam_smooth * loss_smooth +
-                    self.lam_info   * loss_info)
-
-            loss.backward()
-            optimiser.step()
-
+        shared_state["pairwise_mi"] = mi_mat
         return self
 
-    # --------------------------- transform ----------------------------
+    # transform = identity (data unchanged)
     def transform(self, N_data, C_data, y_data=None, shared_state=None):
-        if not self.projectors_:
-            return N_data, C_data, y_data
-
-        for part_name, arr in N_data.items():
-            out_chunks = []
-            for meta in self.fmap_:
-                s, k = meta["new_start"], meta["size"]
-                idx  = meta["orig_idx"]
-
-                if idx in self.constant_feats_:
-                    out_chunks.append(
-                        np.zeros((arr.shape[0], self.const_dims_[idx]), dtype=np.float32)
-                    )
-                else:
-                    P = self.projectors_[idx]
-                    out_chunks.append(
-                        P(torch.as_tensor(arr[:, s:s+k], dtype=torch.float32,
-                                          device=self.device)
-                          ).detach().cpu().numpy()
-                    )
-            N_data[part_name] = np.concatenate(out_chunks, axis=1).astype(np.float32)
-
         return N_data, C_data, y_data

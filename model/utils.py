@@ -79,7 +79,10 @@ def ensure_path(path, remove=True):
 def merge_dicts(base: dict, override: dict) -> dict:
     merged = copy.deepcopy(base)
     for k, v in override.items():
-        merged[k] = v
+        if k in merged and isinstance(merged[k], dict) and isinstance(v, dict):
+            merged[k] = merge_dicts(merged[k], v)
+        else:
+            merged[k] = copy.deepcopy(v)
     return merged
 
 
@@ -130,6 +133,7 @@ _utils_pp = pprint.PrettyPrinter()
 def pprint(x):
     _utils_pp.pprint(x)
 
+
 #  ---- import from lib.util -----------
 def set_seeds(base_seed: int, one_cuda_seed: bool = False) -> None:
     """
@@ -155,8 +159,10 @@ def set_seeds(base_seed: int, one_cuda_seed: bool = False) -> None:
             default_generator = torch.cuda.default_generators[i]
             default_generator.manual_seed(cuda_seed + i)
 
+
 def get_device() -> torch.device:
     return torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 
 import sklearn.metrics as skm
 def rmse(y, prediction, y_info):
@@ -491,7 +497,7 @@ def load_recipes_from_yaml(yaml_file: str, expand_keys: list):
         dataset_name = merged_conf.get("dataset", "UnknownDataset")
         max_epoch = merged_conf.get("max_epoch", 200)
         batch_size = merged_conf.get("batch_size", 1024)
-        tune = merged_conf.get("tune", False)
+        tune = merged_conf.get("tune", False) or merged_conf.get("load_tune_config", False)
         # Construct the save path differently for deep and classical models.
         if model_type in deep_model_list:
             save_path1 = f"{dataset_name}-{model_type}"
@@ -521,6 +527,23 @@ def load_recipes_from_yaml(yaml_file: str, expand_keys: list):
     recipes = remove_duplicate_recipes(recipes)
 
     return recipes
+
+
+def load_tuned_config(args, logger):
+    tune_config_path = osp.join(args.save_path, f"{args.model_type}-tuned.json")
+    
+    if not osp.exists(tune_config_path):
+        logger.info(f"Tuned config file {tune_config_path} does not exist. Skipping loading.")
+        return args
+
+    
+    with open(tune_config_path, 'r') as f:
+        tune_args = json.load(f)
+
+    args.config = merge_dicts(args.config, tune_args)
+
+    logger.info("Successfully merged tuned config into args.config")
+    return args
 
 
 def show_results(
@@ -625,171 +648,6 @@ def show_cross_dataset_results(all_results_summary, logger=None):
             print(line)
 
 # ============================ Hyperparameter Search ============================
-# Central registry of **static** default hyper‑parameters for every `model_type`.
-"""hyperparam_tuning.py
-A **single‑file** implementation that contains:
-  • MODEL_DEFAULTS – static hyper‑parameter presets for each `model_type`
-  • deep_update – recursive dict merge helper
-  • apply_model_defaults – fills static + dynamic defaults into a config
-  • tune_hyper_parameters – Optuna‑based HPO entrypoint
-
-All docstrings & inline comments are now **English‑only** for clarity.
-"""
-
-
-# -----------------------------------------------------------------------------
-# 1. Static defaults for each model_type
-# -----------------------------------------------------------------------------
-MODEL_DEFAULTS: Dict[str, Dict[str, Any]] = {
-    # === Classical models =====================================================
-    "xgboost": {  # CPU defaults; GPU overrides applied later
-        "fit":   {"verbose": False},
-        "model": {"tree_method": "hist"},
-    },
-    "catboost": {},  # dynamic defaults handled later
-    "RandomForest": {"model": {"max_depth": 12}},
-
-    # === CNN‑style ============================================================
-    "resnet": {
-        "model": {"activation": "relu", "normalization": "batchnorm"},
-    },
-
-    # === Transformer family ===================================================
-    "ftt": {
-        "model": {
-            "prenormalization": False,
-            "initialization": "xavier",
-            "activation": "reglu",
-            "n_heads": 8,
-            "d_token": 64,
-            "token_bias": True,
-            "kv_compression": None,
-            "kv_compression_sharing": None,
-        },
-    },
-    "t2gformer": {
-        "model": {
-            "prenormalization": False,
-            "initialization": "xavier",
-            "activation": "reglu",
-            "n_heads": 8,
-            "d_token": 64,
-            "token_bias": True,
-            "kv_compression": None,
-            "kv_compression_sharing": None,
-        },
-    },
-    "excelformer": {
-        "model": {
-            "prenormalization": False,
-            "kv_compression": None,
-            "kv_compression_sharing": None,
-            "token_bias": True,
-            "init_scale": 0.01,
-            "n_heads": 8,
-        },
-    },
-    "autoint": {
-        "model": {
-            "prenormalization": False,
-            "initialization": "xavier",
-            "activation": "relu",
-            "n_heads": 8,
-            "d_token": 64,
-            "kv_compression": None,
-            "kv_compression_sharing": None,
-        },
-    },
-
-    # === Other neural architectures ==========================================
-    "node": {"model": {"choice_function": "sparsemax", "bin_function": "sparsemoid"}},
-
-    "tabr": {
-        "model": {
-            "num_embeddings": {"type": "PLREmbeddings", "lite": True},
-            "d_multiplier": 2.0,
-            "mixer_normalization": "auto",
-            "dropout1": 0.0,
-            "normalization": "LayerNorm",
-            "activation": "ReLU",
-        },
-    },
-    "mlp_plr": {
-        "model": {"num_embeddings": {"type": "PLREmbeddings", "lite": True}},
-    },
-
-    "ptarl": {
-        "model": {"n_clusters": 20, "regularize": "True"},
-        "general": {
-            "diversity": "True",
-            "ot_weight": 0.25,
-            "diversity_weight": 0.25,
-            "r_weight": 0.25,
-        },
-    },
-
-    "modernNCA": {
-        "model": {"num_embeddings": {"type": "PLREmbeddings", "lite": True}},
-    },
-    "tabm": {
-        "model": {
-            "num_embeddings": {"type": "PLREmbeddings", "lite": True},
-            "backbone": {"type": "MLP"},
-            "arch_type": "tabm",
-            "k": 32,
-        },
-    },
-
-    "danets": {"general": {"k": 5, "virtual_batch_size": 256}},
-    "dcn2": {"model": {"stacked": False}},
-
-    "grownet": {
-        "ensemble_model": {"lr": 1.0},
-        "model": {"sparse": False},
-        "training": {"lr_scaler": 3},
-    },
-
-    "protogate": {
-        "training": {
-            "lam": 1e-3,
-            "pred_coef": 1,
-            "sorting_tau": 16,
-            "feature_selection": True,
-        },
-        "model": {"a": 1, "sigma": 0.5},
-    },
-
-    "grande": {
-        "model": {
-            "from_logits": True,
-            "use_class_weights": True,
-            "bootstrap": False,
-        },
-    },
-
-    "amformer": {
-        "model": {
-            "heads": 8,
-            "groups": [54, 54, 54, 54],
-            "sum_num_per_group": [32, 16, 8, 4],
-            "prod_num_per_group": [6, 6, 6, 6],
-            "cluster": True,
-            "target_mode": "mix",
-            "token_descent": False,
-        },
-    },
-}
-
-# -----------------------------------------------------------------------------
-# 2. Helper utilities
-# -----------------------------------------------------------------------------
-__all__ = [
-    "deep_update",
-    "apply_model_defaults",
-    "tune_hyper_parameters",
-]
-
-
 def deep_update(dst: Dict[str, Any], src: Dict[str, Any], *, overwrite: bool = True) -> None:
     """Recursively merge *src* into *dst*.
     When *overwrite* is False, existing keys in *dst* are kept.
@@ -806,7 +664,15 @@ def deep_update(dst: Dict[str, Any], src: Dict[str, Any], *, overwrite: bool = T
 def apply_model_defaults(config: Dict[str, Any], model_type: str, *, gpu_id: int | None = None) -> None:
     """Fill *config* with static defaults and GPU‑dependent overrides."""
     # 1) static defaults
-    deep_update(config, copy.deepcopy(MODEL_DEFAULTS.get(model_type, {})), overwrite=False)
+    default_json_path = osp.join("configs", "default", f"{model_type}.json")
+    if osp.exists(default_json_path):
+        with open(default_json_path, 'r') as fp:
+            defaults = json.load(fp)
+            defaults = defaults.get(model_type, {})
+    else:
+        defaults = {}
+
+    deep_update(config, defaults, overwrite=False)
 
     # 2) dynamic defaults
     if model_type == "xgboost" and torch.cuda.is_available():
@@ -815,12 +681,12 @@ def apply_model_defaults(config: Dict[str, Any], model_type: str, *, gpu_id: int
         deep_update(config, {"fit": {"logging_level": "Silent"}}, overwrite=False)
 
 
-
+from typing import Dict, Any, Tuple, Optional
 def tune_hyper_parameters(
     args,
     opt_space: Dict[str, Any],
     train_val_data: Tuple[Any, Any, Any],
-    info: Dict[str, Any],
+    info: Dict[str, Any]
 ):
     """Run Optuna search and return *args* with the best config injected.
 
@@ -870,7 +736,7 @@ def tune_hyper_parameters(
             trial_args, info["task_type"] == "regression"
         )
         try:
-            method.fit(copy.deepcopy(train_val_data), info, train=True, config=config)
+            method.fit(copy.deepcopy(train_val_data), info, train=True, config=config, tune=True)
             score = method.trlog["best_res"]
         except Exception as e:
             print("Trial failed:", e)

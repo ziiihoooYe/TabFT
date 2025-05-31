@@ -3,44 +3,67 @@
         "model": {
             "d_model": [
                 "categorical",
-                [
-                    256,
-                    512
-                ]
+                64,
+                128,
+                256,
+                512
             ],
             "n_head": [
                 "categorical",
-                [
-                    8,
-                    16
-                ]
+                2,
+                8
             ],
             "num_enc_layers": [
-                "categorical",
-                [
-                    2,
-                    4,
-                    6
-                ]
+                "int",
+                1,
+                4
+            ],
+            "dropout": [
+                "?uniform",
+                0.0,
+                0.0,
+                0.2
+            ],
+            "residual_dropout": [
+                "?uniform",
+                0.0,
+                0.0,
+                0.2
+            ],
+            "attention_dropout": [
+                "?uniform",
+                0.0,
+                0.0,
+                0.5
+            ],
+            "d_ff": [
+                "uniform",
+                0.6666666666666667,
+                3.6666666666666665
+            ],
+            "pre_norm": [
+                "?categorical",
+                false,
+                true,
+                false
+            ],
+            "n_freq": [
+                "int",
+                0,
+                8
             ]
         },
         "training": {
             "lr": [
-                "categorical",
-                [
-                    1e-03,
-                    1e-04,
-                    1e-05
-                ]
+                "loguniform",
+                1e-05,
+                1e-2
             ],
             "weight_decay": [
-                "categorical",
-                [
-                    0.0,
-                    1e-04,
-                    1e-05,
-                    1e-06
-                ]
+                "?loguniform",
+                0.0,
+                1e-06,
+                1e-2
             ]
         },
         "general": {}

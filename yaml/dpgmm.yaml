@@ -54,8 +54,7 @@ transform_list:
       cdf_type: gaussian # uniform, gaussian
       cache_path: fit_cache
       n_components: 100
-      weight_threshold: 0.0001
-      posterior: false
+      weight_threshold: 1e-6
   # ----------------------------------------------------------------
   # categorical encoding process
   - cat_onehot: {}
@@ -68,9 +67,9 @@ model_type:
   - mlp
   - resnet
 
-model_path: results_model/dpgmm_0.0001
+model_path: results_model/dpgmm
 seed: 1
 seed_num: 15
-gpu: 2
+gpu: 4
 tune: true
 n_trials: 20

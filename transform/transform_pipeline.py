@@ -60,8 +60,8 @@ class DataTransformPipeline:
                 pipeline.append(SmoothClipTransform(transform_config))
             elif transform_name == 'num_cdf':
                 pipeline.append(CdfTransform(transform_config, self.dataset))
-            elif transform_name == 'num_homo':
-                pipeline.append(HomoTransform(transform_config))
+            elif transform_name == 'mutual_info':
+                pipeline.append(PairwiseMITransform(transform_config))
             elif transform_name == 'cat_ordinal':
                 pipeline.append(OrdinalTransform(transform_config))
             elif transform_name == 'cat_indice':

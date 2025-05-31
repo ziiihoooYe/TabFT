@@ -54,12 +54,12 @@ transform_list:
   # ----------------------------------------------------------------
   # normalization process
   - norm: 
-      policy: standard # none, standard, minmax, robust, power, quantile, maxabs
+      policy: quantile # none, standard, minmax, robust, power, quantile, maxabs
    
 model_type: 
   - ftt
 
-model_path: results_model/ftt_no_transform
+model_path: results_model/ftt_quantile
 seed: 1
 seed_num: 15
 gpu: 5

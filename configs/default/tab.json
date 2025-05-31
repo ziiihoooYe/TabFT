@@ -3,7 +3,19 @@
         "model": {
             "d_model": 512,
             "n_head": 8,
-            "num_enc_layers": 8
+            "num_enc_layers": 3,
+            "dropout": 0.1,
+            "attention_dropout": 0.2,
+            "residual_dropout": 0.0,
+            "d_ff": 4,
+            "pre_norm": false,
+            "n_freq": 4,
+            "pretrain": true,
+            "mi_pretrain": false,
+            "sincos_mode": "raw",
+            "pretrain_epochs": 200,
+            "mask_ratio": 0.4,
+            "pretrain_lr": 1e-5
         },
         "training": {
             "lr": 0.0001,

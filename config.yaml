@@ -36,7 +36,7 @@ dataset:
   # - BNG(tic-tac-toe)
   # - Bias_correction_r_2
   # - Click_prediction_small
-  # - electricity
+  - electricity
   # - estimation_of_obesity_levels
   # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   # - Diamonds
@@ -44,7 +44,7 @@ dataset:
   # - FOREX_audjpy-day-High
   # - FOREX_audsgd-hour-High
   # - Fitness_Club_c
-  # - IEEE80211aa-GATS
+  - IEEE80211aa-GATS
   # - Intersectional-Bias-Assessment
   # - Job_Profitability
   # - Kaggle_bike_sharing_demand_challange
@@ -81,14 +81,12 @@ transform_list:
   - label: {}
   # ----------------------------------------------------------------
   # numerical encoding process
+  - mutual_info: {}
   - num_cdf: 
-      cdf_type: gaussian # uniform, gaussian, dynamic
+      cdf_type: uniform # uniform, gaussian, dynamic
       cache_path: fit_cache
       n_components: 100
-      binning_method: hierarchical # quantile, hdbscan, hierarchical
-      linkage_method: ward # ward, single, complete, average
-      weight_threshold: 1e-6
-      posterior: false
+      binning_method: quantile # quantile, hdbscan, hierarchical 
   
   # - num_homo:
   #     projector: mlp
@@ -105,12 +103,17 @@ transform_list:
   # categorical encoding process
   # - cat_onehot: {}
   - cat_indice: {}
+  # - cat_sincos: {}
   # - cat_targetindice: {}
   # - cat_target: {}
   # ----------------------------------------------------------------
   # normalization process
-  - norm: 
-      policy: standard # none, standard, minmax, robust, power, quantile, maxabs
+  # - norm: 
+  #     policy: standard # none, standard, minmax, robust, power, quantile, maxabs
+  # - norm:
+  #     policy: l2vec # "l2vec", "l1vec", "linfvec", "sphereextend", "dirplus"
+  - norm:
+      policy: standard
   
 model_type: 
   # - ftt
@@ -120,16 +123,17 @@ model_type:
   # - tabtransformer
   # - xgboost
   # - lightgbm
-  - mlp
+  # - mlp
   # - resnet
   # - catboost
   # - tabpfn
   # - PFN-v2
-  # - tab
+  - tab
 
-model_path: results_model/default_path
+model_path: results_model/raw
 seed: 1
-seed_num: 15
-gpu: 1
-tune: true
-n_trials: 20
+seed_num: 5
+gpu: 7
+tune: false
+load_tune_config: true
+n_trials: 100

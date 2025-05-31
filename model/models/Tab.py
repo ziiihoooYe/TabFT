@@ -6,194 +6,269 @@ import torch.nn.init as nn_init
 from torch.nn import functional as F
 from torch.nn import TransformerEncoder
 
+param_list = ["d_model", "d_ff", "activation", "dropout", "num_enc_layers", "n_head",
+              "attention_dropout", "pre_norm", "n_freq", "pretrain", "residual_dropout", "sincos_mode"]
 
-class PositionalEmbedding(nn.Module):
-    def __init__(self, d_model, max_len=5000):
-        """
-        d_model: 位置编码向量的维度
-        max_len: 能支持的最大位置索引(必须 >= 你会使用到的最大索引)
-        """
-        super(PositionalEmbedding, self).__init__()
+class Tab(nn.Module):
+    """
+    Tab model combining TabEncoder and a head (classification/regression).
+    """
+    def __init__(self, config, num_continuous, categories, d_out, is_regression=True, feature_map=None, pretrain=False):
+        super(Tab, self).__init__()
+        if categories is None: categories = []
+        for param in param_list:
+            if param in config:
+                setattr(self, param, config[param])
+            else:
+                setattr(self, param, None)
 
-        # 预先构造一个 [max_len, d_model] 的正余弦编码矩阵
-        pe = torch.zeros(max_len, d_model).float()
-        position = torch.arange(0, max_len).unsqueeze(1).float()   # shape: [max_len, 1]
-        div_term = torch.exp(-math.log(10000.0) * torch.arange(0, d_model, 2).float() / d_model)
+        self.sincos_mode = config.get("sincos_mode", "two_stage")
 
-        # 生成正余弦
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
+        # Initialize tokenizer
+        self.tokenizer = Tokenizer(
+            num_continuous=num_continuous,
+            categories=categories,
+            d_model=self.d_model,
+            feature_map=feature_map,
+            n_freq=self.n_freq or 0,
+            sincos_mode=self.sincos_mode
+        )
 
-        # 注册到 buffer 中，表示这个张量并不是可训练参数，但会随模型一起保存
-        self.register_buffer('pe', pe)  # shape: [max_len, d_model]
+        # Initialize encoder
+        self.encoder = TabEncoder(
+            d_model=self.d_model,
+            n_head=self.n_head,
+            num_enc_layers=self.num_enc_layers,
+            dropout=self.dropout,
+            d_ff=self.d_ff,
+            activation="reglu",
+            attention_dropout=self.attention_dropout,
+            residual_dropout=self.residual_dropout,
+            pre_norm=config.get("pre_norm", False)  # Use pre-norm if specified in config
+        )
 
-    def forward(self, positions) -> torch.Tensor:
-        """
-        positions: 形状可以是 [L] 或 [B, L] 的长整型索引张量。
-                   其中的数值要小于 self.pe.size(0) = max_len。
-        returns:   若 positions.shape == [L], 则返回 [L, d_model]
-                   若 positions.shape == [B, L], 则返回 [B, L, d_model]
-        """
-        # 直接索引 pe
-        # 如果 positions 是 1D，[L] -> 结果 [L, d_model]
-        # 如果 positions 是 2D，[B, L] -> 结果 [B, L, d_model] (PyTorch自动广播)
-        return self.pe[positions.long()]
-    
-
-class CLSHead(nn.Module):
-    def __init__(self, d_model, out_features, head_dropout=0):
-        super().__init__()
-        self.linear = nn.Linear(d_model, out_features)
-        self.dropout = nn.Dropout(head_dropout)
-
-    def forward(self, x):  # x: [bs x nvars x d_model x patch_num]
-        x = x[:, 0, :]
-        x = self.linear(x)
-        # x = self.dropout(x)
-        return x
-
-
-class MaxPoolingHead(nn.Module):
-    def __init__(self, d_model, out_features, head_dropout=0):
-        super().__init__()
-        self.linear = nn.Linear(d_model, out_features)
-        self.dropout = nn.Dropout(head_dropout)
-
-    def forward(self, x):  # x: [bs x nvars x d_model x patch_num]
-        x = torch.max(x, dim=1).values
-        x = self.linear(x)
-        x = self.dropout(x)
-        return x
-
-
-class FlattenHead(nn.Module):
-    def __init__(self, num_col, d_model, out_features, head_dropout=0):
-        super().__init__()
-        self.flatten = nn.Flatten(start_dim=-2)
-        self.linear = nn.Linear(num_col*d_model, out_features)
-        # self.linear = nn.Linear(d_model, out_features)
-        self.dropout = nn.Dropout(head_dropout)
-
-    def forward(self, x):  # x: [bs x nvars x d_model x patch_num]
-        x = self.flatten(x)
-        # x = torch.max(x, dim=1).values
-        x = self.linear(x)
-        x = self.dropout(x)
-        return x
-
-
-class RegressionHead(nn.Module):
-    def __init__(self, d_model, out_features=1):
-        super(RegressionHead, self).__init__()
-        # self.head = MaxPoolingHead(d_model, out_features)
-        self.head = CLSHead(d_model, out_features)
+        # Initialize head
+        if is_regression:
+            self.head = RegressionHead(
+                d_model=self.d_model,
+                out_features=d_out
+            )
+        else:
+            self.head = ClassificationHead(
+                d_model=self.d_model,
+                classes_num=d_out  # Number of classes for classification
+            )
         
-    def forward(self, x):
-        return self.head(x)
+        if self.pretrain:
+            self.pretrain_head = MaskRecHead(self.d_model)
+        
+
+    def forward(self, x_cont, x_categ, attention_mask=None):
+        x_emb = self.tokenizer(x_cont, x_categ)  # (batch_size, num_groups + num_categories + 1, d_model)
+        out = self.encoder(x_emb, attention_mask)
+        out = self.head(out)
+        return out
     
 
-class ClassificationHead(nn.Module):
-    def __init__(self, d_model, classes_num):
-        super(ClassificationHead, self).__init__()
-        # self.head = MaxPoolingHead(d_model, classes_num)
-        self.head = CLSHead(d_model, classes_num)
-        self.softmax = nn.Softmax(dim=-1)
-
-    def forward(self, x):
-        return self.softmax(self.head(x))
+    def forward_pretrain(self, x_cont, x_categ, mask=None):
+        x_emb = self.tokenizer(x_cont, x_categ, mask)  # (batch_size, num_groups + num_categories + 1, d_model)
+        out = self.encoder(x_emb)
+        out = self.pretrain_head(out)
+        return out[:, 1:]
 
 
-class TabEncoder(nn.Module):
+### ---------------------------------------------------------------------------- ###
+###                                   Tokenizer                                  ###
+### ---------------------------------------------------------------------------- ###
+class Tokenizer(nn.Module):
     def __init__(
-        self, 
+        self,
         num_continuous,
         categories,
-        d_model, 
-        n_head,
-        num_enc_layers=6,
-        dropout=0.1
-        ):
-        
-        super(TabEncoder, self).__init__()
+        d_model,
+        feature_map=None,
+        n_freq: int = 0,         # ← 0 means “no sin‑cos augmentation”
+        sincos_mode: str = "two_stage"
+    ):
+        super(Tokenizer, self).__init__()
+
         self.num_continuous = num_continuous
-        self.categories = categories
         self.d_model = d_model
+        self.sincos_mode = sincos_mode   # "two_stage", "raw", or "none"
+        # Whether we will actually apply sin‑cos augmentation
+        self.use_sincos = (n_freq > 0) and (self.sincos_mode != "none")
 
-        self.encoder = Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(
-                        FullAttention(False, attention_dropout=dropout, output_attention=False), 
-                        d_model, 
-                        n_head),
-                    d_model,
-                    dropout=dropout
-                ) for l in range(num_enc_layers)
-            ],
-            norm_layer=nn.Sequential(Transpose(1,2), nn.BatchNorm1d(d_model), Transpose(1,2))
-        )
+        # --- group information (expanded features) ---
+        # feature map
+        if feature_map is not None:
+            self.group_sizes = [m["size"] for m in feature_map]   # per‑feature expanded dimension
+        else:
+            self.group_sizes = [1] * num_continuous
+        # group num of num feature / cat feature
+        self.num_groups = len(self.group_sizes)
+        self.cat_groups = int(len(categories))
 
-        self.positional_embedding = PositionalEmbedding(d_model)
-        self.col_embedding = nn.Linear(
-            in_features=d_model,
-            out_features=d_model
-        )
-        
-        self.lut_num = nn.Embedding(num_continuous, d_model)
-        nn_init.kaiming_uniform_(self.lut_num.weight, a=math.sqrt(5))
-        self.num_embeddings = nn.ModuleList([
-            nn.Linear(1, d_model) for _ in range(num_continuous)
-        ])
-        for i in range(num_continuous):
-            nn_init.kaiming_uniform_(self.num_embeddings[i].weight, a=math.sqrt(5))
-        
-        self.categories = categories
-        self.category_offsets = torch.tensor([0] + categories[:-1]).cumsum(0)
-        self.lut_cat = nn.Embedding(sum(categories), d_model)
-        nn_init.kaiming_uniform_(self.lut_cat.weight, a=math.sqrt(5))
-        
+        # --- numeric embedding ---
+        # column embedding
+        self.lut_num = nn.Embedding(self.num_groups, d_model)
+        # nn_init.kaiming_uniform_(self.lut_num.weight, a=math.sqrt(5))
+        with torch.no_grad():
+            self.lut_num.weight.zero_()
+        # Linear per column:  (group_size → d_model)
+
+        self.num_embeddings = nn.ModuleList([nn.Linear(sz, d_model, bias=False) for sz in self.group_sizes])
+        for lin in self.num_embeddings: nn_init.kaiming_uniform_(lin.weight, a=math.sqrt(5))
+        # num id
+        self.register_buffer("num_ids", torch.arange(self.num_groups, dtype=torch.long))
+
+        # --- optional sin‑cos augmentation ---
+        self.n_freq = n_freq
+        if self.use_sincos:
+            # Learnable ω and φ for every numeric column
+            self.register_parameter(
+                "omega", nn.Parameter(torch.rand(self.num_groups, 1, self.n_freq) * math.pi)
+            )  # (G, 1, F)
+            self.register_parameter(
+                "phi", nn.Parameter(torch.zeros(self.num_groups, 1, self.n_freq))
+            )   # (G, 1, F)
+
+            if self.sincos_mode == "two_stage":
+                # (d_model * 2 * n_freq) → d_model
+                self.sincos_embeddings = nn.ModuleList(
+                    [
+                        nn.Linear(d_model * 2 * self.n_freq, d_model, bias=False)
+                        for _ in self.group_sizes
+                    ]
+                )
+                for lin in self.sincos_embeddings:
+                    nn_init.kaiming_uniform_(lin.weight, a=math.sqrt(5))
+            else:  # "raw" mode: (2 * n_freq * group_size) → d_model
+                self.sincos_raw_embeddings = nn.ModuleList(
+                    [
+                        nn.Linear(2 * self.n_freq * sz, d_model, bias=False)
+                        for sz in self.group_sizes
+                    ]
+                )
+                for lin in self.sincos_raw_embeddings:
+                    nn_init.kaiming_uniform_(lin.weight, a=math.sqrt(5))
+
+        # --- category embedding ---
+        # column embedding
+        self.lut_cat = nn.Embedding(self.cat_groups, d_model)
+        # nn_init.kaiming_uniform_(self.lut_cat.weight, a=math.sqrt(5))
+        with torch.no_grad():
+            self.lut_cat.weight.zero_() 
+        # categorical embedding (reserve UNK = index 0 for every feature)
+        categories_with_unk = [c + 1 for c in categories]          # +1 for UNK
+        num_cat_embeddings = sum(categories_with_unk)
+        if num_cat_embeddings == 0:                                # no categorical features
+            num_cat_embeddings = 1                                 # dummy UNK slot
+        self.cat_embeddings = nn.Embedding(num_cat_embeddings, d_model)
+        nn_init.kaiming_uniform_(self.cat_embeddings.weight, a=math.sqrt(5))
+        # offsets for individual categorical features
+        self.register_buffer("category_offsets", torch.tensor([0] + categories_with_unk[:-1]).cumsum(0))
+        # zero‑initialize every UNK row so unknown categories contribute no signal
+        with torch.no_grad():
+            self.cat_embeddings.weight[self.category_offsets] = 0
+        # cat id
+        self.register_buffer("cat_ids", torch.arange(self.cat_groups, dtype=torch.long))
+
+        # cls token
         self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
         nn_init.kaiming_uniform_(self.cls_token, a=math.sqrt(5))
         
-        self.dropout = nn.Dropout(dropout)
-    
+        # mask token
+        self.mask_token = nn.Parameter(torch.zeros(1, 1, d_model))
+        nn_init.kaiming_uniform_(self.mask_token, a=math.sqrt(5))
 
-    def forward(self, x_cont, x_categ):
+    def forward(self, x_cont, x_categ, mask=None):
         """
         :param x_cont: (batch_size, num_continuous)
         :param x_categ: (batch_size, num_categories)
+        If n_freq > 0, numeric columns are augmented with learnable sin/cos embeddings.
         """
-        # Normalize inputs and convert to float if necessary
+        # if x_cont is not None:
+        #     x_cont = x_cont.float()
+        #     cont_embeds = []
+        #     offset = 0
+
+        #     for i, size in enumerate(self.group_sizes):
+        #         seg = x_cont[:, offset:offset + size]          # (B, size)
+        #         offset += size
+                
+        #         # optional sin‑cos embedding
+        #         if self.n_freq:
+        #             # seg: (B, group_size)
+        #             # Produce (B, 2 * n_freq * group_size) in order:
+        #             # sin ω1 x1, cos ω1 x1, sin ω1 x2, cos ω1 x2, ..., sin ωF x_g, cos ωF x_g
+        #             B, g = seg.shape
+        #             # (B,g,1) * (1,1,F) → (B,g,F)
+        #             seg_exp = seg.unsqueeze(-1)                             # (B,g,1)
+        #             sin_ = torch.sin(seg_exp * self.omega[i] + self.phi[i]) # (B,g,F)
+        #             cos_ = torch.cos(seg_exp * self.omega[i] + self.phi[i]) # (B,g,F)
+        #             trig = torch.stack((sin_, cos_), dim=-1)                # (B,g,F,2)
+        #             trig = trig.permute(0, 2, 1, 3).reshape(B, -1)          # (B, 2F*g)
+        #             emb = self.sincos_embeddings[i](trig)              # (B, d_model)
+        #         else:
+        #             emb = self.num_embeddings[i](seg)
+        #         cont_embeds.append(emb)
+
+        #     # num column embedding
+        #     x_cont_emb = torch.stack(cont_embeds, dim=1)       # (B, num_groups, d_model)
+        #     channel_embeddings = self.lut_num(self.num_ids.to(x_cont.device))  # (num_groups, d_model))
+        #     x_cont_emb = x_cont_emb + channel_embeddings
         if x_cont is not None:
             x_cont = x_cont.float()
-            x_cont = (x_cont - x_cont.mean(dim=0, keepdim=True)) / (x_cont.std(dim=0, keepdim=True) + 1e-8)
+            cont_embeds = []
+            offset = 0
+
+            for i, size in enumerate(self.group_sizes):
+                seg = x_cont[:, offset:offset + size]          # (B, size)
+                offset += size
+                if self.use_sincos:
+                    if self.sincos_mode == "two_stage":
+                        # --- two‑stage path (embedding1 → sincos → embedding2) ---
+                        B = seg.size(0)
+                        base = self.num_embeddings[i](seg)                         # (B, d_model)
+                        col_emb = self.lut_num.weight[i].unsqueeze(0).expand(B, -1)
+                        base = base + col_emb
+                        base_exp = base.unsqueeze(-1)                              # (B,d_model,1)
+                        sin = torch.sin(base_exp * self.omega[i] + self.phi[i])    # (B,d_model,F)
+                        cos = torch.cos(base_exp * self.omega[i] + self.phi[i])
+                        trig = torch.cat((sin, cos), dim=-1).reshape(B, -1)        # (B,d_model*2F)
+                        emb = self.sincos_embeddings[i](trig)                      # (B,d_model)
+                    else:
+                        # --- raw path (sincos → single embedding) ---
+                        B = seg.size(0)
+                        seg_exp = seg.unsqueeze(-1)                                # (B, g, 1)
+                        sin = torch.sin(seg_exp * self.omega[i] + self.phi[i])     # (B,g,F)
+                        cos = torch.cos(seg_exp * self.omega[i] + self.phi[i])     # (B,g,F)
+                        trig = torch.stack((sin, cos), dim=-1).reshape(B, -1)      # (B, 2F*g)
+                        emb = self.sincos_raw_embeddings[i](trig)                  # (B, d_model)
+                else:   # no sin‑cos
+                    emb = self.num_embeddings[i](seg) + self.lut_num.weight[i]
+                cont_embeds.append(emb)
+
+            # num column embedding
+            x_cont_emb = torch.stack(cont_embeds, dim=1)       # (B, num_groups, d_model)
+            channel_embeddings = self.lut_num(self.num_ids.to(x_cont.device))  # (num_groups, d_model)
+            if not self.use_sincos:                            # add when sin‑cos NOT used
+                x_cont_emb = x_cont_emb + channel_embeddings
+
         if x_categ is not None:
             x_categ = x_categ.long()
-
-        if x_cont is not None:
-            cont_embeds = []
-            x_cont = x_cont.view(-1, self.num_continuous, 1)
-            for i in range(x_cont.shape[-2]):
-                emb = self.num_embeddings[i](x_cont[:, i, :])
-                cont_embeds.append(emb)
-            x_cont_emb = torch.stack(cont_embeds, dim=1)
-            channel_embeddings = self.lut_num(torch.arange(0, x_cont.shape[-2]).to(x_cont.device))
-            x_cont_emb = x_cont_emb + channel_embeddings
-            x_cont_emb = self.dropout(x_cont_emb)
-        if x_categ is not None:
             cat_embeds = []
             for i in range(x_categ.shape[-1]):
-                x_categ_i = x_categ[:, i] + self.category_offsets[i]
-                emb_i = self.lut_cat(x_categ_i)
+                # shift by +1 so that unknown (‑1) → 0, valid 0..c‑1 → 1..c
+                idx = x_categ[:, i].long() + 1
+                idx = idx + self.category_offsets[i]              # global embedding index
+                emb_i = self.cat_embeddings(idx)
                 cat_embeds.append(emb_i)
-            x_categ_emb = torch.stack(cat_embeds, dim=1)  # [bs, n_cat_columns, d_model]
-            channel_embeddings = self.lut_cat(torch.arange(0, x_categ.shape[-1]).to(x_categ.device))
+            x_categ_emb = torch.stack(cat_embeds, dim=1)          # (B, n_cat, d_model)
+            channel_embeddings = self.lut_cat(self.cat_ids.to(x_categ.device))
             x_categ_emb = x_categ_emb + channel_embeddings
-            x_categ_emb = self.dropout(x_categ_emb)
-
 
         if x_cont is not None and x_categ is not None:
-            # Concatenate continuous and categorical embeddings
             x_emb = torch.cat([x_cont_emb, x_categ_emb], dim=-2)
         elif x_cont is not None:
             x_emb = x_cont_emb
@@ -202,105 +277,124 @@ class TabEncoder(nn.Module):
         else:
             raise ValueError("At least one of x_cont or x_categ must be provided")
 
+        if mask is not None:                         # mask: (B, L) → True 表示被遮
+            tok = self.mask_token.expand(x_emb.size(0), 1, -1)
+            x_emb = torch.where(mask.unsqueeze(-1), tok, x_emb)
+
         x_emb = torch.cat((self.cls_token.expand(x_emb.shape[0], -1, -1), x_emb), dim=1)
-        out, _ = self.encoder(x_emb)  # (batch_size, num_continuous + num_category + 1, d_model)
-        
-        return out  # CLS token
+
+        return x_emb
 
 
-class Tab(nn.Module):
-    """
-    Tab model combining TabEncoder and a head (classification/regression).
-    """
-    def __init__(self, num_continuous, categories, d_model, n_head, d_out, num_enc_layers=6, is_regression=True):
-        super(Tab, self).__init__()
-        
-        # categories = len(categories) if categories is not None else 0
-        if categories is None: categories = []
-        
-        self.encoder = TabEncoder(
-            num_continuous=num_continuous,
-            categories=categories,
-            d_model=d_model, 
-            n_head=n_head,
-            num_enc_layers=num_enc_layers
-        )
-        if is_regression:
-            self.head = RegressionHead(
-                d_model=d_model, 
-                out_features=d_out
-            )
-        else:
-            self.head = ClassificationHead(
-                d_model=d_model, 
-                classes_num=d_out  # Number of classes for classification
-            )
+### ---------------------------------------------------------------------------- ###
+###                                     Encoder                                  ###
+### ---------------------------------------------------------------------------- ###
+class TabEncoder(nn.Module):
+    def __init__(
+        self,
+        d_model,
+        n_head,
+        num_enc_layers,
+        dropout,
+        d_ff,
+        activation,
+        attention_dropout,
+        residual_dropout,
+        pre_norm=False
+    ):
+        super(TabEncoder, self).__init__()
 
-    def forward(self, x_cont, x_categ):
-        """
-        :param x_cont: (batch_size, num_continuous)
-        :param x_categ: (batch_size, num_categories)
-        """
-        out = self.encoder(x_cont=x_cont, x_categ=x_categ)
-        out = self.head(out)
-        return out
+        # --- encoder ---
+        self.encoder = nn.ModuleList([
+            EncoderLayer(
+                AttentionLayer(
+                    FullAttention(
+                        attention_dropout=attention_dropout, 
+                        output_attention=False,
+                        ),
+                    d_model,
+                    n_head
+                ),
+                d_model,
+                layer_idx=layer_idx,
+                d_ff=d_ff,
+                dropout=dropout,
+                residual_dropout=residual_dropout,
+                activation=activation,  # "relu" or "reglu", "geglu"
+                pre_norm=pre_norm
+            ) for layer_idx in range(num_enc_layers)
+        ])
 
-
-
-class Encoder(nn.Module):
-    def __init__(self, attn_layers, conv_layers=None, norm_layer=None):
-        super(Encoder, self).__init__()
-        self.attn_layers = nn.ModuleList(attn_layers)
-        self.conv_layers = nn.ModuleList(conv_layers) if conv_layers is not None else None
-        self.norm = norm_layer
-
-    def forward(self, x, attn_mask=None, tau=None, delta=None):
-        # x [B, L, D]
-        attns = []
-        if self.conv_layers is not None:
-            for i, (attn_layer, conv_layer) in enumerate(zip(self.attn_layers, self.conv_layers)):
-                delta = delta if i == 0 else None
-                x, attn = attn_layer(x, attn_mask=attn_mask, tau=tau, delta=delta)
-                x = conv_layer(x)
-                attns.append(attn)
-            x, attn = self.attn_layers[-1](x, tau=tau, delta=None)
-            attns.append(attn)
-        else:
-            for attn_layer in self.attn_layers:
-                x, attn = attn_layer(x, attn_mask=attn_mask, tau=tau, delta=delta)
-                attns.append(attn)
-
-        if self.norm is not None:
-            x = self.norm(x)
-
-        return x, attns
+    def forward(self, x_emb, attn_mask=None):
+        for layer in self.encoder:
+            x_emb, _ = layer(x_emb, attn_mask)
+        return x_emb
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, attention, d_model, d_ff=None, dropout=0.1, activation="relu"):
+    def __init__(self, attention, d_model, layer_idx,
+                 d_ff=None, dropout=0.1, residual_dropout=0., activation="relu", pre_norm=False):
         super(EncoderLayer, self).__init__()
-        d_ff = d_ff or 4 * d_model
+
+        # --- Attention Block ---
         self.attention = attention
-        self.conv1 = nn.Conv1d(in_channels=d_model, out_channels=d_ff, kernel_size=1)
-        self.conv2 = nn.Conv1d(in_channels=d_ff, out_channels=d_model, kernel_size=1)
-        self.norm1 = nn.LayerNorm(d_model)
+
+        # --- Feed-Forward Block ---
+        d_ff = int(d_ff*d_model) if d_ff is not None else 4 * d_model
+        self.linear1 = nn.Linear(
+            d_model, d_ff * (2 if activation.endswith('glu') else 1)
+        )
+        self.linear2 = nn.Linear(d_ff, d_model)
+
+        # --- Layer Normalization and Dropout ---
+        self.norm1 = nn.Identity() if pre_norm and layer_idx == 0 else nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
-        self.activation = F.relu if activation == "relu" else F.gelu
+        self.residual_dropout = nn.Dropout(residual_dropout)
 
-    def forward(self, x, attn_mask=None, tau=None, delta=None):
-        new_x, attn = self.attention(
-            x, x, x,
-            attn_mask=attn_mask,
-            tau=tau, delta=delta
-        )
-        x = x + self.dropout(new_x)
+        # --- Activation Function and Pre-Norm ---
+        self.activation = F.relu if activation == "relu" else reglu if activation == "reglu" else geglu
+        self.pre_norm = pre_norm
 
-        y = x = self.norm1(x)
-        y = self.dropout(self.activation(self.conv1(y.transpose(-1, 1))))
-        y = self.dropout(self.conv2(y).transpose(-1, 1))
+    def forward(self, x, attn_mask=None):
 
-        return self.norm2(x + y), attn
+        # === Pre-Norm Encoder Layer ===
+        if self.pre_norm:
+            # === Multi‑Head Attention Block (Pre‑Norm) ===
+            new_x, attn = self.attention(
+                self.norm1(x),
+                self.norm1(x),
+                self.norm1(x),
+                attn_mask=attn_mask
+            )
+            x = x + self.residual_dropout(new_x)
+
+            # === Feed‑Forward Block (Pre‑Norm) ===
+            x2 = self.norm2(x)
+            y = self.linear1(x2)
+            y = self.dropout(self.activation(y))
+            y = self.linear2(y)
+            x = x + self.residual_dropout(y)
+        else:
+        # === Post-Norm Encoder Layer ===
+            # === Multi‑Head Attention Block (Post‑Norm) ===
+            new_x, attn = self.attention(
+                x,             # queries
+                x,             # keys
+                x,             # values
+                attn_mask=attn_mask
+            )
+            x = self.norm1(x + self.residual_dropout(new_x))
+
+            # === Feed‑Forward Block (Post‑Norm) ===
+            y = self.linear1(x)
+            y = self.dropout(self.activation(y))
+            y = self.linear2(y)
+
+            # Add & Norm
+            x = self.norm2(x + self.residual_dropout(y))
+
+        return x, attn
 
 
 class AttentionLayer(nn.Module):
@@ -318,7 +412,7 @@ class AttentionLayer(nn.Module):
         self.out_projection = nn.Linear(d_values * n_heads, d_model)
         self.n_heads = n_heads
 
-    def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
+    def forward(self, queries, keys, values, attn_mask):
         B, L, _ = queries.shape
         _, S, _ = keys.shape
         H = self.n_heads
@@ -331,45 +425,28 @@ class AttentionLayer(nn.Module):
             queries,
             keys,
             values,
-            attn_mask,
-            tau=tau,
-            delta=delta
+            attn_mask
         )
         out = out.view(B, L, -1)
 
         return self.out_projection(out), attn
 
 
-class TriangularCausalMask():
-    def __init__(self, B, L, device="cpu"):
-        mask_shape = [B, 1, L, L]
-        with torch.no_grad():
-            self._mask = torch.triu(torch.ones(mask_shape, dtype=torch.bool), diagonal=1).to(device)
-
-    @property
-    def mask(self):
-        return self._mask
-
-
 class FullAttention(nn.Module):
-    def __init__(self, mask_flag=True, scale=None, attention_dropout=0.1, output_attention=False):
+    def __init__(self, scale=None, attention_dropout=0.1, output_attention=False):
         super(FullAttention, self).__init__()
         self.scale = scale
-        self.mask_flag = mask_flag
         self.output_attention = output_attention
         self.dropout = nn.Dropout(attention_dropout)
 
-    def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
+    def forward(self, queries, keys, values, attn_mask=None):
         B, L, H, E = queries.shape
         _, S, _, D = values.shape
         scale = self.scale or 1. / math.sqrt(E)
 
         scores = torch.einsum("blhe,bshe->bhls", queries, keys)
 
-        if self.mask_flag:
-            if attn_mask is None:
-                attn_mask = TriangularCausalMask(B, L, device=queries.device)
-
+        if attn_mask:
             scores.masked_fill_(attn_mask.mask, -np.inf)
 
         A = self.dropout(torch.softmax(scale * scores, dim=-1))
@@ -381,6 +458,52 @@ class FullAttention(nn.Module):
             return V.contiguous(), None
 
 
+### ---------------------------------------------------------------------------- ###
+###                                     Heads                                    ###
+### ---------------------------------------------------------------------------- ###
+class CLSHead(nn.Module):
+    def __init__(self, d_model, out_features):
+        super().__init__()
+        self.linear = nn.Linear(d_model, out_features)
+        self.norm = nn.LayerNorm(d_model)
+        self.activation = F.relu
+
+    def forward(self, x):  # x: [bs x nvars x d_model x patch_num]
+        x = x[:, 0, :]
+        x = self.linear(self.activation(self.norm(x)))
+        return x.squeeze(-1)
+
+
+class RegressionHead(nn.Module):
+    def __init__(self, d_model, out_features=1):
+        super(RegressionHead, self).__init__()
+        self.head = CLSHead(d_model, out_features)
+        
+    def forward(self, x):
+        return self.head(x)
+    
+
+class ClassificationHead(nn.Module):
+    def __init__(self, d_model, classes_num):
+        super(ClassificationHead, self).__init__()
+        self.head = CLSHead(d_model, classes_num)
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        return self.softmax(self.head(x))
+
+
+class MaskRecHead(nn.Module):
+    def __init__(self, d_model):
+        super().__init__()
+        self.proj = nn.Linear(d_model, d_model)     # 投影回嵌入空间
+    
+    def forward(self, x):
+        return self.proj(x)
+
+### ---------------------------------------------------------------------------- ###
+###                                   Utils                                      ###
+### ---------------------------------------------------------------------------- ###
 class Transpose(nn.Module):
     def __init__(self, *dims, contiguous=False): 
         super().__init__()
@@ -389,4 +512,13 @@ class Transpose(nn.Module):
         if self.contiguous: return x.transpose(*self.dims).contiguous()
         else: return x.transpose(*self.dims)
 
+
+def reglu(x):
+    a, b = x.chunk(2, dim=-1)
+    return a * F.relu(b)
+
+
+def geglu(x):
+    a, b = x.chunk(2, dim=-1)
+    return a * F.gelu(b)
 

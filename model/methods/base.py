@@ -98,9 +98,9 @@ class Method(object, metaclass=abc.ABCMeta):
         if is_train:
             N_data, C_data, y_data = self.D.N, self.D.C, self.D.y
             N_data, C_data, y_data = self.data_transform_pipeline.fit_transform(N_data, C_data, y_data)
-            self.args.feature_map_ = self.data_transform_pipeline.shared_state.get('feature_map_', None)
+            self.shared_state = self.data_transform_pipeline.shared_state
             self.N, self.C, self.y = N_data, C_data, y_data
-            self.y_info = self.data_transform_pipeline.shared_state.get('y_info', {'policy': 'none'})
+            self.y_info = self.shared_state.get('y_info', {'policy': 'none'})
  
             if self.is_regression:
                 self.d_out = 1
@@ -112,7 +112,7 @@ class Method(object, metaclass=abc.ABCMeta):
         else:
             N_test, C_test, y_test = N, C, y
             N_test, C_test, y_test = self.data_transform_pipeline.transform(N_test, C_test, y_test)
-
+            self.shared_state = self.data_transform_pipeline.shared_state
 
             _, _, _, self.test_loader, _ =  data_loader_process(self.is_regression, (N_test, C_test), y_test, self.y_info, self.args.device, self.args.batch_size, is_train = False,is_float=self.args.use_float)                      
             if N_test is not None and C_test is not None:
@@ -143,6 +143,7 @@ class Method(object, metaclass=abc.ABCMeta):
         if config is not None:
             self.reset_stats_withconfig(config)
         self.data_format(is_train = True)
+        self.feature_map_ = self.shared_state.get('feature_map_', None)
         self.n_num_features = N['train'].shape[1] if N is not None else self.n_num_features
         self.construct_model()
         self.optimizer = torch.optim.AdamW(
@@ -241,9 +242,9 @@ class Method(object, metaclass=abc.ABCMeta):
             loss.backward()
             self.optimizer.step()
             
-            # if (i-1) % 50 == 0 or i == len(self.train_loader):
-            #     print('epoch {}, train {}/{}, loss={:.4f} lr={:.4g}'.format(
-            #         epoch, i, len(self.train_loader), loss.item(), self.optimizer.param_groups[0]['lr']))
+            if (i-1) % 50 == 0 or i == len(self.train_loader):
+                print('epoch {}, train {}/{}, loss={:.4f} lr={:.4g}'.format(
+                    epoch, i, len(self.train_loader), loss.item(), self.optimizer.param_groups[0]['lr']))
             del loss
         tl = tl.item()
         self.trlog['train_loss'].append(tl)    

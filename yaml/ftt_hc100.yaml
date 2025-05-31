@@ -49,19 +49,27 @@ transform_list:
       policy: mean # mean, median
   - label: {}
   # ----------------------------------------------------------------
+  # numerical encoding process
+  - num_cdf: 
+      cdf_type: uniform # uniform, gaussian
+      cache_path: fit_cache
+      n_components: 100
+      binning_method: hierarchical # quantile, hdbscan, hierarchical
+      linkage_method: ward # ward, single, complete, average
+  # ----------------------------------------------------------------
   # categorical encoding process
-  - cat_indice: {}
+  - cat_onehot: {}
   # ----------------------------------------------------------------
   # normalization process
   - norm: 
       policy: standard # none, standard, minmax, robust, power, quantile, maxabs
-   
+  
 model_type: 
   - ftt
 
-model_path: results_model/ftt_no_transform
+model_path: results_model/ftt_hc100
 seed: 1
 seed_num: 15
-gpu: 5
+gpu: 3
 tune: true
 n_trials: 20
