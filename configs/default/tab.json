@@ -12,7 +12,7 @@
             "n_freq": 4,
             "pretrain": true,
             "mi_pretrain": false,
-            "sincos_mode": "raw",
+            "sincos_mode": "two_stage",
             "pretrain_epochs": 200,
             "mask_ratio": 0.4,
             "pretrain_lr": 1e-5

@@ -130,7 +130,7 @@ model_type:
   # - PFN-v2
   - tab
 
-model_path: results_model/raw
+model_path: results_model/two_stage
 seed: 1
 seed_num: 5
 gpu: 7
