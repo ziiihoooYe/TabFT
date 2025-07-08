@@ -40,7 +40,7 @@ dataset:
   # - estimation_of_obesity_levels
   # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   # - Diamonds
-  # - E-CommereShippingData
+  - E-CommereShippingData
   # - FOREX_audjpy-day-High
   # - FOREX_audsgd-hour-High
   # - Fitness_Club_c
@@ -52,7 +52,7 @@ dataset:
   # - NHANES_age_prediction
   # - Shop_Customer_Data
   # - VulNoneVul
-  - Waterstress
+  # - Waterstress
   # - htru
   # - ibm-employee-performance
   # - internet_firewall
@@ -105,19 +105,8 @@ transform_list:
   # - uniple: {}
   # - stretch:
   #     beta: 0.8
-  # - stretch_opt: 
-  #     lambda_: 1.0
-  
-  # - nf: 
-  #     expansion: true
-  #     flow_layers: 6
-  #     d_model: 32
-  #     epochs: 200
-  #     loss_cfg:
-  #       nll: 0.000001
-  #       sample_cka: 100000.0
-  #       col_cka: 0.0
-  #       uniform: 10.0
+  - stretch_opt: 
+      lambda_: 1.0
 
   # - num_cdf: 
   #     cdf_type: uniform # uniform, gaussian, dynamic
@@ -125,9 +114,6 @@ transform_list:
   #     n_components: 32
   #     binning_method: quantile # quantile, hdbscan, hierarchicalVkkk
 
-  # - curve_encode:
-  #     curve_type: helix
-  #     turns: 0.5
 
   - norm:
       policy: standard
