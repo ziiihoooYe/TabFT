@@ -78,8 +78,6 @@ class DataTransformPipeline:
                 pipeline.append(CatBoostTransform(transform_config))
             elif transform_name == 'cat_targetindice':
                 pipeline.append(TargetRankingIndiceTransform(transform_config))
-            elif transform_name == 'cat_qt':
-                pipeline.append(CatQuantileTransform(transform_config))
             elif transform_name == 'uniple':
                 pipeline.append(UniPiecewiseCDFTransform(transform_config))
             elif transform_name == 'stretch_opt':

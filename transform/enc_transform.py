@@ -608,69 +608,6 @@ class TargetRankingIndiceTransform(BaseTransform):
         
         return N_data, C_data, y_data
     
-    
-class CatQuantileTransform(BaseTransform):
-    """
-    Apply a QuantileTransformer to each group of bin columns belonging to a single feature.
-
-    Suppose the shape of numeric data is (N, feature_dim * bin_num).
-    For each feature (each group of bin_num columns), we fit a separate QuantileTransformer.
-    """
-
-    def __init__(self, args):
-        super().__init__()
-        self.n_quantiles = args.get('n_quantiles', 1000)
-        self.output_distribution = args.get('output_distribution', 'normal')  # 'uniform' or 'normal'
-        self.random_state = args.get('random_state', 0)
-
-        self.feature_dim = None
-        self.bin_num = None
-
-        self.transformers_ = []
-
-    def fit(self, N_data, C_data, y_data=None, shared_state=None):
-        """
-        1. obtrain (n_samples, feature_dim * bin_num) matrix from N_data['train']
-        2. extract bin_num columns for each feature in the matrix
-        3. fit corresponding QuantileTransformer
-        """
-        from sklearn.preprocessing import QuantileTransformer as _QuantileTransformer
-
-        if not C_data or 'train' not in C_data:
-            return self
-
-        train_array = C_data['train']  # numpy array
-        if train_array.ndim != 2:
-            raise ValueError("Expected a 2D array for the numeric data.")
-
-        qt = _QuantileTransformer(
-            n_quantiles=self.n_quantiles,
-            output_distribution=self.output_distribution,
-            random_state=self.random_state
-        )
-        qt.fit(train_array)
-        self.transformers_ = qt
-
-        return self
-
-    def transform(self, N_data, C_data, y_data=None, shared_state=None):
-        """
-        Apply the fitted QuantileTransformers to the numeric data in N_data.
-        """
-        if not self.transformers_:
-            return N_data, C_data, y_data
-
-        for part in C_data:
-            arr = C_data[part]
-            if arr.ndim != 2:
-                raise ValueError(f"N_data[{part}] must be a 2D array.")
-
-            C_data[part] = self.transformers_.transform(arr)
-            N_data[part] = np.concatenate((N_data[part], C_data[part]), axis=-1)
-
-        return N_data, C_data, y_data
-
-
 
 class RobustScaleTransform:
     def __init__(self, args):
