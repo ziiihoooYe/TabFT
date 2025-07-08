@@ -270,7 +270,34 @@ def sample_parameters(trial, space, base_config):
                 for x in args:
                     assert x % n_heads == 0
                 result[label] = trial.suggest_int('d_token', *args, n_heads)  # type: ignore[code]
+            
+            elif distribution == "per_feature_int":
+                low, high = args
+                meta = base_config["_meta"]
+                low  = int(_resolve(low,  meta))
+                high = int(_resolve(high, meta))
+                n_feat = meta["n_num_features"]
+                value = [
+                    trial.suggest_int(f"{label}_{j}", low, high)
+                    for j in range(n_feat)
+                ]
+                result[label] = value
 
+            elif distribution == "per_feature_exp_int":
+                base = 2
+                lo_exp, hi_exp = args
+                meta = base_config["_meta"]
+                lo_exp = int(_resolve(lo_exp, meta))
+                hi_exp = int(_resolve(hi_exp, meta))
+                n_feat = meta["n_num_features"]
+
+                exps = [
+                    trial.suggest_int(f"{label}__exp_{j}", lo_exp, hi_exp)
+                    for j in range(n_feat)
+                ]
+                bins = [int(round(base ** e)) for e in exps]      # 至少 1
+                result[label] = bins
+            
             elif distribution in ['$d_ffn_factor', '$d_hidden_factor']:
                 if base_config['model']['activation'].endswith('glu'):
                     args = (args[0] * 2 / 3, args[1] * 2 / 3)
@@ -279,7 +306,6 @@ def sample_parameters(trial, space, base_config):
             else:
                 result[label] = get_distribution(distribution)(label, *args)
     return result
-
 
 
 def merge_sampled_parameters(config, sampled_parameters):
@@ -295,70 +321,6 @@ def merge_sampled_parameters(config, sampled_parameters):
         else:
             # If there are parameters in the default config, the value of the parameter will be overwritten.
             config[k] = v
-
-
-# --- update_transform_list helper ---
-def update_transform_list(transform_list: list, updates: dict) -> list:
-    """
-    Return a **new** transform_list whose internal parameter dicts are
-    updated according to *updates*.
-
-    `updates` follows the same nesting structure as transform_list, e.g.:
-
-        updates = {
-            "num_cdf": {          # block name
-                "cdf_type": "uniform",
-                "n_components": 50,
-            },
-            "norm": {
-                "policy": "minmax",
-            },
-        }
-    """
-    new_list = copy.deepcopy(transform_list)
-
-    def deep_merge(dst, src):
-        for k, v in src.items():
-            if isinstance(v, dict) and isinstance(dst.get(k), dict):
-                deep_merge(dst[k], v)
-            else:
-                dst[k] = v
-
-    for block in new_list:
-        name = next(iter(block))          # each block is {"blk_name": {...}}
-        if name in updates:
-            deep_merge(block[name], updates[name])
-    return new_list
-
-
-def fix_recipe(args, constraints):
-    """
-    If a constraint is violated, override the value in `args` with the first valid option
-    from constraints.
-    """
-    model_type = args.model_type
-    model_constraints = constraints.get(model_type, {})
-    for key, allowed_values in model_constraints.items():
-        current_value = getattr(args, key, None)
-        if current_value not in allowed_values:
-            # Override with the first valid choice, or any logic you prefer:
-            setattr(args, key, allowed_values[0])
-
-
-def fix_recipes(recipes, constraints):
-    """
-    For each recipe in (args, default_para, opt_space),
-    fix the fields in `args` according to the model constraints.
-    """
-    for (args, default_para, opt_space) in recipes:
-        fix_recipe(args, constraints)
-
-        # If you also store certain fields in `args.config` (like normalization),
-        # reflect that change there as well if needed:
-        if hasattr(args, 'config') and 'training' in args.config:
-            args.config['training']['normalization'] = args.normalization
-
-    return recipes
 
 
 def remove_duplicate_recipes(recipes):
@@ -512,7 +474,20 @@ def load_recipes_from_yaml(yaml_file: str, expand_keys: list):
         model_path = merged_conf.get("model_path", "results_model")
         final_save_path = osp.join(model_path, save_path1, save_path2)
         merged_conf["save_path"] = final_save_path
+        merged_conf["tune_transform"] = conf.get("tune_transform", False)
         mkdir(final_save_path)
+        
+        # --- transform opt-space ---
+        trans_name_set = {next(iter(t)) 
+                          for t in merged_conf.get("transform_list", []) 
+                          if isinstance(t, dict)}
+        tr_opt_space = {}
+        for name in trans_name_set:
+            f = osp.join("configs", "opt_space_transform", f"{name}.json")
+            if osp.exists(f):
+                with open(f, "r") as fp:
+                    tr_opt_space[name] = json.load(fp)
+        opt_space = {"model": opt_space, "transform": tr_opt_space}
 
         # Convert merged configuration into a Namespace.
         args = Namespace(**merged_conf)
@@ -523,7 +498,6 @@ def load_recipes_from_yaml(yaml_file: str, expand_keys: list):
     # 4. filter invalid recipes
     with open("configs/model_constraints.json", 'r', encoding='utf-8') as f:
         constrains = json.load(f)
-    recipes = fix_recipes(recipes, constrains)
     recipes = remove_duplicate_recipes(recipes)
 
     return recipes
@@ -541,6 +515,21 @@ def load_tuned_config(args, logger):
         tune_args = json.load(f)
 
     args.config = merge_dicts(args.config, tune_args)
+    
+    for idx, tr in enumerate(args.transform_list):
+        if not isinstance(tr, dict):
+            continue
+        tr_name = next(iter(tr))
+        tr_tuned_path = osp.join(
+            args.save_path, f"{args.model_type}-{tr_name}-tuned.json"
+        )
+        if osp.exists(tr_tuned_path):
+            with open(tr_tuned_path, "r") as fp:
+                tuned_params = json.load(fp)
+            original_params = tr.get(tr_name, {})
+            args.transform_list[idx] = {
+                tr_name: merge_dicts(original_params, tuned_params)
+            }
 
     logger.info("Successfully merged tuned config into args.config")
     return args
@@ -660,109 +649,120 @@ def deep_update(dst: Dict[str, Any], src: Dict[str, Any], *, overwrite: bool = T
             if overwrite or k not in dst:
                 dst[k] = v
 
+def _resolve(meta_val, meta_dict):
+    """Turn `$n_samples` → int, or keep the original value."""
+    if isinstance(meta_val, str) and meta_val.startswith("$"):
+        key = meta_val[1:]
+        if key not in meta_dict:
+            raise RuntimeError(f"Unknown meta variable: {meta_val}")
+        else:
+            return meta_dict[key]
+    return meta_val
 
-def apply_model_defaults(config: Dict[str, Any], model_type: str, *, gpu_id: int | None = None) -> None:
-    """Fill *config* with static defaults and GPU‑dependent overrides."""
-    # 1) static defaults
-    default_json_path = osp.join("configs", "default", f"{model_type}.json")
-    if osp.exists(default_json_path):
-        with open(default_json_path, 'r') as fp:
-            defaults = json.load(fp)
-            defaults = defaults.get(model_type, {})
-    else:
-        defaults = {}
-
-    deep_update(config, defaults, overwrite=False)
-
-    # 2) dynamic defaults
-    if model_type == "xgboost" and torch.cuda.is_available():
-        deep_update(config, {"model": {"tree_method": "gpu_hist", "gpu_id": gpu_id or 0}}, overwrite=True)
-    if model_type == "catboost" and torch.cuda.is_available():
-        deep_update(config, {"fit": {"logging_level": "Silent"}}, overwrite=False)
-
-
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Optional
+from transform.transform_pipeline import DataTransformPipeline
 def tune_hyper_parameters(
     args,
     opt_space: Dict[str, Any],
     train_val_data: Tuple[Any, Any, Any],
-    info: Dict[str, Any]
+    info: Dict[str, Any],
+    pipeline: Optional[Any] = None,
+    pre_transformed: bool = False
 ):
-    """Run Optuna search and return *args* with the best config injected.
+    """Run Optuna search and return *args* with the best config injected."""
 
-    Parameters
-    ----------
-    args        : argparse.Namespace  – must contain model_type / save_path / n_trials / gpu
-    opt_space   : dict               – search‑space definition (same schema as before)
-    train_val_data : tuple           – (train, valid) data used by `method.fit`
-    info        : dict               – dataset metadata; needs `task_type`
-    """
+    model_space_root = opt_space["model"][args.model_type]
+
     # 0) tweak search space (once, not inside objective)
     if info["task_type"] == "regression":
         direction = "minimize"
-        for k, v in opt_space[args.model_type]["model"].items():
+        for k, v in model_space_root.items():
             if "dropout" in k and not v[0].startswith("?"):
-                opt_space[args.model_type]["model"][k] = ["?" + v[0], 0.0] + v[1:]
+                model_space_root[k] = ["?" + v[0], 0.0] + v[1:]
     else:
         direction = "maximize"
 
     # 1) define objective
     def objective(trial: optuna.trial.Trial):
         # skeleton config
-        config = {"transform": {},"model": {}, "fit": {}, "training": {}, "general": {}, "ensemble_model": {}}
+        config = {"model": {}, 
+                  "fit": {}, 
+                  "training": {}, 
+                  "general": {}, 
+                  "ensemble_model": {},
+                  "_meta": {          
+                      "n_num_features": train_val_data[0]['train'].shape[1] if train_val_data[0] is not None else 0,
+                      "log_n_num_features": np.ceil(np.log2(train_val_data[0]['train'].shape[1])) if train_val_data[0] is not None else 0,
+                      "sample_num":      train_val_data[0]['train'].shape[0] if train_val_data[0] is not None else 0,
+                  }}
 
-        # (a) defaults
-        apply_model_defaults(config, args.model_type, gpu_id=args.gpu)
-        # (b) optuna‑sampled overrides
-        local_space = copy.deepcopy(opt_space[args.model_type])
+        config = merge_dicts(config, args.config)
+        # (b) optuna‑sampled overrides ( model)
+        local_space = copy.deepcopy(model_space_root)
+        tune_param = getattr(args, "tune_param", True)
+        if tune_param:
+            # (c) sample model&training params
+            sampled_all = sample_parameters(trial, local_space, config) 
+            # (d) merge sampled parameters
+            config = merge_dicts(config, sampled_all)
 
-        # --- 1) sample everything (model + training + transform) ---
-        sampled_all = sample_parameters(trial, local_space, config)
+        # sample transform params (if needed)
+        tune_transform = getattr(args, "tune_transform", False)
+        if tune_transform:
+            tr_space = opt_space.get("transform", {})
+            tr_list = copy.deepcopy(args.transform_list)
+            for i, tr in enumerate(tr_list):
+                if next(iter(tr)) in tr_space:
+                    tr_name = next(iter(tr))
+                    tr_space_item = tr_space[tr_name]
+                    if isinstance(tr_space_item, dict):
+                        # If the transform is a dict, sample parameters for it
+                        tr_sampled = sample_parameters(trial, tr_space_item, config)
+                        tr_list[i] = merge_dicts(tr, tr_sampled)
+                    else:
+                        # If the transform is a list, just keep it as is
+                        continue
 
-        # --- 2) peel off transform‑related hyper‑params -------------
-        sampled_transform = sampled_all.pop("transform", None)
-
-        # --- 3) merge the rest into `config` ------------------------
-        merge_sampled_parameters(config, sampled_all)
-
-        # --- 4) clone args and apply transform updates --------------
+        # update config and transform_list
         trial_args = copy.deepcopy(args)
-        if sampled_transform:
-            trial_args.transform_list = update_transform_list(
-                trial_args.transform_list, sampled_transform
-            )
+        trial_args.config = config
+        trial_args.transform_list = tr_list if tune_transform else args.transform_list
+        
+        # init method
+        method = get_method(trial_args.model_type)(trial_args, info['task_type']=='regression')
+        method.pre_transformed = pre_transformed
 
-        method = get_method(trial_args.model_type)(
-            trial_args, info["task_type"] == "regression"
-        )
-        try:
-            method.fit(copy.deepcopy(train_val_data), info, train=True, config=config, tune=True)
-            score = method.trlog["best_res"]
-        except Exception as e:
-            print("Trial failed:", e)
-            score = float("inf") if direction == "minimize" else float("-inf")
+        # fit and eval
+        method.fit(copy.deepcopy(train_val_data), info, train=True, config=config, tune=True)
+        score = method.trlog['best_res']
 
         full_cfg = copy.deepcopy(config)
-        if sampled_transform:
-            full_cfg["transform"] = sampled_transform
         trial.set_user_attr("config", full_cfg)
+        trial.set_user_attr("transform_list", tr_list if tune_transform else args.transform_list)
         return score
 
     # 2) run Optuna
     study = optuna.create_study(direction=direction, sampler=optuna.samplers.TPESampler(seed=0))
     study.optimize(objective, n_trials=args.n_trials, show_progress_bar=True)
-
     best_config = study.best_trial.user_attrs["config"]
     args.config = best_config
-
-    best_transform = best_config.pop("transform", None)
-    if best_transform:
-        args.transform_list = update_transform_list(args.transform_list, best_transform)
+    best_transform_list = study.best_trial.user_attrs.get("transform_list", args.transform_list)
+    args.transform_list = best_transform_list
 
     # 3) persist
     os.makedirs(args.save_path, exist_ok=True)
     with open(osp.join(args.save_path, f"{args.model_type}-tuned.json"), "w") as fp:
         json.dump(best_config, fp, indent=4)
+
+    if getattr(args, "tune_transform", False) and best_transform_list:
+        for tr in best_transform_list:
+            if not isinstance(tr, dict) or next(iter(tr)) not in opt_space.get("transform", {}):
+                continue
+            tr_name = next(iter(tr))
+            tr_params = tr[tr_name]
+            file_name = f"{args.model_type}-{tr_name}-tuned.json"
+            with open(osp.join(args.save_path, file_name), "w") as fp:
+                json.dump(tr_params, fp, indent=4)       
 
     return args
 
@@ -936,3 +936,4 @@ def get_logger(logger_name: str, log_file: str = None, level: int = __import__('
     logger.addHandler(file_handler)
     
     return logger
+

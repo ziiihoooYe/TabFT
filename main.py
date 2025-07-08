@@ -2,11 +2,13 @@ import json
 import os
 import os.path as osp
 from tqdm import tqdm
+import copy
 from model.utils import (load_recipes_from_yaml, tune_hyper_parameters, get_logger,
                          set_seeds, get_method, show_results, show_cross_dataset_results,
                          load_tuned_config)
 import logging
 from model.lib.data import get_dataset
+from transform.transform_pipeline import DataTransformPipeline
 import warnings
 warnings.filterwarnings("ignore")
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -37,21 +39,48 @@ def main():
         logger.info(f"Model: {args.model_type}")
         logger.info(f"transform_list: {args.transform_list}")
         
-        ### ----------- Tuning Hyperparameters ------------
+        # get dataset
         train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
-        if args.tune:
-            args = tune_hyper_parameters(args,opt_space,train_val_data,info)
-        elif args.load_tune_config:
+
+        # ---------- Pre‑process the dataset once ----------
+        need_pretransform = not (getattr(args, "tune_transform", False) and args.tune)
+        pipeline = None
+        pre_transformed = False
+
+        if need_pretransform:
+            pipeline = DataTransformPipeline(args.transform_list, args, info['task_type']=='regression')
+            N_trainval, C_trainval, y_trainval = pipeline.fit_transform(*train_val_data)
+            train_val_data = (N_trainval, C_trainval, y_trainval)
+
+            N_test, C_test, y_test = pipeline.transform(*test_data)
+            test_data = (N_test, C_test, y_test)
+            pre_transformed = True
+        
+        ### ----------- Tuning Hyperparameters ------------
+        if args.load_tune_config:
             args = load_tuned_config(args, logger)
+        if args.tune:
+            args = tune_hyper_parameters(args,opt_space,train_val_data,info,pipeline,pre_transformed)
+        
+        if not pre_transformed:
+            pipeline = DataTransformPipeline(args.transform_list, args, info['task_type']=='regression')
+            N_trainval, C_trainval, y_trainval = pipeline.fit_transform(*train_val_data)
+            train_val_data = (N_trainval, C_trainval, y_trainval)
+
+            N_test, C_test, y_test = pipeline.transform(*test_data)
+            test_data = (N_test, C_test, y_test)
+
 
         ### ----------- Training and Testing ------------
         for seed in tqdm(range(args.seed, args.seed + args.seed_num)):
             # get unmodified dataset 
-            train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
+            # train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
             
             args.seed = seed    # update seed  
             set_seeds(args.seed)
             method = get_method(args.model_type)(args, info['task_type'] == 'regression')
+            method.data_transform_pipeline = copy.deepcopy(pipeline)
+            method.pre_transformed = pre_transformed
             time_cost = method.fit(train_val_data, info)    
             vl, vres, metric_name, predict_logits = method.predict(test_data, info, model_name=args.evaluate_option)
 
@@ -87,6 +116,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-

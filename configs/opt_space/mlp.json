@@ -1,33 +1,5 @@
 {
     "mlp": {
-        "transform": {
-            "num_cdf": {
-                "weight_concentration_prior_type": [
-                    "?categorical",
-                    "dirichlet_process",
-                    "dirichlet_process",
-                    "dirichlet_distribution"
-                ],
-                "weight_threshold": [
-                    "?loguniform",
-                    1e-6,
-                    1e-8,
-                    1e-5
-                ],
-                "reg_covar": [
-                    "?loguniform",
-                    1e-6,
-                    1e-7,
-                    1e-5
-                ],
-                "dynamic_ks_thresh": [
-                    "?uniform",
-                    0.05,
-                    0.01,
-                    0.1
-                ]
-            }
-        },
         "model": {
             "d_layers": [
                 "$mlp_d_layers",

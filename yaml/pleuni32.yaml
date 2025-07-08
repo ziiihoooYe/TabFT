@@ -43,25 +43,29 @@ dataset:
   - yeast
 
 transform_list:
-  # ----------------------------------------------------------------
-  # standard proprocess: nan, label
   - nan:
       policy: mean # mean, median
   - label: {}
-  # ----------------------------------------------------------------
-  # categorical encoding process
   - cat_indice: {}
-  # ----------------------------------------------------------------
-  # normalization process
+  - uniple:
+      n_bins: 32 
   - norm: 
-      policy: quantile # none, standard, minmax, robust, power, quantile, maxabs
+      policy: standard # none, standard, minmax, robust, power, quantile, maxabs
    
 model_type: 
+  - mlp
+  - resnet
+  - mlp_plr
+  - realmlp
   - ftt
+  # - tab
+  # - xgboost
+  # - catboost
 
-model_path: results_model/ftt_quantile
-seed: 1
+model_path: results_model/pleuni32
+seed: 0
 seed_num: 15
-gpu: 5
+gpu: 0
 tune: true
-n_trials: 20
+n_trials: 100
+load_tune_config: true

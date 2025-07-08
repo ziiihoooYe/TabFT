@@ -18,7 +18,7 @@ class XGBoostMethod(classical_methods):
         else:
             self.model = XGBClassifier(**model_config,random_state=self.args.seed)
 
-    def fit(self, data, info, train=True, config=None):
+    def fit(self, data, info, train=True, config=None, tune=False):
         super().fit(data, info, train, config)
         # if not train, skip the training process. such as load the checkpoint and directly predict the results
         if not train:

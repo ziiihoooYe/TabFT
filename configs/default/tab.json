@@ -9,18 +9,14 @@
             "residual_dropout": 0.0,
             "d_ff": 4,
             "pre_norm": false,
-            "n_freq": 4,
-            "pretrain": true,
-            "mi_pretrain": false,
-            "sincos_mode": "two_stage",
-            "pretrain_epochs": 200,
-            "mask_ratio": 0.4,
-            "pretrain_lr": 1e-5
+            "n_freq": 4
         },
         "training": {
             "lr": 0.0001,
-            "weight_decay": 1e-05
+            "weight_decay": 1e-05,
+            "max_epoch": 500
         },
-        "general": {}
+        "general": {
+        }
     }
 }

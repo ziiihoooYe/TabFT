@@ -21,7 +21,7 @@ class CatBoostMethod(classical_methods):
         self.args.device = get_device()
         self.trlog = {}
 
-    def fit(self, data, info, train=True, config=None):
+    def fit(self, data, info, train=True, config=None, tune=False):
         N, C, y = data
         self.D = Dataset(N, C, y, info)
         self.N, self.C, self.y = self.D.N, self.D.C, self.D.y

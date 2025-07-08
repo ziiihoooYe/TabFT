@@ -60,8 +60,6 @@ class DataTransformPipeline:
                 pipeline.append(SmoothClipTransform(transform_config))
             elif transform_name == 'num_cdf':
                 pipeline.append(CdfTransform(transform_config, self.dataset))
-            elif transform_name == 'mutual_info':
-                pipeline.append(PairwiseMITransform(transform_config))
             elif transform_name == 'cat_ordinal':
                 pipeline.append(OrdinalTransform(transform_config))
             elif transform_name == 'cat_indice':
@@ -82,6 +80,10 @@ class DataTransformPipeline:
                 pipeline.append(TargetRankingIndiceTransform(transform_config))
             elif transform_name == 'cat_qt':
                 pipeline.append(CatQuantileTransform(transform_config))
+            elif transform_name == 'uniple':
+                pipeline.append(UniPiecewiseCDFTransform(transform_config))
+            elif transform_name == 'stretch_opt':
+                pipeline.append(SlopeEqualizeStretchTransform(transform_config, self.is_regression))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline
@@ -108,6 +110,10 @@ class DataTransformPipeline:
         """
         Convenience method: fit on the data, then transform it in place.
         """
+        # set seeds for reproducibility
+        np.random.seed(0)
+        torch.manual_seed(0)
+        
         for transform_obj in self.pipeline:
             # 1) Fit on the current state of the data
             transform_obj.fit(N_data, C_data, y_data, self.shared_state)

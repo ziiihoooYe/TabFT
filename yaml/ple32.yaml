@@ -43,26 +43,32 @@ dataset:
   - yeast
 
 transform_list:
-  # ----------------------------------------------------------------
-  # standard proprocess: nan, label
   - nan:
       policy: mean # mean, median
   - label: {}
-  # ----------------------------------------------------------------
-  # categorical encoding process
-  - cat_onehot: {}
-  # ----------------------------------------------------------------
-  # normalization process
+  - cat_indice: {}
+  - num_cdf: 
+      cdf_type: uniform # uniform, gaussian, dynamic
+      cache_path: fit_cache
+      n_components: 32
+      binning_method: quantile # quantile, hdbscan, hierarchicalVkkk
   - norm: 
-      policy: uniform # none, standard, minmax, robust, power, quantile, maxabs
+      policy: standard # none, standard, minmax, robust, power, quantile, maxabs
    
 model_type: 
   - mlp
   - resnet
+  - mlp_plr
+  - realmlp
+  - ftt
+  # - tab
+  # - xgboost
+  # - catboost
 
-model_path: results_model/uniform
-seed: 1
+model_path: results_model/ple32
+seed: 0
 seed_num: 15
-gpu: 6
+gpu: 1
 tune: true
-n_trials: 20
+n_trials: 100
+load_tune_config: true

@@ -61,6 +61,9 @@ class Method(object, metaclass=abc.ABCMeta):
 
         self.args.device = get_device()
         
+        # Flag indicating whether the input data has already been transformed
+        self.pre_transformed: bool = False
+
         self.data_transform_pipeline = DataTransformPipeline(args.transform_list, args, is_regression)
 
     def reset_stats_withconfig(self, config):
@@ -97,7 +100,9 @@ class Method(object, metaclass=abc.ABCMeta):
         """
         if is_train:
             N_data, C_data, y_data = self.D.N, self.D.C, self.D.y
-            N_data, C_data, y_data = self.data_transform_pipeline.fit_transform(N_data, C_data, y_data)
+            if not self.pre_transformed:
+                N_data, C_data, y_data = self.data_transform_pipeline.fit_transform(
+                    N_data, C_data, y_data)
             self.shared_state = self.data_transform_pipeline.shared_state
             self.N, self.C, self.y = N_data, C_data, y_data
             self.y_info = self.shared_state.get('y_info', {'policy': 'none'})
@@ -111,7 +116,9 @@ class Method(object, metaclass=abc.ABCMeta):
             self.N, self.C, self.y, self.train_loader, self.val_loader, self.criterion = data_loader_process(self.is_regression, (self.N, self.C), self.y, self.y_info, self.args.device, self.args.batch_size, is_train = True,is_float=self.args.use_float)
         else:
             N_test, C_test, y_test = N, C, y
-            N_test, C_test, y_test = self.data_transform_pipeline.transform(N_test, C_test, y_test)
+            if not self.pre_transformed:
+                N_test, C_test, y_test = self.data_transform_pipeline.transform(
+                    N_test, C_test, y_test)
             self.shared_state = self.data_transform_pipeline.shared_state
 
             _, _, _, self.test_loader, _ =  data_loader_process(self.is_regression, (N_test, C_test), y_test, self.y_info, self.args.device, self.args.batch_size, is_train = False,is_float=self.args.use_float)                      
@@ -124,7 +131,7 @@ class Method(object, metaclass=abc.ABCMeta):
             self.y_test = y_test['test']
     
     
-    def fit(self, data, info, train = True, config = None):
+    def fit(self, data, info, train = True, config = None, tune = False):
         """
         Fit the method to the data.
 
@@ -146,8 +153,19 @@ class Method(object, metaclass=abc.ABCMeta):
         self.feature_map_ = self.shared_state.get('feature_map_', None)
         self.n_num_features = N['train'].shape[1] if N is not None else self.n_num_features
         self.construct_model()
+ 
+        ###
+        # from model.utils import KernelSmoothCDF
+        # # self.pre_module = LearnableEdgesPWL(n_features=self.n_num_features,B_max=100, init_strategy='quantile')
+        # self.pre_module = KernelSmoothCDF(ref_points=self.N['train'].T)
+        # self.pre_module.to(self.args.device)
+        # # self.pre_module.smart_init(self.N['train']) 
+        # params = list(self.model.parameters()) + list(self.pre_module.parameters())
+        params = self.model.parameters()
+        ###
+
         self.optimizer = torch.optim.AdamW(
-            self.model.parameters(), 
+            params,
             lr=self.args.config['training']['lr'], 
             weight_decay=self.args.config['training']['weight_decay']
         )
@@ -187,7 +205,6 @@ class Method(object, metaclass=abc.ABCMeta):
         self.model.eval()
 
         self.data_format(False, N, C, y)
-
         
         test_logit, test_label = [], []
         with torch.no_grad():
@@ -213,7 +230,7 @@ class Method(object, metaclass=abc.ABCMeta):
 
         # print('Test: loss={:.4f}'.format(vl))
         # for name, res in zip(metric_name, vres):
-        #     print('[{}]={:.4f}'.format(name, res))
+        #     print('[{}]={:.4f}'.format(name, res)mean_std)
 
         
         return vl, vres, metric_name, test_logit
@@ -235,6 +252,8 @@ class Method(object, metaclass=abc.ABCMeta):
             else:
                 X_num, X_cat = X, None
 
+            # X_num = self.pre_module(X_num)
+
             loss = self.criterion(self.model(X_num, X_cat), y)
 
             tl.add(loss.item())
@@ -242,9 +261,9 @@ class Method(object, metaclass=abc.ABCMeta):
             loss.backward()
             self.optimizer.step()
             
-            if (i-1) % 50 == 0 or i == len(self.train_loader):
-                print('epoch {}, train {}/{}, loss={:.4f} lr={:.4g}'.format(
-                    epoch, i, len(self.train_loader), loss.item(), self.optimizer.param_groups[0]['lr']))
+            # if (i-1) % 50 == 0 or i == len(self.train_loader):
+            #     print('epoch {}, train {}/{}, loss={:.4f} lr={:.4g}'.format(
+            #         epoch, i, len(self.train_loader), loss.item(), self.optimizer.param_groups[0]['lr']))
             del loss
         tl = tl.item()
         self.trlog['train_loss'].append(tl)    

@@ -1,8 +1,8 @@
 dataset:
   - ASP-POTASSCO-classification
-  - Amazon_employee_access
+  # - Amazon_employee_access
   - Ailerons
-  - BNG(tic-tac-toe)
+  # - BNG(tic-tac-toe)
   - Bias_correction_r_2
   - Click_prediction_small
   - electricity
@@ -43,32 +43,30 @@ dataset:
   - yeast
 
 transform_list:
-  # ----------------------------------------------------------------
-  # standard proprocess: nan, label
   - nan:
-      policy: mean # mean, median
+      policy: mean
   - label: {}
-  # ----------------------------------------------------------------
-  # numerical encoding process
-  - num_cdf: 
-      cdf_type: uniform # uniform, gaussian
-      cache_path: fit_cache
-      n_components: 100
-      binning_method: hdbscan # quantile, hdbscan, hierarchical
-  # ----------------------------------------------------------------
-  # categorical encoding process
-  - cat_onehot: {}
-  # ----------------------------------------------------------------
-  # normalization process
-  - norm: 
-      policy: standard # none, standard, minmax, robust, power, quantile, maxabs
-  
+  - cat_indice: {}
+  - stretch_opt:
+      lambda_: 0.8
+  - norm:
+      policy: standard
+   
 model_type: 
+  - mlp
+  - resnet
+  - mlp_plr
+  - realmlp
   - ftt
+  # - tab
+  # - xgboost
+  # - catboost
 
-model_path: results_model/ftt_hdbscan
-seed: 1
+model_path: results_model/stretch_opt0.8
+seed: 2025
 seed_num: 15
-gpu: 0
+gpu: 6
 tune: true
-n_trials: 20
+tune_transform: false
+n_trials: 100
+load_tune_config: true

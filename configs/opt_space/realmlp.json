@@ -3,19 +3,15 @@
         "model": {
             "num_emb_type": [
                 "categorical",
-                [
-                    "none",
-                    "pbld",
-                    "pl",
-                    "plr"
-                ]
+                "none",
+                "pbld",
+                "pl",
+                "plr"
             ],
             "add_front_scale": [
                 "categorical",
-                [
-                    true,
-                    false
-                ]
+                true,
+                false
             ],
             "lr": [
                 "loguniform",
@@ -24,34 +20,26 @@
             ],
             "p_drop": [
                 "categorical",
-                [
-                    0.00,
-                    0.15,
-                    0.30
-                ]
+                0.00,
+                0.15,
+                0.30
             ],
             "act": [
                 "categorical",
-                [
-                    "selu",
-                    "relu",
-                    "mish"
-                ]
+                "selu",
+                "relu",
+                "mish"
             ],
             "hidden_sizes": [
                 "categorical",
-                [
-                    [256, 256, 256],
-                    [64, 64, 64, 64, 64],
-                    [512]
-                ]
+                [256, 256, 256],
+                [64, 64, 64, 64, 64],
+                [512]
             ],
             "wd": [
                 "categorical",
-                [
-                    0.0,
-                    2e-2
-                ]
+                0.0,
+                2e-2
             ],
             "plr_sigma": [
                 "loguniform",
@@ -60,10 +48,8 @@
             ],
             "ls_eps": [
                 "categorical",
-                [
-                    0.0,
-                    0.1
-                ]
+                0.0,
+                0.1
             ]
         },
         "training": {},

@@ -4,6 +4,10 @@ import sklearn.preprocessing
 import category_encoders
 from transform.base import BaseTransform
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from torch.utils.data import DataLoader, TensorDataset
 from model.lib.num_embeddings import (
     PiecewiseLinearEncoding, UnaryEncoding, BinsEncoding, JohnsonEncoding, _check_bins
 )
@@ -33,8 +37,20 @@ class BinningTransform(BaseTransform):
         if N_data is not None and 'train' in N_data:
             train_t = torch.from_numpy(N_data['train']).float()
             if self.method == 'Q':
-                bins_ = compute_bins(train_t, n_bins=self.n_bins, tree_kwargs=None,
-                                     y=None, regression=None)
+                if isinstance(self.n_bins, (list, tuple, np.ndarray)):
+                    bins_ = []
+                    for col_idx, nb in enumerate(self.n_bins):
+                        col_t = train_t[:, col_idx : col_idx + 1]          # (N,1)
+                        # compute_bins 返回 [edges]；取第 0 个
+                        col_edges = compute_bins(col_t,
+                                                 n_bins=int(nb),
+                                                 tree_kwargs=None,
+                                                 y=None,
+                                                 regression=None)[0]
+                        bins_.append(col_edges)
+                else:
+                    bins_ = compute_bins(train_t, n_bins=self.n_bins,
+                                         tree_kwargs=None, y=None, regression=None)
             elif self.method == 'T':
                 y_train = torch.from_numpy(y_data['train']) if y_data else None
                 bins_ = compute_bins(train_t, 
@@ -733,27 +749,10 @@ from sklearn.mixture import BayesianGaussianMixture
 from scipy.stats import norm
 import numpy as np, os, json, hashlib, pickle
 from typing import Dict, List
-from transform.base import BaseTransform   # 保持与原工程一致
+from transform.base import BaseTransform
 
 
 class CdfTransform(BaseTransform):
-    """
-    Cluster‑CDF ('uniform') / DPGMM‑CDF ('gaussian') / 自适应 ('dynamic').
-
-    Args (*args*)
-    -------------
-    cdf_type         : 'uniform' | 'gaussian' | 'dynamic'
-    n_components     : int
-    binning_method   : quantile | hdbscan | hierarchical   (uniform)
-    linkage_method   : ward | single | average | complete
-    min_cluster_size : int (hdbscan)
-    min_sigma        : float
-    weight_threshold : float
-    cache_path       : str | None
-    # dynamic‑mode extra
-    dynamic_ks_thresh: float   – KS 阈值 (≤ 0.05 越严格)
-    """
-
     # -------------------- init --------------------
     def __init__(self, args: Dict, dataset=None):
         super().__init__()
@@ -1079,63 +1078,213 @@ class CdfTransform(BaseTransform):
         return edges
 
 
-# -----------------------------------------------------------
-# Pair‑wise Mutual Information transform
-# -----------------------------------------------------------
-from sklearn.preprocessing import KBinsDiscretizer
-from sklearn.metrics import mutual_info_score
-class PairwiseMITransform(BaseTransform):
+class UniPiecewiseCDFTransform(BaseTransform):
     def __init__(self, args):
         super().__init__()
-        self.n_bins = args.get("n_bins", 100)
+        self.n_bins = args.get("n_bins", 10)
+        self.bin_edges_: list[np.ndarray] | None = None  # per‑feature edges
 
-    # ---------- fitting: compute & store MI ----------
+    # ---------- fit ----------
     def fit(self, N_data, C_data, y_data=None, shared_state=None):
-        if shared_state is None:
-            shared_state = {}
-        # Require a training split to build statistics
-        if (not N_data or "train" not in N_data) and (not C_data or "train" not in C_data):
+            if not (N_data and "train" in N_data):
+                return self
+
+            X = N_data["train"]
+            n_samples, n_features = X.shape
+            self.bin_edges_ = []
+
+            if isinstance(self.n_bins, (list, tuple, np.ndarray)):
+                if len(self.n_bins) != n_features:
+                    raise ValueError(
+                        f"n_bins list length ({len(self.n_bins)}) "
+                        f"≠ number of features ({n_features})"
+                    )
+
+            for j in range(n_features):
+                col = X[:, j]
+
+                if isinstance(self.n_bins, (list, tuple, np.ndarray)):
+                    nb = int(max(1, self.n_bins[j]))
+                else:
+                    nb = int(max(1, self.n_bins))
+
+                edges = np.percentile(col, np.linspace(0, 100, nb + 1))
+                edges[0], edges[-1] = col.min(), col.max()
+                edges = np.unique(edges)
+                if edges.size < 2:
+                    edges = np.array([0.0, 1.0], dtype=float)
+
+                self.bin_edges_.append(edges.astype(np.float32))
+
             return self
 
-        cols = []
+    # ---------- transform ----------
+    def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        if not self.bin_edges_:
+            return N_data, C_data, y_data
 
-        # ---- numeric columns (→ discretised) ----
-        if N_data and "train" in N_data:
-            X_num = N_data["train"]                           # (n, d_num)
-            if X_num.ndim == 1:                               # edge case: single column
-                X_num = X_num[:, None]
-            kb = KBinsDiscretizer(
-                n_bins=self.n_bins, encode="ordinal", strategy="quantile"
+        for part, X in N_data.items():
+            n_samples, n_features = X.shape
+            assert n_features == len(self.bin_edges_), (
+                f"Feature mismatch: expected {len(self.bin_edges_)}, got {n_features}"
             )
-            X_disc = kb.fit_transform(X_num)
-            cols.extend([X_disc[:, i].astype(int) for i in range(X_disc.shape[1])])
 
-        # ---- categorical columns (already discrete) ----
-        if C_data and "train" in C_data:
-            X_cat = C_data["train"]                           # (n, d_cat)
-            if X_cat.ndim == 1:
-                X_cat = X_cat[:, None]
-            cols.extend([X_cat[:, i] for i in range(X_cat.shape[1])])
+            X_out = np.empty_like(X, dtype=np.float32)
 
-        L = len(cols)
-        if L == 0:                                           # no columns found
+            for j, edges in enumerate(self.bin_edges_):
+                col = X[:, j]
+                idx = np.searchsorted(edges, col, side="right") - 1
+                idx = np.clip(idx, 0, edges.size - 2)
+
+                denom = edges[idx + 1] - edges[idx]
+                denom[denom == 0] = 1.0  # avoid divide‑by‑zero for duplicate edges
+
+                frac = (col - edges[idx]) / denom
+                X_out[:, j] = (idx + frac) / (edges.size - 1)
+
+            N_data[part] = X_out
+
+        return N_data, C_data, y_data
+
+
+class SlopeEqualizeStretchTransform(BaseTransform):
+    def __init__(self, args, is_regression: bool | None = None):
+        super().__init__()
+        self.mode       = args.get("mode", "auto").lower()
+        self.norm       = args.get("norm", "l1").lower()
+        self.handle_nan = args.get("handle_nan", "ignore")
+        self.eps        = float(args.get("eps", 1e-12))
+        self.lambda_ = float(args.get("lambda_", 1.0))
+        self.lambda_ = max(0.0, min(self.lambda_, 1.0))   # clamp to [0, 1]
+        if self.handle_nan not in {"ignore", "zero"}:
+            raise ValueError("handle_nan must be 'ignore' or 'zero'")
+        self.is_regression = is_regression
+        self.maps_: list[tuple[np.ndarray, np.ndarray]] = []   # (xs_unique, f_vals)
+
+    # ---------- helper ----------
+    def _vec_dist(self, a: np.ndarray, b: np.ndarray) -> float:
+        if self.norm == "l2":
+            return float(np.linalg.norm(a - b))
+        # default L1
+        return float(np.abs(a - b).sum())
+
+    # ---------- fit ----------
+    def fit(self, N_data, C_data, y_data=None, shared_state=None):
+        if not (N_data and "train" in N_data and y_data and "train" in y_data):
             return self
 
-        import numpy as np
-        mi_mat = np.zeros((L, L), dtype=np.float32)
-        for i in range(L):
-            for j in range(i + 1, L):
-                val = mutual_info_score(cols[i], cols[j])
-                mi_mat[i, j] = mi_mat[j, i] = val
+        X = N_data["train"]
+        y = y_data["train"].ravel()
+        uniq = np.unique(y)
 
-        # min‑max scale to [0,1]  (avoid division by zero)
-        vmax = mi_mat.max()
-        if vmax > 0:
-            mi_mat /= vmax
+        # ---- decide mode ----
+        if self.mode != "auto":
+            mode = self.mode
+        else:
+            if self.is_regression is True:
+                mode = "regression"
+            elif self.is_regression is False:
+                mode = "binary" if uniq.size == 2 else "multiclass"
+            else:
+                # auto inference
+                if np.issubdtype(y.dtype, np.floating) and uniq.size > 2:
+                    mode = "regression"
+                elif uniq.size == 2:
+                    mode = "binary"
+                else:
+                    mode = "multiclass"
 
-        shared_state["pairwise_mi"] = mi_mat
+        if mode == "multiclass":
+            C = int(uniq.max()) + 1       # assume labels are 0…C‑1
+
+        self.maps_.clear()
+        n_samples, n_features = X.shape
+
+        for j in range(n_features):
+            x_col = X[:, j]
+
+            # optional NaN mask
+            mask = ~np.isnan(x_col) if self.handle_nan == "ignore" else slice(None)
+            xs_valid, y_valid = x_col[mask], y[mask]
+            if xs_valid.size == 0:
+                self.maps_.append(None)
+                continue
+
+            # 1) aggregate duplicates
+            xs_u, inv = np.unique(xs_valid, return_inverse=True)
+
+            if mode == "multiclass":
+                gs = np.zeros((len(xs_u), C), dtype=float)
+                for idx_u in range(len(xs_u)):
+                    labs = y_valid[inv == idx_u].astype(int)
+                    if labs.size:
+                        cnts = np.bincount(labs, minlength=C)
+                        gs[idx_u] = cnts / cnts.sum()
+            else:
+                sums = np.bincount(inv, weights=y_valid, minlength=len(xs_u))
+                cnts = np.bincount(inv, minlength=len(xs_u)).astype(float)
+                gs = sums / np.maximum(cnts, 1.0)
+
+            # ---------- build original cumulative coordinate ----------
+            if len(xs_u) == 1:
+                f_orig = np.zeros_like(xs_u, dtype=float)
+            else:
+                span = xs_u[-1] - xs_u[0]
+                f_orig = np.zeros_like(xs_u, dtype=float) if span < self.eps \
+                         else (xs_u - xs_u[0]) / span
+
+            # ---------- build optimal slope‑equalised coordinate ----------
+            if len(xs_u) == 1:
+                TV = 0.0                               # ensure TV is always defined
+                f_star = np.zeros_like(xs_u, dtype=float)
+            else:
+                if mode == "multiclass":
+                    dists = np.array(
+                        [self._vec_dist(gs[k + 1], gs[k]) for k in range(len(xs_u) - 1)],
+                        dtype=float
+                    )
+                else:
+                    dists = np.abs(np.diff(gs)).astype(float)
+
+                TV = dists.sum()
+                if TV < self.eps:
+                    f_star = np.linspace(0.0, 1.0, len(xs_u), dtype=float)
+                else:
+                    gaps = dists / TV
+                    f_star = np.zeros(len(xs_u), dtype=float)
+                    f_star[1:] = np.cumsum(gaps)
+                    f_star[-1] = 1.0
+
+            # ---------- λ‑smoothed final mapping ----------
+            f_vals = (1.0 - self.lambda_) * f_orig + self.lambda_ * f_star
+
+            self.maps_.append((xs_u.astype(float), f_vals.astype(float)))
+
         return self
 
-    # transform = identity (data unchanged)
+    # ---------- transform ----------
     def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        if not self.maps_:
+            return N_data, C_data, y_data
+
+        for part, X in N_data.items():
+            if X is None:
+                continue
+            X_out = X.astype(np.float32, copy=True)
+            for j, mapping in enumerate(self.maps_):
+                if mapping is None:
+                    continue
+                xs_u, f_vals = mapping
+                col = X_out[:, j]
+
+                if self.handle_nan == "ignore":
+                    isnan = np.isnan(col)
+                    if (~isnan).any():
+                        X_out[~isnan, j] = np.interp(col[~isnan], xs_u, f_vals)
+                else:  # 'zero'
+                    col_filled = np.where(np.isnan(col), 0.0, col)
+                    X_out[:, j] = np.interp(col_filled, xs_u, f_vals)
+
+            N_data[part] = X_out
+
         return N_data, C_data, y_data

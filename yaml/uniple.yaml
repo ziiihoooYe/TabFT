@@ -43,30 +43,29 @@ dataset:
   - yeast
 
 transform_list:
-  # ----------------------------------------------------------------
-  # standard proprocess: nan, label
   - nan:
-      policy: mean # mean, median
+      policy: mean
   - label: {}
-  - num_cdf: 
-      cdf_type: gaussian # uniform, gaussian
-      cache_path: fit_cache
-      n_components: 100
-      weight_threshold: 1e-6
-  # ----------------------------------------------------------------
-  # categorical encoding process
-  - cat_onehot: {}
-  # ----------------------------------------------------------------
-  # normalization process
-  - norm: 
-      policy: standard # none, standard, minmax, robust, power, quantile, maxabs
+  - cat_indice: {}
+  - uniple: {}
+  - norm:
+      policy: standard
    
 model_type: 
+  - mlp
+  - resnet
+  - mlp_plr
+  - realmlp
   - ftt
+  # - tab
+  # - xgboost
+  # - catboost
 
-model_path: results_model/ftt_dpgmm
-seed: 1
+model_path: results_model/uniple
+seed: 2025
 seed_num: 15
-gpu: 4
-tune: true
-n_trials: 20
+gpu: 3
+tune: false
+tune_transform: true
+n_trials: 100
+load_tune_config: true

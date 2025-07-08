@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from torch.nn import TransformerEncoder
 
 param_list = ["d_model", "d_ff", "activation", "dropout", "num_enc_layers", "n_head",
-              "attention_dropout", "pre_norm", "n_freq", "pretrain", "residual_dropout", "sincos_mode"]
+              "attention_dropout", "pre_norm", "n_freq", "pretrain", "residual_dropout"]
 
 class Tab(nn.Module):
     """
@@ -21,17 +21,20 @@ class Tab(nn.Module):
                 setattr(self, param, config[param])
             else:
                 setattr(self, param, None)
-
-        self.sincos_mode = config.get("sincos_mode", "two_stage")
-
+        
         # Initialize tokenizer
-        self.tokenizer = Tokenizer(
+        # self.tokenizer = Tokenizer(
+        #     num_continuous=num_continuous,
+        #     categories=categories,
+        #     d_model=self.d_model,
+        #     feature_map=feature_map
+        # )
+        self.tokenizer = PLRTokenizer(
             num_continuous=num_continuous,
             categories=categories,
             d_model=self.d_model,
             feature_map=feature_map,
-            n_freq=self.n_freq or 0,
-            sincos_mode=self.sincos_mode
+            n_freq=self.n_freq or 0
         )
 
         # Initialize encoder
@@ -86,17 +89,12 @@ class Tokenizer(nn.Module):
         num_continuous,
         categories,
         d_model,
-        feature_map=None,
-        n_freq: int = 0,         # ← 0 means “no sin‑cos augmentation”
-        sincos_mode: str = "two_stage"
+        feature_map=None
     ):
         super(Tokenizer, self).__init__()
 
         self.num_continuous = num_continuous
         self.d_model = d_model
-        self.sincos_mode = sincos_mode   # "two_stage", "raw", or "none"
-        # Whether we will actually apply sin‑cos augmentation
-        self.use_sincos = (n_freq > 0) and (self.sincos_mode != "none")
 
         # --- group information (expanded features) ---
         # feature map
@@ -121,43 +119,13 @@ class Tokenizer(nn.Module):
         # num id
         self.register_buffer("num_ids", torch.arange(self.num_groups, dtype=torch.long))
 
-        # --- optional sin‑cos augmentation ---
-        self.n_freq = n_freq
-        if self.use_sincos:
-            # Learnable ω and φ for every numeric column
-            self.register_parameter(
-                "omega", nn.Parameter(torch.rand(self.num_groups, 1, self.n_freq) * math.pi)
-            )  # (G, 1, F)
-            self.register_parameter(
-                "phi", nn.Parameter(torch.zeros(self.num_groups, 1, self.n_freq))
-            )   # (G, 1, F)
-
-            if self.sincos_mode == "two_stage":
-                # (d_model * 2 * n_freq) → d_model
-                self.sincos_embeddings = nn.ModuleList(
-                    [
-                        nn.Linear(d_model * 2 * self.n_freq, d_model, bias=False)
-                        for _ in self.group_sizes
-                    ]
-                )
-                for lin in self.sincos_embeddings:
-                    nn_init.kaiming_uniform_(lin.weight, a=math.sqrt(5))
-            else:  # "raw" mode: (2 * n_freq * group_size) → d_model
-                self.sincos_raw_embeddings = nn.ModuleList(
-                    [
-                        nn.Linear(2 * self.n_freq * sz, d_model, bias=False)
-                        for sz in self.group_sizes
-                    ]
-                )
-                for lin in self.sincos_raw_embeddings:
-                    nn_init.kaiming_uniform_(lin.weight, a=math.sqrt(5))
 
         # --- category embedding ---
         # column embedding
         self.lut_cat = nn.Embedding(self.cat_groups, d_model)
-        # nn_init.kaiming_uniform_(self.lut_cat.weight, a=math.sqrt(5))
-        with torch.no_grad():
-            self.lut_cat.weight.zero_() 
+        nn_init.kaiming_uniform_(self.lut_cat.weight, a=math.sqrt(5))
+        # with torch.no_grad():
+        #     self.lut_cat.weight.zero_() 
         # categorical embedding (reserve UNK = index 0 for every feature)
         categories_with_unk = [c + 1 for c in categories]          # +1 for UNK
         num_cat_embeddings = sum(categories_with_unk)
@@ -175,11 +143,7 @@ class Tokenizer(nn.Module):
 
         # cls token
         self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
-        nn_init.kaiming_uniform_(self.cls_token, a=math.sqrt(5))
-        
-        # mask token
-        self.mask_token = nn.Parameter(torch.zeros(1, 1, d_model))
-        nn_init.kaiming_uniform_(self.mask_token, a=math.sqrt(5))
+        nn_init.kaiming_uniform_(self.cls_token, a=math.sqrt(5))        
 
     def forward(self, x_cont, x_categ, mask=None):
         """
@@ -187,36 +151,6 @@ class Tokenizer(nn.Module):
         :param x_categ: (batch_size, num_categories)
         If n_freq > 0, numeric columns are augmented with learnable sin/cos embeddings.
         """
-        # if x_cont is not None:
-        #     x_cont = x_cont.float()
-        #     cont_embeds = []
-        #     offset = 0
-
-        #     for i, size in enumerate(self.group_sizes):
-        #         seg = x_cont[:, offset:offset + size]          # (B, size)
-        #         offset += size
-                
-        #         # optional sin‑cos embedding
-        #         if self.n_freq:
-        #             # seg: (B, group_size)
-        #             # Produce (B, 2 * n_freq * group_size) in order:
-        #             # sin ω1 x1, cos ω1 x1, sin ω1 x2, cos ω1 x2, ..., sin ωF x_g, cos ωF x_g
-        #             B, g = seg.shape
-        #             # (B,g,1) * (1,1,F) → (B,g,F)
-        #             seg_exp = seg.unsqueeze(-1)                             # (B,g,1)
-        #             sin_ = torch.sin(seg_exp * self.omega[i] + self.phi[i]) # (B,g,F)
-        #             cos_ = torch.cos(seg_exp * self.omega[i] + self.phi[i]) # (B,g,F)
-        #             trig = torch.stack((sin_, cos_), dim=-1)                # (B,g,F,2)
-        #             trig = trig.permute(0, 2, 1, 3).reshape(B, -1)          # (B, 2F*g)
-        #             emb = self.sincos_embeddings[i](trig)              # (B, d_model)
-        #         else:
-        #             emb = self.num_embeddings[i](seg)
-        #         cont_embeds.append(emb)
-
-        #     # num column embedding
-        #     x_cont_emb = torch.stack(cont_embeds, dim=1)       # (B, num_groups, d_model)
-        #     channel_embeddings = self.lut_num(self.num_ids.to(x_cont.device))  # (num_groups, d_model))
-        #     x_cont_emb = x_cont_emb + channel_embeddings
         if x_cont is not None:
             x_cont = x_cont.float()
             cont_embeds = []
@@ -225,35 +159,14 @@ class Tokenizer(nn.Module):
             for i, size in enumerate(self.group_sizes):
                 seg = x_cont[:, offset:offset + size]          # (B, size)
                 offset += size
-                if self.use_sincos:
-                    if self.sincos_mode == "two_stage":
-                        # --- two‑stage path (embedding1 → sincos → embedding2) ---
-                        B = seg.size(0)
-                        base = self.num_embeddings[i](seg)                         # (B, d_model)
-                        col_emb = self.lut_num.weight[i].unsqueeze(0).expand(B, -1)
-                        base = base + col_emb
-                        base_exp = base.unsqueeze(-1)                              # (B,d_model,1)
-                        sin = torch.sin(base_exp * self.omega[i] + self.phi[i])    # (B,d_model,F)
-                        cos = torch.cos(base_exp * self.omega[i] + self.phi[i])
-                        trig = torch.cat((sin, cos), dim=-1).reshape(B, -1)        # (B,d_model*2F)
-                        emb = self.sincos_embeddings[i](trig)                      # (B,d_model)
-                    else:
-                        # --- raw path (sincos → single embedding) ---
-                        B = seg.size(0)
-                        seg_exp = seg.unsqueeze(-1)                                # (B, g, 1)
-                        sin = torch.sin(seg_exp * self.omega[i] + self.phi[i])     # (B,g,F)
-                        cos = torch.cos(seg_exp * self.omega[i] + self.phi[i])     # (B,g,F)
-                        trig = torch.stack((sin, cos), dim=-1).reshape(B, -1)      # (B, 2F*g)
-                        emb = self.sincos_raw_embeddings[i](trig)                  # (B, d_model)
-                else:   # no sin‑cos
-                    emb = self.num_embeddings[i](seg) + self.lut_num.weight[i]
+                # optional sin‑cos embedding
+                emb = self.num_embeddings[i](seg) 
                 cont_embeds.append(emb)
 
             # num column embedding
             x_cont_emb = torch.stack(cont_embeds, dim=1)       # (B, num_groups, d_model)
             channel_embeddings = self.lut_num(self.num_ids.to(x_cont.device))  # (num_groups, d_model)
-            if not self.use_sincos:                            # add when sin‑cos NOT used
-                x_cont_emb = x_cont_emb + channel_embeddings
+            x_cont_emb = x_cont_emb + channel_embeddings
 
         if x_categ is not None:
             x_categ = x_categ.long()
@@ -278,8 +191,171 @@ class Tokenizer(nn.Module):
             raise ValueError("At least one of x_cont or x_categ must be provided")
 
         if mask is not None:                         # mask: (B, L) → True 表示被遮
-            tok = self.mask_token.expand(x_emb.size(0), 1, -1)
-            x_emb = torch.where(mask.unsqueeze(-1), tok, x_emb)
+            mask_token = torch.zeros_like(self.cls_token).expand(x_emb.size(0), 1, -1).to(x_emb.device)
+            x_emb = torch.where(mask.unsqueeze(-1), mask_token, x_emb)
+
+        x_emb = torch.cat((self.cls_token.expand(x_emb.shape[0], -1, -1), x_emb), dim=1)
+
+        return x_emb
+    
+    
+class PLRTokenizer(nn.Module):
+    def __init__(
+        self,
+        num_continuous,
+        categories,
+        d_model,
+        feature_map=None,
+        n_freq: int = 0          # ← 0 means “no sin‑cos augmentation”, use relu activation
+    ):
+        super(PLRTokenizer, self).__init__()
+
+        self.num_continuous = num_continuous
+        self.d_model = d_model
+
+        # --- group information (expanded features) ---
+        # feature map
+        if feature_map is not None:
+            self.group_sizes = [m["size"] for m in feature_map]   # per‑feature expanded dimension
+        else:
+            self.group_sizes = [1] * num_continuous
+        # group num of num feature / cat feature
+        self.num_groups = len(self.group_sizes)
+        self.cat_groups = int(len(categories))
+
+        # --- numeric embedding ---
+        # column embedding
+        self.lut_num = nn.Embedding(self.num_groups, d_model)
+        # nn_init.kaiming_uniform_(self.lut_num.weight, a=math.sqrt(5))
+        with torch.no_grad():
+            self.lut_num.weight.zero_()
+        # Linear per column:  (group_size → d_model)
+
+        self.num_embeddings = nn.ModuleList([nn.Linear(sz, d_model, bias=False) for sz in self.group_sizes])
+        for lin in self.num_embeddings: nn_init.kaiming_uniform_(lin.weight, a=math.sqrt(5))
+        # num id
+        self.register_buffer("num_ids", torch.arange(self.num_groups, dtype=torch.long))
+
+        # --- secondary numeric embedding ---
+        self.n_freq = n_freq
+        if self.n_freq > 0:
+            # Learnable ω and φ for every numeric column
+            self.register_parameter(
+                "omega", nn.Parameter(torch.rand(self.num_groups, 1, self.n_freq) * math.pi)
+            )  # (G, 1, F)
+            self.register_parameter(
+                "phi", nn.Parameter(torch.zeros(self.num_groups, 1, self.n_freq))
+            )   # (G, 1, F)
+            self.num_embeddings2 = nn.ModuleList(
+                [
+                    nn.Linear(d_model * 2 * self.n_freq, d_model, bias=False)
+                    for _ in self.group_sizes
+                ]
+            )
+        else:
+            self.num_embeddings2 = nn.ModuleList(
+                [
+                    nn.Linear(d_model, d_model, bias=False)
+                    for _ in self.group_sizes
+                ]
+            )
+        for lin in self.num_embeddings2:
+            nn_init.kaiming_uniform_(lin.weight, a=math.sqrt(5))
+
+        # --- category embedding ---
+        # column embedding
+        self.lut_cat = nn.Embedding(self.cat_groups, d_model)
+        nn_init.kaiming_uniform_(self.lut_cat.weight, a=math.sqrt(5))
+        # with torch.no_grad():
+        #     self.lut_cat.weight.zero_() 
+        # categorical embedding (reserve UNK = index 0 for every feature)
+        categories_with_unk = [c + 1 for c in categories]          # +1 for UNK
+        num_cat_embeddings = sum(categories_with_unk)
+        if num_cat_embeddings == 0:                                # no categorical features
+            num_cat_embeddings = 1                                 # dummy UNK slot
+        self.cat_embeddings = nn.Embedding(num_cat_embeddings, d_model)
+        nn_init.kaiming_uniform_(self.cat_embeddings.weight, a=math.sqrt(5))
+        # offsets for individual categorical features
+        self.register_buffer("category_offsets", torch.tensor([0] + categories_with_unk[:-1]).cumsum(0))
+        # zero‑initialize every UNK row so unknown categories contribute no signal
+        with torch.no_grad():
+            self.cat_embeddings.weight[self.category_offsets] = 0
+        # cat id
+        self.register_buffer("cat_ids", torch.arange(self.cat_groups, dtype=torch.long))
+
+        # cls token
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
+        nn_init.kaiming_uniform_(self.cls_token, a=math.sqrt(5))        
+
+    def forward(self, x_cont, x_categ, mask=None):
+        """
+        :param x_cont: (batch_size, num_continuous)
+        :param x_categ: (batch_size, num_categories)
+        If n_freq > 0, numeric columns are augmented with learnable sin/cos embeddings.
+        """
+        if x_cont is not None:
+            x_cont = x_cont.float()
+            cont_embeds = []
+            offset = 0
+
+            for i, size in enumerate(self.group_sizes):
+                seg = x_cont[:, offset:offset + size]          # (B, size)
+                offset += size
+                # optional sin‑cos embedding
+                if self.n_freq > 0: 
+                    B = seg.size(0)
+
+                    # 1) embedding1 * seg
+                    base = self.num_embeddings[i](seg)                         # (B, d_model) 
+                    
+                    # 2) sin / cos transform
+                    base_exp = base.unsqueeze(-1)                              # (B, d_model, 1)
+                    sin = torch.sin(base_exp * self.omega[i] + self.phi[i])    # (B, d_model, F)
+                    cos = torch.cos(base_exp * self.omega[i] + self.phi[i])    # (B, d_model, F)
+                    trig = torch.cat((sin, cos), dim=-1)                       # (B, d_model, 2F)
+                    emb = trig.reshape(B, -1)                                 # (B, d_model * 2F)
+
+                    # 3) embedding2 * trig
+                    emb = self.num_embeddings2[i](emb)                      # (B, d_model) 
+                        
+                else:
+                    # 1) embedding1 * seg
+                    emb = self.num_embeddings[i](seg)
+                    
+                    # 2) embedding2 * relu(embedding1 * seg)
+                    emb = self.num_embeddings2[i](F.relu(emb))  # (B, d_model)
+                cont_embeds.append(emb)
+
+            # num column embedding
+            x_cont_emb = torch.stack(cont_embeds, dim=1)       # (B, num_groups, d_model)
+            channel_embeddings = self.lut_num(self.num_ids.to(x_cont.device))  # (num_groups, d_model)
+            x_cont_emb = x_cont_emb + channel_embeddings
+
+        if x_categ is not None:
+            x_categ = x_categ.long()
+            cat_embeds = []
+            for i in range(x_categ.shape[-1]):
+                # shift by +1 so that unknown (‑1) → 0, valid 0..c‑1 → 1..c
+                idx = x_categ[:, i].long() + 1
+                idx = idx + self.category_offsets[i]              # global embedding index
+                emb_i = self.cat_embeddings(idx)
+                cat_embeds.append(emb_i)
+            x_categ_emb = torch.stack(cat_embeds, dim=1)          # (B, n_cat, d_model)
+            channel_embeddings = self.lut_cat(self.cat_ids.to(x_categ.device))
+            x_categ_emb = x_categ_emb + channel_embeddings
+
+        if x_cont is not None and x_categ is not None:
+            x_emb = torch.cat([x_cont_emb, x_categ_emb], dim=-2)
+        elif x_cont is not None:
+            x_emb = x_cont_emb
+        elif x_categ is not None:
+            x_emb = x_categ_emb
+        else:
+            raise ValueError("At least one of x_cont or x_categ must be provided")
+
+        if mask is not None:                         # mask: (B, L) → True 表示被遮
+            mask_token = torch.zeros_like(self.cls_token).expand(x_emb.size(0), 1, -1).to(x_emb.device)
+            x_emb = torch.where(mask.unsqueeze(-1), mask_token, x_emb)
 
         x_emb = torch.cat((self.cls_token.expand(x_emb.shape[0], -1, -1), x_emb), dim=1)
 
@@ -322,7 +398,8 @@ class TabEncoder(nn.Module):
                 residual_dropout=residual_dropout,
                 activation=activation,  # "relu" or "reglu", "geglu"
                 pre_norm=pre_norm
-            ) for layer_idx in range(num_enc_layers)
+            )
+            for layer_idx in range(num_enc_layers)
         ])
 
     def forward(self, x_emb, attn_mask=None):
@@ -522,3 +599,15 @@ def geglu(x):
     a, b = x.chunk(2, dim=-1)
     return a * F.gelu(b)
 
+
+class ResBlock(nn.Module):
+    def __init__(self, d_model, dropout=0.):
+        super(ResBlock, self).__init__()
+        self.linear1 = nn.Linear(d_model, d_model)
+        self.linear2 = nn.Linear(d_model, d_model)
+        self.dropout = nn.Dropout(dropout)
+    def forward(self, x):
+        y = self.linear1(x)
+        y = F.relu(y)
+        y = self.linear2(y)
+        return y + self.dropout(x)

@@ -38,7 +38,9 @@ class RealMLPMethod(Method):
     def data_format(self, is_train = True, N = None, C = None, y = None):
         if is_train:
             N_data, C_data, y_data = self.D.N, self.D.C, self.D.y
-            N_data, C_data, y_data = self.data_transform_pipeline.fit_transform(N_data, C_data, y_data)
+            self.shared_state = self.data_transform_pipeline.shared_state
+            if not self.pre_transformed:
+                N_data, C_data, y_data = self.data_transform_pipeline.fit_transform(N_data, C_data, y_data)
             self.N, self.C, self.y = N_data, C_data, y_data
             self.y_info = self.data_transform_pipeline.shared_state.get('y_info', {'policy': 'none'})
 
@@ -55,7 +57,9 @@ class RealMLPMethod(Method):
             )
         else:
             N_test, C_test, y_test = N, C, y
-            N_test, C_test, y_test = self.data_transform_pipeline.transform(N_test, C_test, y_test)
+            if not self.pre_transformed:
+                N_test, C_test, y_test = self.data_transform_pipeline.transform(N_test, C_test, y_test)
+            self.shared_state = self.data_transform_pipeline.shared_state
             if N_test is not None and C_test is not None:
                 self.N_test, self.C_test = N_test['test'], C_test['test']
             elif N_test is None and C_test is not None:
@@ -65,7 +69,7 @@ class RealMLPMethod(Method):
             self.y_test = y_test['test']
 
 
-    def fit(self, data, info, train = True, config = None):
+    def fit(self, data, info, train = True, config = None, tune = False):
         N, C, y = data
         # if the method already fit the dataset, skip these steps (such as the hyper-tune process)
         self.D = Dataset(N, C, y, info)
