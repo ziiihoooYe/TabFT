@@ -1,30 +1,39 @@
 {
-    // 使用 IntelliSense 了解相关属性。 
-    // 悬停以查看现有属性的描述。
-    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        // {
-        //     "name": "Run Current File",
-        //     "type": "debugpy",
-        //     "request": "launch",
-        //     "program": "${file}",
-        //     "console": "integratedTerminal",
-        //     "args": [
-        //     ],
-        // },
         {
-            "name": "Run Deep Model",
+            "name": "Run Current File",
             "type": "debugpy",
             "request": "launch",
-            "program": "main.py",
+            "program": "split_and_run.py",
             "console": "integratedTerminal",
             "args": [
-                "--config",
-                "config.yaml",
-                // "--suffix",
-                // "TEST__",
-            ]
-        }
+                "--yaml",
+                "yaml/cdf.yaml",
+                "--logdir",
+                "log",
+                "--mode",
+                "combo",
+                "--n-splits",
+                "6",
+                "--max-workers",
+                "6",
+                "--gpus",
+                "0"
+            ],
+        },
+        // {
+        //     "name": "Run Deep Model",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "program": "main.py",
+        //     "console": "integratedTerminal",
+        //     "args": [
+        //         "--config",
+        //         "config.yaml",
+        //         // "--suffix",
+        //         // "TEST__",
+        //     ]
+        // }
     ]
 }

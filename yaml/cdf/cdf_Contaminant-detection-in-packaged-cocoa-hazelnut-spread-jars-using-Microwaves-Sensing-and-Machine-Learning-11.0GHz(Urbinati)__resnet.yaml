@@ -1,0 +1,20 @@
+dataset:
+- Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+- uniple:
+    n_bins: 10000000
+- norm:
+    policy: standard
+model_type:
+- resnet
+model_path: results_model/cdf
+seed: 0
+seed_num: 15
+gpu: 1
+tune: true
+n_trials: 100
+load_tune_config: true

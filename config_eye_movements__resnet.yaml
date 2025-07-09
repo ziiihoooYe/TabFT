@@ -1,0 +1,22 @@
+dataset:
+- eye_movements
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+- uniple:
+    n_bins: 10000000
+- norm:
+    policy: standard
+model_type:
+- resnet
+model_path: results_model/default_path
+seed: 2025
+seed_num: 15
+gpu: 0
+tune: true
+tune_transform: false
+tune_param: true
+load_tune_config: true
+n_trials: 100

@@ -40,7 +40,7 @@ dataset:
   # - estimation_of_obesity_levels
   # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   # - Diamonds
-  - E-CommereShippingData
+  # - E-CommereShippingData
   # - FOREX_audjpy-day-High
   # - FOREX_audsgd-hour-High
   # - Fitness_Club_c
@@ -73,6 +73,8 @@ dataset:
   # - wine
   # - yeast
 
+  - eye_movements
+
 transform_list:
   # ----------------------------------------------------------------
   # standard proprocess: nan, label
@@ -102,11 +104,12 @@ transform_list:
   # - norm:
   #     policy: standard
 
-  # - uniple: {}
+  - uniple:
+      n_bins: 10000000
   # - stretch:
   #     beta: 0.8
-  - stretch_opt: 
-      lambda_: 1.0
+  # - stretch_opt: 
+  #     lambda_: 0.8
 
   # - num_cdf: 
   #     cdf_type: uniform # uniform, gaussian, dynamic
@@ -135,9 +138,10 @@ model_type:
   # - xgboost
   # - lightgbm
   - mlp
-  # - resnet
+  - resnet
   # - mlp_plr
   # - realmlp
+  # - xgboost
   # - catboost
   # - tabpfn
   # - PFN-v2

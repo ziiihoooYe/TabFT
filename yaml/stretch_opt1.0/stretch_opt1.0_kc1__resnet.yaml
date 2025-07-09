@@ -1,0 +1,21 @@
+dataset:
+- kc1
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+- stretch_opt:
+    lambda_: 1.0
+- norm:
+    policy: standard
+model_type:
+- resnet
+model_path: results_model/stretch_opt1.0
+seed: 2025
+seed_num: 15
+gpu: 4
+tune: true
+tune_transform: false
+n_trials: 100
+load_tune_config: true

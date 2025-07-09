@@ -1045,6 +1045,8 @@ class UniPiecewiseCDFTransform(BaseTransform):
                 else:
                     nb = int(max(1, self.n_bins))
 
+                nb = min(nb, n_samples - 1)
+
                 edges = np.percentile(col, np.linspace(0, 100, nb + 1))
                 edges[0], edges[-1] = col.min(), col.max()
                 edges = np.unique(edges)
