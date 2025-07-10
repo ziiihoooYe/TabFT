@@ -52,7 +52,7 @@ dataset:
   # - NHANES_age_prediction
   # - Shop_Customer_Data
   # - VulNoneVul
-  # - Waterstress
+  - Waterstress
   # - htru
   # - ibm-employee-performance
   # - internet_firewall
@@ -73,7 +73,6 @@ dataset:
   # - wine
   # - yeast
 
-  - eye_movements
 
 transform_list:
   # ----------------------------------------------------------------
@@ -105,7 +104,7 @@ transform_list:
   #     policy: standard
 
   - uniple:
-      n_bins: 10000000
+      n_bins: 1000000
   # - stretch:
   #     beta: 0.8
   # - stretch_opt: 
@@ -115,7 +114,7 @@ transform_list:
   #     cdf_type: uniform # uniform, gaussian, dynamic
   #     cache_path: fit_cache
   #     n_components: 32
-  #     binning_method: quantile # quantile, hdbscan, hierarchicalVkkk
+  #     binning_method: quantile # quantile, hdbscan, hierarchical
 
 
   - norm:

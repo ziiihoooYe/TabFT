@@ -14,7 +14,7 @@ model_type:
 model_path: results_model/stretch_opt0.8
 seed: 2025
 seed_num: 15
-gpu: 6
+gpu: 4
 tune: true
 tune_transform: false
 n_trials: 100

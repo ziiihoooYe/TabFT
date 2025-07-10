@@ -1,39 +1,39 @@
 {
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Run Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "split_and_run.py",
-            "console": "integratedTerminal",
-            "args": [
-                "--yaml",
-                "yaml/cdf.yaml",
-                "--logdir",
-                "log",
-                "--mode",
-                "combo",
-                "--n-splits",
-                "6",
-                "--max-workers",
-                "6",
-                "--gpus",
-                "0"
-            ],
-        },
         // {
-        //     "name": "Run Deep Model",
+        //     "name": "Run Current File",
         //     "type": "debugpy",
         //     "request": "launch",
-        //     "program": "main.py",
+        //     "program": "split_and_run.py",
         //     "console": "integratedTerminal",
         //     "args": [
-        //         "--config",
-        //         "config.yaml",
-        //         // "--suffix",
-        //         // "TEST__",
-        //     ]
-        // }
+        //         "--yaml",
+        //         "yaml/cdf.yaml",
+        //         "--logdir",
+        //         "log",
+        //         "--mode",
+        //         "combo",
+        //         "--n-splits",
+        //         "6",
+        //         "--max-workers",
+        //         "6",
+        //         "--gpus",
+        //         "0"
+        //     ],
+        // },
+        {
+            "name": "Run Deep Model",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config",
+                "config.yaml",
+                // "--suffix",
+                // "TEST__",
+            ]
+        }
     ]
 }
