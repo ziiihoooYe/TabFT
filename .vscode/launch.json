@@ -9,15 +9,15 @@
         //     "console": "integratedTerminal",
         //     "args": [
         //         "--yaml",
-        //         "yaml/cdf.yaml",
+        //         "yaml/pleuni/pleuni.yaml",
         //         "--logdir",
         //         "log",
         //         "--mode",
         //         "combo",
         //         "--n-splits",
-        //         "6",
+        //         "2",
         //         "--max-workers",
-        //         "6",
+        //         "2",
         //         "--gpus",
         //         "0"
         //     ],
@@ -31,6 +31,7 @@
             "args": [
                 "--config",
                 "config.yaml",
+                // "yaml/pleuni/pleuni.yaml",
                 // "--suffix",
                 // "TEST__",
             ]

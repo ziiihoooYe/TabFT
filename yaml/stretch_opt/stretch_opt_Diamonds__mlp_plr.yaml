@@ -1,0 +1,20 @@
+dataset:
+- Diamonds
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+- stretch_opt: {}
+- norm:
+    policy: standard
+model_type:
+- mlp_plr
+model_path: results_model/stretch_opt
+seed: 2025
+seed_num: 15
+gpu: 5
+tune: true
+tune_transform: true
+n_trials: 100
+load_tune_config: true

@@ -298,6 +298,17 @@ def sample_parameters(trial, space, base_config):
                 bins = [int(round(base ** e)) for e in exps]      # 至少 1
                 result[label] = bins
             
+            elif distribution == "sample_num_int":
+                low, high = args
+                meta = base_config["_meta"]
+                low  = int(_resolve(low,  meta))
+                high = int(_resolve(high, meta))
+                sample_num = meta["sample_num"]
+                if high > sample_num:
+                    high = sample_num
+                high = max(low, high)
+                result[label] = trial.suggest_int(label, low, high)
+            
             elif distribution in ['$d_ffn_factor', '$d_hidden_factor']:
                 if base_config['model']['activation'].endswith('glu'):
                     args = (args[0] * 2 / 3, args[1] * 2 / 3)

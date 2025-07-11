@@ -1,0 +1,20 @@
+dataset:
+- jungle_chess_2pcs_raw_endgame_complete
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+- uniple: {}
+- norm:
+    policy: standard
+model_type:
+- mlp
+model_path: results_model/pleuni
+seed: 2025
+seed_num: 15
+gpu: 3
+tune: true
+tune_transform: true
+n_trials: 100
+load_tune_config: true

@@ -1,9 +1,9 @@
 {
     "uniple": {
         "n_bins": [
-            "per_feature_exp_int",
-            0,
-            "$log_n_num_features"
+            "sample_num_int",
+            1,
+            "$n_num_features"
         ]
     }
 }

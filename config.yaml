@@ -44,7 +44,7 @@ dataset:
   # - FOREX_audjpy-day-High
   # - FOREX_audsgd-hour-High
   # - Fitness_Club_c
-  # - IEEE80211aa-GATS
+  - IEEE80211aa-GATS
   # - Intersectional-Bias-Assessment
   # - Job_Profitability
   # - Kaggle_bike_sharing_demand_challange
@@ -52,7 +52,7 @@ dataset:
   # - NHANES_age_prediction
   # - Shop_Customer_Data
   # - VulNoneVul
-  - Waterstress
+  # - Waterstress
   # - htru
   # - ibm-employee-performance
   # - internet_firewall
@@ -103,12 +103,12 @@ transform_list:
   # - norm:
   #     policy: standard
 
-  - uniple:
-      n_bins: 1000000
+  # - uniple:
+  #     n_bins: 1000000
   # - stretch:
   #     beta: 0.8
-  # - stretch_opt: 
-  #     lambda_: 0.8
+  - stretch_opt: 
+      lambda_: 0.75
 
   # - num_cdf: 
   #     cdf_type: uniform # uniform, gaussian, dynamic
@@ -149,9 +149,9 @@ model_type:
 model_path: results_model/default_path
 seed: 2025
 seed_num: 15
-gpu: 2
+gpu: 0
 tune: true
-tune_transform: false
+tune_transform: true
 tune_param: true
 load_tune_config: true
-n_trials: 100
+n_trials: 10
