@@ -6,6 +6,7 @@ from transform.base import BaseTransform
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from typing import Dict, List, Any, Optional
 
 from torch.utils.data import DataLoader, TensorDataset
 from model.lib.num_embeddings import (
@@ -16,9 +17,6 @@ import os, json, hashlib
 
 
 class BinningTransform(BaseTransform):
-    """
-    A transform that computes bins for numeric data (Q or T) and stores them in the context.
-    """
     def __init__(self, args, is_regression=False):
         super().__init__()
         self.method = args.get('method', 'Q')
@@ -682,18 +680,13 @@ class SmoothClipTransform:
         return X / np.sqrt(1.0 + (X / 3.0)**2)
      
 
-from sklearn.mixture import BayesianGaussianMixture
-from scipy.stats import norm
-import numpy as np, os, json, hashlib, pickle
-from typing import Dict, List
-from transform.base import BaseTransform
-
+##########################################################################
+#                           Custom Transform                             #
+##########################################################################
 
 class CdfTransform(BaseTransform):
-    # -------------------- init --------------------
     def __init__(self, args: Dict, dataset=None):
         super().__init__()
-        # --- basic ---
         self.cdf_type  = args.get("cdf_type", "uniform").lower()
         self.cdf_path  = args.get("cache_path", None)
         self.dataset   = dataset
@@ -737,7 +730,7 @@ class CdfTransform(BaseTransform):
         if self.cdf_type == "dynamic":
             self.config += ("dynamic_ks_thresh",)
 
-    # ---------------- cache helpers ----------------
+
     def _cfg(self):  # dict used for hashing
         return {k: getattr(self, k) for k in self.config}
 
@@ -749,15 +742,12 @@ class CdfTransform(BaseTransform):
             return None
         return os.path.join(self.cdf_path, f"{self._hash()}.pkl")
 
-    # ---------------- fit --------------------------
     def fit(self, N_data, C_data, y_data=None, shared_state=None):
         if not N_data or "train" not in N_data:
             return self
         shared_state = shared_state or {}
 
-        # ---------- try cache ----------
         cfile = self._cache_file()
-        # os.remove(cfile) if cfile and os.path.exists(cfile) else None
         if cfile and os.path.exists(cfile):
             state = pickle.load(open(cfile, "rb"))
             if state.get("config") == self._cfg():
@@ -1021,7 +1011,7 @@ class UniPiecewiseCDFTransform(BaseTransform):
         self.n_bins = args.get("n_bins", 10)
         self.bin_edges_: list[np.ndarray] | None = None  # per‑feature edges
 
-    # ---------- fit ----------
+
     def fit(self, N_data, C_data, y_data=None, shared_state=None):
             if not (N_data and "train" in N_data):
                 return self
@@ -1057,7 +1047,6 @@ class UniPiecewiseCDFTransform(BaseTransform):
 
             return self
 
-    # ---------- transform ----------
     def transform(self, N_data, C_data, y_data=None, shared_state=None):
         if not self.bin_edges_:
             return N_data, C_data, y_data
@@ -1076,7 +1065,7 @@ class UniPiecewiseCDFTransform(BaseTransform):
                 idx = np.clip(idx, 0, edges.size - 2)
 
                 denom = edges[idx + 1] - edges[idx]
-                denom[denom == 0] = 1.0  # avoid divide‑by‑zero for duplicate edges
+                denom[denom == 0] = 1.0
 
                 frac = (col - edges[idx]) / denom
                 X_out[:, j] = (idx + frac) / (edges.size - 1)
@@ -1089,15 +1078,16 @@ class UniPiecewiseCDFTransform(BaseTransform):
 class SlopeEqualizeStretchTransform(BaseTransform):
     def __init__(self, args, is_regression: bool | None = None):
         super().__init__()
-        self.mode       = args.get("mode", "auto").lower()
         self.norm       = args.get("norm", "l1").lower()
-        self.handle_nan = args.get("handle_nan", "ignore")
         self.eps        = float(args.get("eps", 1e-12))
+
         self.lambda_ = float(args.get("lambda_", 1.0))
-        self.lambda_ = max(0.0, min(self.lambda_, 1.0))   # clamp to [0, 1]
-        if self.handle_nan not in {"ignore", "zero"}:
-            raise ValueError("handle_nan must be 'ignore' or 'zero'")
+        self.lambda_ = max(0.0, min(self.lambda_, 1.0))
+
         self.is_regression = is_regression
+
+        self.n_bins = args.get("n_bins", 1)
+
         self.maps_: list[tuple[np.ndarray, np.ndarray]] = []   # (xs_unique, f_vals)
 
     # ---------- helper ----------
@@ -1107,7 +1097,6 @@ class SlopeEqualizeStretchTransform(BaseTransform):
         # default L1
         return float(np.abs(a - b).sum())
 
-    # ---------- fit ----------
     def fit(self, N_data, C_data, y_data=None, shared_state=None):
         if not (N_data and "train" in N_data and y_data and "train" in y_data):
             return self
@@ -1116,40 +1105,100 @@ class SlopeEqualizeStretchTransform(BaseTransform):
         y = y_data["train"].ravel()
         uniq = np.unique(y)
 
-        # ---- decide mode ----
-        if self.mode != "auto":
-            mode = self.mode
+        if self.is_regression is True:
+            mode = "regression"
+        elif self.is_regression is False:
+            mode = "binary" if uniq.size == 2 else "multiclass"
         else:
-            if self.is_regression is True:
+            if np.issubdtype(y.dtype, np.floating) and uniq.size > 2:
                 mode = "regression"
-            elif self.is_regression is False:
-                mode = "binary" if uniq.size == 2 else "multiclass"
+            elif uniq.size == 2:
+                mode = "binary"
             else:
-                # auto inference
-                if np.issubdtype(y.dtype, np.floating) and uniq.size > 2:
-                    mode = "regression"
-                elif uniq.size == 2:
-                    mode = "binary"
-                else:
-                    mode = "multiclass"
+                mode = "multiclass"
 
         if mode == "multiclass":
-            C = int(uniq.max()) + 1       # assume labels are 0…C‑1
+            C = int(uniq.max()) + 1
 
         self.maps_.clear()
         n_samples, n_features = X.shape
 
         for j in range(n_features):
             x_col = X[:, j]
+            xs_valid, y_valid = x_col, y
+            uniq_vals = np.unique(xs_valid)
+            uniq_cnt  = uniq_vals.size
+            n_bins = min(self.n_bins, uniq_cnt - 1)
 
-            # optional NaN mask
-            mask = ~np.isnan(x_col) if self.handle_nan == "ignore" else slice(None)
-            xs_valid, y_valid = x_col[mask], y[mask]
-            if xs_valid.size == 0:
-                self.maps_.append(None)
+            if n_bins <= 1:
+                x_min, x_max = xs_valid.min(), xs_valid.max()
+                if x_max - x_min < self.eps:
+                    self.maps_.append((np.array([x_min], dtype=float),
+                                       np.array([0.0], dtype=float)))
+                else:
+                    self.maps_.append((np.array([x_min, x_max], dtype=float),
+                                       np.array([0.0, 1.0], dtype=float)))
                 continue
 
-            # 1) aggregate duplicates
+            if 1 < n_bins < uniq_cnt - 1:
+                edges = np.percentile(xs_valid, np.linspace(0, 100, n_bins + 1))
+                edges[0], edges[-1] = xs_valid.min(), xs_valid.max()
+                edges = np.unique(edges)
+
+                xs_u = uniq_vals
+                inv  = np.searchsorted(xs_u, xs_valid)
+
+                # --- expected target value per unique x ---
+                if mode == "multiclass":
+                    gs = np.zeros((len(xs_u), C), dtype=float)
+                    for idx_u in range(len(xs_u)):
+                        labs = y_valid[inv == idx_u].astype(int)
+                        if labs.size:
+                            cnts = np.bincount(labs, minlength=C)
+                            gs[idx_u] = cnts / cnts.sum()
+                else:
+                    sums = np.bincount(inv, weights=y_valid, minlength=len(xs_u))
+                    cnts = np.bincount(inv,              minlength=len(xs_u)).astype(float)
+                    gs   = sums / np.maximum(cnts, 1.0)
+
+                if len(xs_u) == 1:
+                    self.maps_.append((xs_u.astype(float),
+                                       np.zeros_like(xs_u, dtype=float)))
+                    continue
+
+                if mode == "multiclass":
+                    neigh = np.array([self._vec_dist(gs[k + 1], gs[k])
+                                      for k in range(len(xs_u) - 1)], dtype=float)
+                else:
+                    neigh = np.abs(np.diff(gs)).astype(float)
+
+                interval_bins = np.searchsorted(edges, xs_u[:-1], side='right') - 1
+                num_bins = edges.size - 1
+                S = np.zeros(num_bins)
+                for b in range(num_bins):
+                    mask = interval_bins == b
+                    if mask.any():
+                        S[b] = neigh[mask].sum()
+
+                total_S = float(S.sum())
+                if total_S < self.eps:
+                    span = xs_u[-1] - xs_u[0]
+                    f_vals = np.zeros_like(xs_u, dtype=float) if span < self.eps \
+                                else (xs_u - xs_u[0]) / span
+                    self.maps_.append((xs_u.astype(float), f_vals.astype(float)))
+                    continue
+
+                alpha   = S / total_S
+                s_vals  = np.zeros(edges.size, dtype=float)
+                for b in range(num_bins):
+                    s_vals[b + 1] = s_vals[b] + alpha[b]
+
+                linear = np.linspace(0.0, 1.0, s_vals.size, dtype=float)
+                s_vals = (1.0 - self.lambda_) * linear + self.lambda_ * s_vals
+
+                self.maps_.append((edges.astype(float), s_vals.astype(float)))
+                continue
+
             xs_u, inv = np.unique(xs_valid, return_inverse=True)
 
             if mode == "multiclass":
@@ -1164,17 +1213,15 @@ class SlopeEqualizeStretchTransform(BaseTransform):
                 cnts = np.bincount(inv, minlength=len(xs_u)).astype(float)
                 gs = sums / np.maximum(cnts, 1.0)
 
-            # ---------- build original cumulative coordinate ----------
             if len(xs_u) == 1:
-                f_orig = np.zeros_like(xs_u, dtype=float)
+                f_base = np.zeros_like(xs_u, dtype=float)
             else:
                 span = xs_u[-1] - xs_u[0]
-                f_orig = np.zeros_like(xs_u, dtype=float) if span < self.eps \
-                         else (xs_u - xs_u[0]) / span
+                f_base = np.zeros_like(xs_u, dtype=float) if span < self.eps \
+                            else (xs_u - xs_u[0]) / span
 
-            # ---------- build optimal slope‑equalised coordinate ----------
             if len(xs_u) == 1:
-                TV = 0.0                               # ensure TV is always defined
+                TV = 0.0
                 f_star = np.zeros_like(xs_u, dtype=float)
             else:
                 if mode == "multiclass":
@@ -1194,14 +1241,12 @@ class SlopeEqualizeStretchTransform(BaseTransform):
                     f_star[1:] = np.cumsum(gaps)
                     f_star[-1] = 1.0
 
-            # ---------- λ‑smoothed final mapping ----------
-            f_vals = (1.0 - self.lambda_) * f_orig + self.lambda_ * f_star
+            f_vals = (1.0 - self.lambda_) * f_base + self.lambda_ * f_star
 
             self.maps_.append((xs_u.astype(float), f_vals.astype(float)))
 
         return self
 
-    # ---------- transform ----------
     def transform(self, N_data, C_data, y_data=None, shared_state=None):
         if not self.maps_:
             return N_data, C_data, y_data
@@ -1215,15 +1260,296 @@ class SlopeEqualizeStretchTransform(BaseTransform):
                     continue
                 xs_u, f_vals = mapping
                 col = X_out[:, j]
-
-                if self.handle_nan == "ignore":
-                    isnan = np.isnan(col)
-                    if (~isnan).any():
-                        X_out[~isnan, j] = np.interp(col[~isnan], xs_u, f_vals)
-                else:  # 'zero'
-                    col_filled = np.where(np.isnan(col), 0.0, col)
-                    X_out[:, j] = np.interp(col_filled, xs_u, f_vals)
+                X_out[:, j] = np.interp(col, xs_u, f_vals)
 
             N_data[part] = X_out
 
+        return N_data, C_data, y_data
+
+
+class HierarchicalPleTransform(BaseTransform):
+    def __init__(self, args):
+        self.bin_order = args.get("bin_order", 4)
+        self.z_score_eps = args.get("z_score_eps", 1e-6)
+        
+        self.n_features_in_: int = 0
+        self.bin_edges_: List[List[np.ndarray]] = []
+        self.feature_map_: List[Dict] = []
+        self.stats_: Dict[str, np.ndarray] = {}
+
+    def fit(self, N_data, C_data=None, y_data=None, shared_state: Optional[Dict[str, Any]] = None):
+        if N_data is None or N_data['train'].shape[0] == 0:
+            raise ValueError("Training data cannot be empty.")
+        
+        X_train = N_data['train']
+
+        self.n_features_in_ = X_train.shape[1]
+        
+        self.stats_['mean'] = np.mean(X_train, axis=0)
+        self.stats_['std'] = np.std(X_train, axis=0)
+
+        self.bin_edges_, self.feature_map_ = [], []
+        for j in range(self.n_features_in_):
+            col_data, feature_specific_edges = X_train[:, j], []
+            unique_vals, n_unique = np.unique(col_data), len(np.unique(col_data))
+            for i in range(self.bin_order + 1):
+                num_bins = 2**i
+                if n_unique <= 1 and i > 0: break
+                if num_bins >= n_unique: edges = np.sort(unique_vals)
+                else: edges = np.percentile(col_data, np.linspace(0, 100, num_bins + 1))
+                edges = np.unique(edges)
+                if len(edges) < 2:
+                    val = edges[0] if len(edges) > 0 else col_data.mean()
+                    edges = np.array([val - 1e-6, val + 1e-6])
+                if i > 0 and np.array_equal(edges, feature_specific_edges[-1]): break
+                feature_specific_edges.append(edges)
+                self.feature_map_.append({"orig_idx": j, "order": i, "size": len(edges) - 1})
+            self.bin_edges_.append(feature_specific_edges)
+
+        offset = 0
+        for meta in self.feature_map_:
+            meta["new_start"] = offset
+            offset += meta["size"]
+        
+        if shared_state is not None:
+            shared_state["feature_map_"] = self.feature_map_
+            shared_state["ple_dims"] = offset
+            shared_state["orig_val_start_dim"] = offset
+        
+        return self
+
+    def transform(self, N_data, C_data=None, y_data=None, shared_state: Optional[Dict[str, Any]] = None):
+        if not self.feature_map_: raise RuntimeError("Transform has not been fitted.")
+        for part_k in N_data:
+            X = N_data[part_k]
+            if X.shape[1] != self.n_features_in_: raise ValueError("Mismatched feature count.")
+
+            ple_parts = []
+            for j in range(self.n_features_in_):
+                original_col = X[:, j]
+                for edges in self.bin_edges_[j]:
+                    num_bins = len(edges) - 1
+                    if num_bins == 0: continue
+                    part = np.zeros((X.shape[0], num_bins), dtype=np.float32)
+                    indices = np.clip(np.digitize(original_col, edges, right=True), 1, num_bins) - 1
+                    mask = np.arange(num_bins) < indices[:, None]
+                    # part[mask] = 1.0
+                    # lower, upper = edges[:-1][indices], edges[1:][indices]
+                    # denom = upper - lower
+                    # denom[denom < 1e-9] = 1e-9
+                    # interp_vals = np.clip((original_col - lower) / denom, 0.0, 1.0)
+                    interp_vals = 1.0
+                    part[np.arange(X.shape[0]), indices] = interp_vals
+                    ple_parts.append(part)
+            gating_vector = np.hstack(ple_parts)
+
+            X_zscored = (X - self.stats_['mean']) / (self.stats_['std'] + self.z_score_eps)
+
+            N_data[part_k] = np.hstack([gating_vector, X_zscored.astype(np.float32)])
+
+        return N_data, C_data, y_data
+
+
+import numpy as np
+from sklearn.cluster import SpectralClustering
+from sklearn.neighbors import KNeighborsRegressor
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import TensorDataset, DataLoader
+
+# A Sklearn-style wrapper for a PyTorch MLP
+class MLPEncoder:
+    def __init__(self, input_dim=1, output_dim=8, hidden_dims=[32], 
+                 epochs=50, learning_rate=1e-3, batch_size=32):
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_dims = hidden_dims
+        self.epochs = epochs
+        self.lr = learning_rate
+        self.batch_size = batch_size
+        
+        # Define the network structure
+        layers = []
+        current_dim = self.input_dim
+        for h_dim in self.hidden_dims:
+            layers.append(nn.Linear(current_dim, h_dim))
+            layers.append(nn.ReLU())
+            current_dim = h_dim
+        layers.append(nn.Linear(self.hidden_dims[-1], self.output_dim))
+        
+        self.model = nn.Sequential(*layers)
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.model.to(self.device)
+
+    def fit(self, X, y):
+        # Convert numpy arrays to torch tensors
+        X_tensor = torch.from_numpy(X.astype(np.float32)).to(self.device)
+        y_tensor = torch.from_numpy(y.astype(np.float32)).to(self.device)
+        
+        # Create dataset and dataloader for batch training
+        dataset = TensorDataset(X_tensor, y_tensor)
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        
+        # Define loss and optimizer
+        criterion = nn.MSELoss()
+        optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        
+        # Training loop
+        self.model.train()
+        for epoch in range(self.epochs):
+            for batch_X, batch_y in loader:
+                optimizer.zero_grad()
+                predictions = self.model(batch_X)
+                loss = criterion(predictions, batch_y)
+                loss.backward()
+                optimizer.step()
+            # Optional: print training loss
+            # if (epoch + 1) % 10 == 0:
+            #     print(f'  Epoch [{epoch+1}/{self.epochs}], Loss: {loss.item():.4f}')
+        
+        return self
+
+    def predict(self, X):
+        # Convert numpy array to torch tensor
+        X_tensor = torch.from_numpy(X.astype(np.float32)).to(self.device)
+        
+        # Set model to evaluation mode
+        self.model.eval()
+        with torch.no_grad():
+            predictions = self.model(X_tensor)
+        
+        # Convert back to numpy array
+        return predictions.cpu().numpy()
+
+
+class RBFSpectralContextTransform(BaseTransform):
+    """
+    A transform that learns the manifold structure of each numerical feature 
+    using an RBF kernel context and Spectral Clustering. It then trains a 
+    non-linear regressor to map new data points to this learned "context space",
+    effectively performing Inductive Spectral Clustering.
+
+    This aligns with the idea of learning the "intra-column contexture".
+    """
+    def __init__(self, args):
+        super().__init__()
+        # The target dimension for the output vectors
+        self.output_dim = args.get("output_dim", 8) 
+        
+        # Gamma for the RBF kernel. A crucial hyperparameter.
+        self.gamma = args.get("gamma", 1.0)
+        
+        # A list to hold the trained models (the "encoders"), one for each feature.
+        # self.encoders_: list[KNeighborsRegressor] | None = None
+        self.encoders_: list[MLPEncoder] | None = None
+
+    def fit(self, N_data, C_data, y_data=None, shared_state=None):
+        """
+        Phase 1: Learn the context space from the training data.
+        This part is "transductive". It learns the structure of the data it sees.
+        """
+        if not (N_data and "train" in N_data):
+            return self
+
+        X_train = N_data["train"]
+        n_samples, n_features = X_train.shape
+        self.encoders_ = []
+
+        print(f"Fitting RBFSpectralContextTransform for {n_features} features...")
+
+        for j in range(n_features):
+            # Step 1: Extract the single column to work on.
+            # Reshape it to (n_samples, 1) for sklearn compatibility.
+            col_data = X_train[:, j].reshape(-1, 1)
+
+            # Step 2: Use SpectralClustering to define and learn the context.
+            # This is the core of the "Contexture" idea.
+            # It internally computes the RBF kernel matrix (the context),
+            # builds the graph laplacian, and finds the eigenfunctions.
+            print(f"  - Fitting SpectralClustering on feature {j+1}/{n_features}...")
+            spectral_model = SpectralClustering(
+                n_clusters=self.output_dim, # We repurpose n_clusters to be our target dimension
+                affinity='rbf',          # This tells it to use the RBF kernel context
+                gamma=self.gamma,
+                assign_labels='kmeans'     # This is the standard but we will use its embedding
+            )
+            
+            # The 'fit' method performs the entire spectral analysis.
+            # Note: We are not interested in the final cluster labels.
+            # We want the intermediate "spectral embedding" which corresponds
+            # to the eigenfunctions we've discussed.
+            # Sklearn's implementation doesn't directly expose this, so we 
+            # cleverly re-implement the embedding part.
+            
+            # Re-implementing the embedding extraction for clarity
+            affinity_matrix = spectral_model.fit(col_data).affinity_matrix_
+            from sklearn.manifold import spectral_embedding
+            
+            # Y_target is our set of eigenfunctions, shape (n_samples, output_dim)
+            Y_target = spectral_embedding(
+                adjacency=affinity_matrix,
+                n_components=self.output_dim,
+                drop_first=False, # We want all top eigenfunctions
+                norm_laplacian=True
+            )
+
+            # Step 3: Train an "encoder" to generalize this mapping.
+            # This is the "Inductive" part. The encoder learns to map a
+            # raw value to its corresponding point in the context space.
+            # A K-Nearest Neighbors Regressor is a simple, non-parametric choice.
+            # An MLP would be another great choice.
+            print(f"  - Training encoder for feature {j+1}/{n_features}...")
+            # encoder = KNeighborsRegressor(n_neighbors=5)
+            encoder = MLPEncoder(
+                input_dim=1, 
+                output_dim=self.output_dim, 
+                hidden_dims=[32], 
+                epochs=50, 
+                learning_rate=1e-3, 
+                batch_size=128
+            )
+            
+            # The encoder learns to predict the spectral coordinates (Y_target)
+            # from the original data (col_data).
+            encoder.fit(col_data, Y_target)
+            
+            self.encoders_.append(encoder)
+            
+            shared_state['encoders'] = self.encoders_
+
+        return self
+
+    def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        """
+        Phase 2: Apply the learned context mapping to all data splits.
+        This part is "inductive", using the trained encoders.
+        """
+        if not self.encoders_:
+            # The model hasn't been fit, so do nothing.
+            return N_data, C_data, y_data
+        
+        # We process each data part (train, val, test)
+        for part, X in N_data.items():
+            n_samples, n_features = X.shape
+            assert n_features == len(self.encoders_), "Feature mismatch during transform"
+
+            # We will collect the new high-dimensional features in a list
+            transformed_features = []
+
+            for j, encoder in enumerate(self.encoders_):
+                col_data = X[:, j].reshape(-1, 1)
+                
+                # Use the trained encoder to project the scalar to the high-dim space
+                # The output will be of shape (n_samples, output_dim)
+                col_transformed = encoder.predict(col_data)
+                transformed_features.append(col_transformed)
+            
+            # Concatenate the transformed features side-by-side
+            # The new feature matrix will have shape (n_samples, n_features * output_dim)
+            X_out = np.concatenate(transformed_features, axis=1)
+            
+            N_data[part] = X_out
+            
         return N_data, C_data, y_data

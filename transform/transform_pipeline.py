@@ -80,8 +80,12 @@ class DataTransformPipeline:
                 pipeline.append(TargetRankingIndiceTransform(transform_config))
             elif transform_name == 'uniple':
                 pipeline.append(UniPiecewiseCDFTransform(transform_config))
+            elif transform_name == 'hierarchical_ple':
+                pipeline.append(HierarchicalPleTransform(transform_config))
             elif transform_name == 'stretch_opt':
                 pipeline.append(SlopeEqualizeStretchTransform(transform_config, self.is_regression))
+            elif transform_name == 'rbf_eigenfuntion':
+                pipeline.append(RBFSpectralContextTransform(transform_config))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline

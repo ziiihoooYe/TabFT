@@ -9,7 +9,8 @@
             "residual_dropout": 0.0,
             "d_ff": 4,
             "pre_norm": false,
-            "n_freq": 4
+            "n_freq": 4,
+            "rbf_bins": 10
         },
         "training": {
             "lr": 0.0001,

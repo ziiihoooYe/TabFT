@@ -154,15 +154,12 @@ class Method(object, metaclass=abc.ABCMeta):
         self.n_num_features = N['train'].shape[1] if N is not None else self.n_num_features
         self.construct_model()
  
-        ###
-        # from model.utils import KernelSmoothCDF
-        # # self.pre_module = LearnableEdgesPWL(n_features=self.n_num_features,B_max=100, init_strategy='quantile')
-        # self.pre_module = KernelSmoothCDF(ref_points=self.N['train'].T)
-        # self.pre_module.to(self.args.device)
-        # # self.pre_module.smart_init(self.N['train']) 
-        # params = list(self.model.parameters()) + list(self.pre_module.parameters())
         params = self.model.parameters()
-        ###
+        # if self.shared_state.get('encoders', None) is not None:
+        #     params = list(self.model.parameters()) + [ {'params': encoder.model.parameters()} for encoder in self.shared_state['encoders'] ]
+        # else:
+        #     params = self.model.parameters()
+        
 
         self.optimizer = torch.optim.AdamW(
             params,

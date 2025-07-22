@@ -1,13 +1,15 @@
 import torch
+import numpy as np
 import torch.nn as nn
 from typing import  Optional, Union
 import math
 import statistics
 from functools import partial
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, Callable, Optional, Union, cast, Dict, Any
 from torch import Tensor
 from torch.nn.parameter import Parameter
 import math
+
 
 # adapted from https://github.com/yandex-research/tabular-dl-tabr
 def _initialize_embeddings(weight: Tensor, d: Optional[int]) -> None:
@@ -21,9 +23,6 @@ def make_trainable_vector(d: int) -> Parameter:
     x = torch.empty(d)
     _initialize_embeddings(x, None)
     return Parameter(x)
-
-
-
 
 
 class CLSEmbedding(nn.Module):
@@ -179,6 +178,7 @@ class PLREmbeddings(nn.Sequential):
         frequency_scale: float,
         d_embedding: int,
         lite: bool,
+        **kwargs: Any
     ) -> None:
         super().__init__(
             PeriodicEmbeddings(n_features, n_frequencies, frequency_scale),
@@ -189,7 +189,8 @@ class PLREmbeddings(nn.Sequential):
             ),
             nn.ReLU(),
         )
-import numpy as np
+
+
 class PBLDEmbeddings(nn.Module):
     def __init__(self, n_features: int,
                  n_frequencies: int,
@@ -236,69 +237,108 @@ class PBLDEmbeddings(nn.Module):
         return x
 
 
+class GroupPLREmbeddings(nn.Module):
+    def __init__(
+        self,
+        shared_state: Dict[str, Any],
+        n_features: int,
+        n_frequencies: int,
+        frequency_scale: float,
+        d_embedding: int,
+        std_decay_rate: float = 2.0,
+        n_freq_decay_rate: float = 1.0,
+        **kwargs: Any
+    ) -> None:
+        super().__init__()
 
+        try:
+            self.feature_map = shared_state['feature_map_']
+            self.ple_dims = shared_state['ple_dims']
+            self.orig_val_start_dim = shared_state['orig_val_start_dim']
+        except KeyError as e:
+            raise ValueError(f"shared_state is missing a required key: {e}")
 
-# class MLP(nn.Module):
-#     class Block(nn.Module):
-#         def __init__(
-#             self,
-#             *,
-#             d_in: int,
-#             d_out: int,
-#             bias: bool,
-#             activation: str,
-#             dropout: float,
-#         ) -> None:
-#             super().__init__()
-#             self.linear = nn.Linear(d_in, d_out, bias)
-#             self.activation = make_module(activation)
-#             self.dropout = nn.Dropout(dropout)
+        self.n_orig_features = n_features
+        self.d_embedding = d_embedding
+                
+        self.unique_orders = sorted(list(set(g['order'] for g in self.feature_map)))
+        self.freqs_per_order = nn.ParameterList()
+        self.mlps = nn.ModuleList()
 
-#         def forward(self, x: Tensor) -> Tensor:
-#             return self.dropout(self.activation(self.linear(x)))
+        for order in self.unique_orders:
+            n_freq_for_order = max(1, int(n_frequencies * (n_freq_decay_rate ** order)))
+            std_for_order = frequency_scale * (std_decay_rate ** order)
+            
+            ple_dims_for_order = sum(g['size'] for g in self.feature_map if g['order'] == order)
 
-#     Head = nn.Linear
+            order_freqs = torch.normal(mean=0.0, std=std_for_order, size=(ple_dims_for_order, n_freq_for_order))
+            self.freqs_per_order.append(nn.Parameter(order_freqs, requires_grad=True))
 
-#     def __init__(
-#         self,
-#         *,
-#         d_in: int,
-#         d_out: Optional[int],
-#         n_blocks: int,
-#         d_layer: int,
-#         activation: str,
-#         dropout: float,
-#     ) -> None:
-#         assert n_blocks > 0
-#         super().__init__()
+            dims_per_feature = sum(g['size'] for g in self.feature_map if g['orig_idx'] == 0 and g['order'] == order)
+            mlp_in_dim = dims_per_feature * n_freq_for_order * 2
+            self.mlps.append(nn.Sequential(
+                nn.Linear(mlp_in_dim, self.d_embedding),
+                nn.ReLU()
+            ))
 
-#         self.blocks = nn.Sequential(
-#             *[
-#                 MLP.Block(
-#                     d_in=d_layer if block_i else d_in,
-#                     d_out=d_layer,
-#                     bias=True,
-#                     activation=activation,
-#                     dropout=dropout,
-#                 )
-#                 for block_i in range(n_blocks)
-#             ]
-#         )
-#         self.head = None if d_out is None else MLP.Head(d_layer, d_out)
+        self.dim_to_orig_idx_map = self._create_dim_map()
+        self.order_gather_maps = self._create_gather_maps()
+        projector_in_dim = len(self.unique_orders) * self.d_embedding
+        self.projector = nn.Linear(projector_in_dim, self.d_embedding)
 
-#     @property
-#     def d_out(self) -> int:
-#         return (
-#             self.blocks[-1].linear.out_features  # type: ignore[code]
-#             if self.head is None
-#             else self.head.out_features
-#         )
+    def _create_dim_map(self):
+        dim_to_orig_idx = [g['orig_idx'] for g in self.feature_map for _ in range(g['size'])]
+        return torch.tensor(dim_to_orig_idx, dtype=torch.long)
+        
+    def _create_gather_maps(self):
+        maps = {order: {feat_idx: [] for feat_idx in range(self.n_orig_features)} for order in self.unique_orders}
+        for g in self.feature_map:
+            maps[g['order']][g['orig_idx']].append(slice(g['new_start'], g['new_start'] + g['size']))
+        return maps
 
-#     def forward(self, x: Tensor) -> Tensor:
-#         x = self.blocks(x)
-#         if self.head is not None:
-#             x = self.head(x)
-#         return x
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x_ple = x[:, :self.ple_dims]
+        x_orig_zscored = x[:, self.orig_val_start_dim:]
+
+        all_order_outputs = []
+        for i, order in enumerate(self.unique_orders):
+            mlp = self.mlps[i]
+            order_freqs = self.freqs_per_order[i]
+            gather_map = self.order_gather_maps[order]
+
+            order_ple_slices = [s for f_map in gather_map.values() for s in f_map]
+            if not order_ple_slices: continue
+            
+            order_ple_indices = torch.cat([torch.arange(s.start, s.stop) for s in order_ple_slices])
+            
+            order_ple_gates = x_ple[:, order_ple_indices]
+            order_orig_expanded = x_orig_zscored[:, self.dim_to_orig_idx_map[order_ple_indices]]
+
+            raw_fourier = 2 * math.pi * order_freqs[None] * order_orig_expanded[..., None]
+            fourier_features = torch.cat([torch.cos(raw_fourier), torch.sin(raw_fourier)], dim=-1)
+            
+            gated_features_order = order_ple_gates[..., None] * fourier_features
+            
+            order_outputs = []
+            offset = 0
+            for feat_idx in range(self.n_orig_features):
+                slices = gather_map.get(feat_idx, [])
+                if not slices:
+                    order_outputs.append(x.new_zeros(x.size(0), self.d_embedding))
+                    continue
+
+                num_dims_for_feat = sum(s.stop - s.start for s in slices)
+                chunk = gated_features_order[:, offset : offset + num_dims_for_feat, :]
+                offset += num_dims_for_feat
+                
+                order_outputs.append(mlp(chunk.flatten(start_dim=1)))
+            all_order_outputs.append(torch.stack(order_outputs, dim=1))
+
+        concatenated = torch.cat(all_order_outputs, dim=-1)
+        projected = self.projector(concatenated)
+        
+        return projected.flatten(start_dim=1)
+
 
 class MLP(nn.Module):
     def __init__(
@@ -342,6 +382,7 @@ _CUSTOM_MODULES = {
         PLREmbeddings,
         MLP,
         PBLDEmbeddings,
+        GroupPLREmbeddings
     ]
 }
 
@@ -374,3 +415,4 @@ def make_module1(type: str, *args, **kwargs) -> nn.Module:
     if Module is None:
         Module = _CUSTOM_MODULES[type]
     return Module(*args, **kwargs)
+

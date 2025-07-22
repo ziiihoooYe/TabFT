@@ -3,6 +3,8 @@
         "model": {
             "d_model": [
                 "categorical",
+                16,
+                32,
                 64,
                 128,
                 256,
@@ -48,9 +50,18 @@
                 false
             ],
             "n_freq": [
-                "int",
-                0,
-                8
+                "categorical",
+                1,
+                4,
+                16,
+                64,
+                256
+            ],
+            "freq_scale": [
+                "?loguniform",
+                1,
+                0.1,
+                10.0
             ]
         },
         "training": {

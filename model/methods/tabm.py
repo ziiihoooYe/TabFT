@@ -46,6 +46,7 @@ class TabMMethod(Method):
             n_num_features=self.d_in,
             cat_cardinalities=self.categories,
             n_classes=self.d_out,
+            shared_state=getattr(self.data_transform_pipeline, 'shared_state', None),
             **model_config
         ).to(self.args.device)
         if self.args.use_float:

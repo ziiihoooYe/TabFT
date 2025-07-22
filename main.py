@@ -57,9 +57,10 @@ def main():
             pre_transformed = True
         
         ### ----------- Tuning Hyperparameters ------------
+        is_loaded = False
         if args.load_tune_config:
-            args = load_tuned_config(args, logger)
-        if args.tune:
+            args, is_loaded = load_tuned_config(args, logger)
+        if args.tune and not is_loaded:
             args = tune_hyper_parameters(args,opt_space,train_val_data,info,pipeline,pre_transformed)
         
         if not pre_transformed:
@@ -69,6 +70,7 @@ def main():
 
             N_test, C_test, y_test = pipeline.transform(*test_data)
             test_data = (N_test, C_test, y_test)
+            pre_transformed = True
 
 
         ### ----------- Training and Testing ------------

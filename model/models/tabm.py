@@ -4,7 +4,7 @@ import typing as ty
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Any, Literal
+from typing import Any, Literal, Dict
 from torch import Tensor
 import delu
 from model.lib.tabm.tabm import _init_scaling_by_sections
@@ -39,9 +39,12 @@ class TabM(nn.Module):
             'tabm-naive'
         ],
         k: None | int = None,
+        shared_state: None | list[Dict] = None,
     ) -> None:
         # >>> Validate arguments.
         assert n_num_features >= 0
+        if shared_state is not None:
+            n_num_features = max(list(g['orig_idx'] for g in shared_state['feature_map_']))+1
         assert n_num_features or cat_cardinalities
         if arch_type == 'vanilla':
             assert k is None
@@ -68,7 +71,7 @@ class TabM(nn.Module):
 
         else:
             self.num_module = make_module(
-                num_embeddings, n_features=n_num_features
+                num_embeddings, n_features=n_num_features, shared_state=shared_state
             )
             d_num = n_num_features * num_embeddings['d_embedding']
             scaling_init_sections.extend(

@@ -29,6 +29,7 @@
 # regression dataset: [cpu_small]
 # classification dataset: [bank]
 # --------------------------------------------------------------------------------
+
 dataset:
   # - ASP-POTASSCO-classification
   # - Amazon_employee_access
@@ -44,7 +45,7 @@ dataset:
   # - FOREX_audjpy-day-High
   # - FOREX_audsgd-hour-High
   # - Fitness_Club_c
-  - IEEE80211aa-GATS
+  # - IEEE80211aa-GATS
   # - Intersectional-Bias-Assessment
   # - Job_Profitability
   # - Kaggle_bike_sharing_demand_challange
@@ -52,7 +53,7 @@ dataset:
   # - NHANES_age_prediction
   # - Shop_Customer_Data
   # - VulNoneVul
-  # - Waterstress
+  - Waterstress
   # - htru
   # - ibm-employee-performance
   # - internet_firewall
@@ -105,17 +106,22 @@ transform_list:
 
   # - uniple:
   #     n_bins: 1000000
-  # - stretch:
-  #     beta: 0.8
-  - stretch_opt: 
-      lambda_: 0.75
+  # - hierarchical_ple:
+  #     bin_order: 0
+  # - stretch_opt:
+  #     lambda_: 1.0
+  #     n_bins: 128
 
   # - num_cdf: 
   #     cdf_type: uniform # uniform, gaussian, dynamic
   #     cache_path: fit_cache
   #     n_components: 32
   #     binning_method: quantile # quantile, hdbscan, hierarchical
+  - norm:
+      policy: standard
 
+  - rbf_eigenfuntion:
+      output_dim: 16
 
   - norm:
       policy: standard
@@ -137,21 +143,22 @@ model_type:
   # - xgboost
   # - lightgbm
   - mlp
-  - resnet
+  # - resnet
   # - mlp_plr
   # - realmlp
   # - xgboost
   # - catboost
   # - tabpfn
   # - PFN-v2
+  # - tabm
   # - tab
 
 model_path: results_model/default_path
 seed: 2025
 seed_num: 15
-gpu: 0
+gpu: 6
 tune: true
-tune_transform: true
+tune_transform: false
 tune_param: true
-load_tune_config: true
-n_trials: 10
+load_tune_config: false
+n_trials: 100

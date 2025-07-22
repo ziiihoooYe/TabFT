@@ -1,9 +1,18 @@
 {
     "uniple": {
         "n_bins": [
-            "sample_num_int",
+            "?categorical",
             1,
-            "$n_num_features"
+            2,
+            4,
+            8,
+            16,
+            32,
+            64,
+            128,
+            256,
+            512,
+            100000
         ]
     }
 }

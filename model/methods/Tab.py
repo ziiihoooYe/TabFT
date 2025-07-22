@@ -2,17 +2,13 @@ import os.path as osp
 import time
 import math
 import numpy as np
-from sklearn.preprocessing import KBinsDiscretizer
-from sklearn.metrics import mutual_info_score
 from model.methods.base import Method
 import torch
 from tqdm import tqdm
-import torch.nn.functional as F
 from model.lib.data import Dataset
 from model.utils import (
     Averager
 )
-from model.lib.data import data_loader_process
 
 class TabMethod(Method):
     def __init__(self, args, is_regression):
@@ -21,7 +17,7 @@ class TabMethod(Method):
     def construct_model(self, model_config = None):
         if model_config is None:
             model_config = self.args.config['model']
-        self.feature_map = getattr(self, "feature_map_", None)
+        self.feature_map = getattr(self, "feature_map_", None) or self.data_transform_pipeline.shared_state.get('feature_map_', None)
         self.num_groups  = len(self.feature_map) if self.feature_map else self.n_num_features
 
         from model.models.Tab import Tab
@@ -57,7 +53,9 @@ class TabMethod(Method):
         if config is not None:
             self.reset_stats_withconfig(config)
         self.data_format(is_train = True)
+
         self.feature_map_ = self.shared_state.get('feature_map_', None)
+
         # Pre‑compute column‑level MI matrix (used by MI pre‑training)
         self.n_num_features = N['train'].shape[1] if N is not None else self.n_num_features
         self.construct_model()
@@ -73,10 +71,16 @@ class TabMethod(Method):
         # supervised learning
         time_cost = 0
         max_epoch = self.args.config['training'].get('max_epoch', None) or self.args.max_epoch
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            self.optimizer,
+            T_max=max_epoch,
+            eta_min=1e-6
+        )
         for epoch in range(max_epoch):
             tic = time.time()
             self.train_epoch(epoch)
             self.validate(epoch)
+            self.scheduler.step()
             elapsed = time.time() - tic
             time_cost += elapsed
             # print(f'Epoch: {epoch}, Time cost: {elapsed}')

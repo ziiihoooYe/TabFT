@@ -1,4 +1,3 @@
-from __future__ import annotations
 import os
 import yaml
 import shutil
@@ -519,7 +518,7 @@ def load_tuned_config(args, logger):
     
     if not osp.exists(tune_config_path):
         logger.info(f"Tuned config file {tune_config_path} does not exist. Skipping loading.")
-        return args
+        return args, False
 
     
     with open(tune_config_path, 'r') as f:
@@ -543,7 +542,7 @@ def load_tuned_config(args, logger):
             }
 
     logger.info("Successfully merged tuned config into args.config")
-    return args
+    return args, True
 
 
 def show_results(
@@ -742,6 +741,8 @@ def tune_hyper_parameters(
         # init method
         method = get_method(trial_args.model_type)(trial_args, info['task_type']=='regression')
         method.pre_transformed = pre_transformed
+        if pipeline is not None:
+            method.data_transform_pipeline = copy.deepcopy(pipeline)
 
         # fit and eval
         method.fit(copy.deepcopy(train_val_data), info, train=True, config=config, tune=True)

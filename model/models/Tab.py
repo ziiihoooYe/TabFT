@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from torch.nn import TransformerEncoder
 
 param_list = ["d_model", "d_ff", "activation", "dropout", "num_enc_layers", "n_head",
-              "attention_dropout", "pre_norm", "n_freq", "pretrain", "residual_dropout"]
+              "attention_dropout", "pre_norm", "n_freq", "pretrain", "residual_dropout", "freq_scale"]
 
 class Tab(nn.Module):
     """
@@ -23,19 +23,25 @@ class Tab(nn.Module):
                 setattr(self, param, None)
         
         # Initialize tokenizer
+        # self.tokenizer = PiecewisePLRTokenizer(
+        #     categories=categories,
+        #     d_model=self.d_model,
+        #     n_freq=self.n_freq or 0,
+        #     feature_map=feature_map,
+        #     freq_scale=self.freq_scale
+        # )
+        self.tokenizer = PLRTokenizer(
+            num_continuous=num_continuous,
+            categories=categories,
+            d_model=self.d_model,
+            n_freq=self.n_freq or 0
+        )
         # self.tokenizer = Tokenizer(
         #     num_continuous=num_continuous,
         #     categories=categories,
         #     d_model=self.d_model,
         #     feature_map=feature_map
         # )
-        self.tokenizer = PLRTokenizer(
-            num_continuous=num_continuous,
-            categories=categories,
-            d_model=self.d_model,
-            feature_map=feature_map,
-            n_freq=self.n_freq or 0
-        )
 
         # Initialize encoder
         self.encoder = TabEncoder(
@@ -202,164 +208,226 @@ class Tokenizer(nn.Module):
 class PLRTokenizer(nn.Module):
     def __init__(
         self,
-        num_continuous,
-        categories,
-        d_model,
-        feature_map=None,
-        n_freq: int = 0          # ← 0 means “no sin‑cos augmentation”, use relu activation
+        num_continuous: int,
+        categories: list,
+        d_model: int,
+        n_freq: int = 32,
     ):
-        super(PLRTokenizer, self).__init__()
-
-        self.num_continuous = num_continuous
+        super().__init__()
+        assert n_freq > 0
+        self.n_features = num_continuous
+        self.n_freq = n_freq
         self.d_model = d_model
 
-        # --- group information (expanded features) ---
-        # feature map
-        if feature_map is not None:
-            self.group_sizes = [m["size"] for m in feature_map]   # per‑feature expanded dimension
-        else:
-            self.group_sizes = [1] * num_continuous
-        # group num of num feature / cat feature
-        self.num_groups = len(self.group_sizes)
-        self.cat_groups = int(len(categories))
+        # initial_freqs = torch.logspace(0.0, 1.0, n_freq) * math.pi
+        initial_freqs = torch.rand(n_freq) * math.pi
+        self.freqs = nn.Parameter(initial_freqs.unsqueeze(0).expand(num_continuous, -1))
 
-        # --- numeric embedding ---
-        # column embedding
-        self.lut_num = nn.Embedding(self.num_groups, d_model)
-        # nn_init.kaiming_uniform_(self.lut_num.weight, a=math.sqrt(5))
-        with torch.no_grad():
-            self.lut_num.weight.zero_()
-        # Linear per column:  (group_size → d_model)
+        # The shared projection layer is now explicitly unbiased.
+        self.projection = nn.Linear(2 * n_freq, d_model, bias=False)
+        nn_init.kaiming_uniform_(self.projection.weight, a=math.sqrt(5))
 
-        self.num_embeddings = nn.ModuleList([nn.Linear(sz, d_model, bias=False) for sz in self.group_sizes])
-        for lin in self.num_embeddings: nn_init.kaiming_uniform_(lin.weight, a=math.sqrt(5))
-        # num id
-        self.register_buffer("num_ids", torch.arange(self.num_groups, dtype=torch.long))
+        # The embedding layer now acts as the sole, per-feature bias.
+        self.lut_num = nn.Embedding(num_continuous, d_model)
+        nn_init.kaiming_uniform_(self.lut_num.weight, a=math.sqrt(5))
+        self.register_buffer("num_ids", torch.arange(num_continuous, dtype=torch.long))
+        
+        self.cat_groups = len(categories) if categories else 0
+        if self.cat_groups > 0:
+            self.lut_cat = nn.Embedding(self.cat_groups, d_model)
+            nn_init.kaiming_uniform_(self.lut_cat.weight, a=math.sqrt(5))
+            
+            categories_with_unk = [c + 1 for c in categories]
+            n_cat_emb = sum(categories_with_unk)
+            self.cat_embeddings = nn.Embedding(n_cat_emb, d_model)
+            nn_init.kaiming_uniform_(self.cat_embeddings.weight, a=math.sqrt(5))
+            
+            self.register_buffer("category_offsets",
+                                 torch.tensor([0] + categories_with_unk[:-1], dtype=torch.long).cumsum(0))
+            with torch.no_grad():
+                self.cat_embeddings.weight[self.category_offsets] = 0
+            self.register_buffer("cat_ids", torch.arange(self.cat_groups, dtype=torch.long))
 
-        # --- secondary numeric embedding ---
-        self.n_freq = n_freq
-        if self.n_freq > 0:
-            # Learnable ω and φ for every numeric column
-            self.register_parameter(
-                "omega", nn.Parameter(torch.rand(self.num_groups, 1, self.n_freq) * math.pi)
-            )  # (G, 1, F)
-            self.register_parameter(
-                "phi", nn.Parameter(torch.zeros(self.num_groups, 1, self.n_freq))
-            )   # (G, 1, F)
-            self.num_embeddings2 = nn.ModuleList(
-                [
-                    nn.Linear(d_model * 2 * self.n_freq, d_model, bias=False)
-                    for _ in self.group_sizes
-                ]
-            )
-        else:
-            self.num_embeddings2 = nn.ModuleList(
-                [
-                    nn.Linear(d_model, d_model, bias=False)
-                    for _ in self.group_sizes
-                ]
-            )
-        for lin in self.num_embeddings2:
-            nn_init.kaiming_uniform_(lin.weight, a=math.sqrt(5))
-
-        # --- category embedding ---
-        # column embedding
-        self.lut_cat = nn.Embedding(self.cat_groups, d_model)
-        nn_init.kaiming_uniform_(self.lut_cat.weight, a=math.sqrt(5))
-        # with torch.no_grad():
-        #     self.lut_cat.weight.zero_() 
-        # categorical embedding (reserve UNK = index 0 for every feature)
-        categories_with_unk = [c + 1 for c in categories]          # +1 for UNK
-        num_cat_embeddings = sum(categories_with_unk)
-        if num_cat_embeddings == 0:                                # no categorical features
-            num_cat_embeddings = 1                                 # dummy UNK slot
-        self.cat_embeddings = nn.Embedding(num_cat_embeddings, d_model)
-        nn_init.kaiming_uniform_(self.cat_embeddings.weight, a=math.sqrt(5))
-        # offsets for individual categorical features
-        self.register_buffer("category_offsets", torch.tensor([0] + categories_with_unk[:-1]).cumsum(0))
-        # zero‑initialize every UNK row so unknown categories contribute no signal
-        with torch.no_grad():
-            self.cat_embeddings.weight[self.category_offsets] = 0
-        # cat id
-        self.register_buffer("cat_ids", torch.arange(self.cat_groups, dtype=torch.long))
-
-        # cls token
         self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
-        nn_init.kaiming_uniform_(self.cls_token, a=math.sqrt(5))        
+        nn_init.kaiming_uniform_(self.cls_token, a=math.sqrt(5))
 
-    def forward(self, x_cont, x_categ, mask=None):
-        """
-        :param x_cont: (batch_size, num_continuous)
-        :param x_categ: (batch_size, num_categories)
-        If n_freq > 0, numeric columns are augmented with learnable sin/cos embeddings.
-        """
-        if x_cont is not None:
-            x_cont = x_cont.float()
-            cont_embeds = []
-            offset = 0
+    def forward(self, x_cont, x_categ=None, mask=None):
+        if x_cont is None:
+            return None
+            
+        B, num_features = x_cont.shape
+        x_cont = x_cont.float()
 
-            for i, size in enumerate(self.group_sizes):
-                seg = x_cont[:, offset:offset + size]          # (B, size)
-                offset += size
-                # optional sin‑cos embedding
-                if self.n_freq > 0: 
-                    B = seg.size(0)
+        phase = x_cont.unsqueeze(-1) * self.freqs
+        
+        sin_features = torch.sin(phase)
+        cos_features = torch.cos(phase)
+        
+        modulated_features = torch.cat([sin_features, cos_features], dim=-1)
+        
+        x_cont_emb = self.projection(modulated_features) + self.lut_num(self.num_ids)
+        x_cont_emb = F.relu(x_cont_emb)
 
-                    # 1) embedding1 * seg
-                    base = self.num_embeddings[i](seg)                         # (B, d_model) 
-                    
-                    # 2) sin / cos transform
-                    base_exp = base.unsqueeze(-1)                              # (B, d_model, 1)
-                    sin = torch.sin(base_exp * self.omega[i] + self.phi[i])    # (B, d_model, F)
-                    cos = torch.cos(base_exp * self.omega[i] + self.phi[i])    # (B, d_model, F)
-                    trig = torch.cat((sin, cos), dim=-1)                       # (B, d_model, 2F)
-                    emb = trig.reshape(B, -1)                                 # (B, d_model * 2F)
-
-                    # 3) embedding2 * trig
-                    emb = self.num_embeddings2[i](emb)                      # (B, d_model) 
-                        
-                else:
-                    # 1) embedding1 * seg
-                    emb = self.num_embeddings[i](seg)
-                    
-                    # 2) embedding2 * relu(embedding1 * seg)
-                    emb = self.num_embeddings2[i](F.relu(emb))  # (B, d_model)
-                cont_embeds.append(emb)
-
-            # num column embedding
-            x_cont_emb = torch.stack(cont_embeds, dim=1)       # (B, num_groups, d_model)
-            channel_embeddings = self.lut_num(self.num_ids.to(x_cont.device))  # (num_groups, d_model)
-            x_cont_emb = x_cont_emb + channel_embeddings
-
-        if x_categ is not None:
-            x_categ = x_categ.long()
-            cat_embeds = []
-            for i in range(x_categ.shape[-1]):
-                # shift by +1 so that unknown (‑1) → 0, valid 0..c‑1 → 1..c
-                idx = x_categ[:, i].long() + 1
-                idx = idx + self.category_offsets[i]              # global embedding index
-                emb_i = self.cat_embeddings(idx)
-                cat_embeds.append(emb_i)
-            x_categ_emb = torch.stack(cat_embeds, dim=1)          # (B, n_cat, d_model)
-            channel_embeddings = self.lut_cat(self.cat_ids.to(x_categ.device))
-            x_categ_emb = x_categ_emb + channel_embeddings
-
-        if x_cont is not None and x_categ is not None:
-            x_emb = torch.cat([x_cont_emb, x_categ_emb], dim=-2)
-        elif x_cont is not None:
-            x_emb = x_cont_emb
-        elif x_categ is not None:
-            x_emb = x_categ_emb
+        if x_categ is not None and self.cat_groups > 0:
+            indices = x_categ.long() + 1 + self.category_offsets.to(x_categ.device)            
+            x_categ_emb = self.cat_embeddings(indices) 
+            x_categ_emb = x_categ_emb + self.lut_cat(self.cat_ids)
         else:
-            raise ValueError("At least one of x_cont or x_categ must be provided")
+            x_categ_emb = None
 
-        if mask is not None:                         # mask: (B, L) → True 表示被遮
-            mask_token = torch.zeros_like(self.cls_token).expand(x_emb.size(0), 1, -1).to(x_emb.device)
+        if x_categ_emb is not None:
+            x_emb = torch.cat([x_cont_emb, x_categ_emb], dim=1)
+        else:
+            x_emb = x_cont_emb
+
+        if mask is not None:
+            mask_token = torch.zeros_like(self.cls_token).expand(B, 1, -1)
             x_emb = torch.where(mask.unsqueeze(-1), mask_token, x_emb)
 
-        x_emb = torch.cat((self.cls_token.expand(x_emb.shape[0], -1, -1), x_emb), dim=1)
-
+        x_emb = torch.cat((self.cls_token.expand(B, -1, -1), x_emb), dim=1)
         return x_emb
+
+
+from typing import List, Dict, Tuple
+class PiecewisePLRTokenizer(nn.Module):
+    def __init__(
+        self,
+        feature_map: List[Dict],
+        categories: list,
+        d_model: int,
+        n_freq: int = 4,
+        freq_scale: float = 1.0,
+    ):
+        super().__init__()
+        assert n_freq > 0
+        assert feature_map, "feature_map cannot be empty."
+
+        self.feature_map = feature_map
+        self.num_continuous_orig = len(feature_map)
+        
+        self.max_ple_size = max(meta['size'] for meta in feature_map)
+        
+        last_meta = feature_map[-1]
+        self.n_flat_dims_in = last_meta['new_start'] + last_meta['size']
+
+        self.n_freq = n_freq
+        self.d_model = d_model
+
+        initial_freqs = torch.rand(self.num_continuous_orig, self.max_ple_size, n_freq) * math.pi * freq_scale
+        self.freqs = nn.Parameter(initial_freqs)
+        
+        projection_in_dim = 2 * self.max_ple_size * n_freq
+        self.projection = nn.Linear(projection_in_dim, d_model, bias=False)
+        nn_init.kaiming_uniform_(self.projection.weight, a=math.sqrt(5))
+
+        self.lut_num = nn.Embedding(self.num_continuous_orig, d_model)
+        nn_init.kaiming_uniform_(self.lut_num.weight, a=math.sqrt(5))
+        self.register_buffer("num_ids", torch.arange(self.num_continuous_orig, dtype=torch.long))
+
+        gather_indices = torch.full((self.num_continuous_orig, self.max_ple_size), self.n_flat_dims_in, dtype=torch.long)
+        
+        padding_mask = torch.ones(self.num_continuous_orig, self.max_ple_size, dtype=torch.bool)
+
+        for i, meta in enumerate(self.feature_map):
+            start, size = meta['new_start'], meta['size']
+            indices = torch.arange(start, start + size)
+            gather_indices[i, :size] = indices
+            padding_mask[i, :size] = False
+
+        self.register_buffer("gather_indices", gather_indices, persistent=False)
+        self.register_buffer("precomputed_mask", padding_mask, persistent=False)
+
+        self.cat_groups = len(categories) if categories else 0
+        if self.cat_groups > 0:
+            self.lut_cat = nn.Embedding(self.cat_groups, d_model)
+            nn_init.kaiming_uniform_(self.lut_cat.weight, a=math.sqrt(5))
+            
+            categories_with_unk = [c + 1 for c in categories]
+            n_cat_emb = sum(categories_with_unk)
+            self.cat_embeddings = nn.Embedding(n_cat_emb, d_model)
+            nn_init.kaiming_uniform_(self.cat_embeddings.weight, a=math.sqrt(5))
+            
+            self.register_buffer("category_offsets",
+                                torch.tensor([0] + categories_with_unk[:-1], dtype=torch.long).cumsum(0))
+            with torch.no_grad():
+                self.cat_embeddings.weight[self.category_offsets] = 0
+            self.register_buffer("cat_ids", torch.arange(self.cat_groups, dtype=torch.long))
+
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
+        nn_init.kaiming_uniform_(self.cls_token, a=math.sqrt(5))
+
+    def _prepare_and_pad(self, x_cont: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        向量化版本: 使用预计算的索引和掩码来代替 for 循环。
+        """
+        B, _ = x_cont.shape
+
+        # --- 优化点 2: 使用 F.pad 和高级索引 ---
+        # 在 x_cont 的最后一个维度上填充一个0。这个0将作为所有填充位置的值。
+        # self.gather_indices 中指向填充位置的索引 (self.n_flat_dims_in) 现在会安全地指向这个0。
+        x_cont_padded_for_gather = F.pad(x_cont, (0, 1), 'constant', 0)
+        
+        # 使用高级索引一次性完成所有数据的提取和重排。
+        # x_cont_padded_for_gather 的 shape 是 (B, D_flat+1)
+        # self.gather_indices 的 shape 是 (N, S_max)
+        # 结果 x_padded 的 shape 是 (B, N, S_max), 这正是我们想要的。
+        x_padded = x_cont_padded_for_gather[:, self.gather_indices]
+        
+        # 直接扩展预计算的掩码以匹配批次大小
+        padding_mask = self.precomputed_mask.expand(B, -1, -1)
+            
+        return x_padded, padding_mask
+
+    def forward(self, x_cont: torch.Tensor, x_categ: torch.Tensor = None) -> torch.Tensor:
+        """
+        处理来自HierarchicalPleTransform的扁平化输出。
+
+        Args:
+            x_cont (torch.Tensor): 扁平化的PLE特征。Shape: (B, D_flat)
+            x_categ (torch.Tensor, optional): 分类特征。
+        
+        Returns:
+            torch.Tensor: 最终的Token嵌入。Shape: (B, 1 + N_orig + N_cat, d_model)
+        """
+        B, D_flat = x_cont.shape
+        if D_flat != self.n_flat_dims_in:
+            raise ValueError(f"Input has {D_flat} features, but tokenizer was built for {self.n_flat_dims_in} flat features.")
+
+        # --- 1. 内部进行解包和填充 (现在是高效的向量化操作) ---
+        x_padded, padding_mask = self._prepare_and_pad(x_cont)
+        # x_padded Shape: (B, N, S_max)
+        # padding_mask Shape: (B, N, S_max)
+
+        # --- 后续步骤与原版相同，它们已经是高效的了 ---
+        
+        # --- 2. 应用频率编码 ---
+        phase = x_padded.unsqueeze(-1) * self.freqs
+        features = torch.cat([torch.sin(phase), torch.cos(phase)], dim=-1)
+        
+        # --- 3. 应用掩码 ---
+        features.masked_fill_(padding_mask.unsqueeze(-1), 0.0)
+
+        # --- 4. 扁平化特征组并投影 ---
+        flattened_features = features.view(B, self.num_continuous_orig, -1)
+        x_cont_emb = self.projection(flattened_features)
+        
+        # --- 5. 添加共享偏置 ---
+        bias = self.lut_num(self.num_ids)
+        x_cont_emb = x_cont_emb + bias
+        x_cont_emb = F.relu(x_cont_emb)
+
+        # --- 6. 整合并添加CLS Token ---
+        x_categ_emb = None # Placeholder for categorical features
+        if x_categ_emb is not None:
+            x_emb = torch.cat([x_cont_emb, x_categ_emb], dim=1)
+        else:
+            x_emb = x_cont_emb
+
+        x_emb = torch.cat((self.cls_token.expand(B, -1, -1), x_emb), dim=1)
+        return x_emb
+
+
+
 
 
 ### ---------------------------------------------------------------------------- ###
@@ -403,8 +471,9 @@ class TabEncoder(nn.Module):
         ])
 
     def forward(self, x_emb, attn_mask=None):
-        for layer in self.encoder:
-            x_emb, _ = layer(x_emb, attn_mask)
+        for i, layer in enumerate(self.encoder):
+            is_last_layer = i == len(self.encoder) - 1
+            x_emb, _ = layer(x_emb, attn_mask, is_last_layer=is_last_layer)
         return x_emb
 
 
@@ -433,13 +502,14 @@ class EncoderLayer(nn.Module):
         self.activation = F.relu if activation == "relu" else reglu if activation == "reglu" else geglu
         self.pre_norm = pre_norm
 
-    def forward(self, x, attn_mask=None):
+    def forward(self, x, attn_mask=None, is_last_layer=False):
 
         # === Pre-Norm Encoder Layer ===
         if self.pre_norm:
             # === Multi‑Head Attention Block (Pre‑Norm) ===
+            q = self.norm1(x)[:, :1] if is_last_layer else self.norm1(x)
             new_x, attn = self.attention(
-                self.norm1(x),
+                q,
                 self.norm1(x),
                 self.norm1(x),
                 attn_mask=attn_mask
@@ -453,10 +523,11 @@ class EncoderLayer(nn.Module):
             y = self.linear2(y)
             x = x + self.residual_dropout(y)
         else:
-        # === Post-Norm Encoder Layer ===
+            # === Post-Norm Encoder Layer ===
             # === Multi‑Head Attention Block (Post‑Norm) ===
+            q = x[:, :1] if is_last_layer else x
             new_x, attn = self.attention(
-                x,             # queries
+                q,             # queries
                 x,             # keys
                 x,             # values
                 attn_mask=attn_mask
@@ -471,6 +542,8 @@ class EncoderLayer(nn.Module):
             # Add & Norm
             x = self.norm2(x + self.residual_dropout(y))
 
+        if is_last_layer:
+            x = x[:, :1]
         return x, attn
 
 
@@ -488,6 +561,12 @@ class AttentionLayer(nn.Module):
         self.value_projection = nn.Linear(d_model, d_values * n_heads)
         self.out_projection = nn.Linear(d_values * n_heads, d_model)
         self.n_heads = n_heads
+
+        for proj in (self.query_projection,
+                     self.key_projection,
+                     self.value_projection,
+                     self.out_projection):
+            nn_init.zeros_(proj.bias)
 
     def forward(self, queries, keys, values, attn_mask):
         B, L, _ = queries.shape
