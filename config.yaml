@@ -87,7 +87,7 @@ transform_list:
   #     cdf_type: uniform # uniform, gaussian, dynamic
   #     cache_path: fit_cache
   #     n_components: 32
-  #     binning_method: quantile # quantile, hdbscan, hierarchicalVkkk
+  #     binning_method: quantile # quantile, hdbscan, hierarchical
   
   # ----------------------------------------------------------------
   # categorical encoding process
@@ -120,11 +120,11 @@ transform_list:
   - norm:
       policy: standard
 
-  - rbf_eigenfuntion:
+  - rbf_marginal:
       output_dim: 16
 
-  - norm:
-      policy: standard
+  # - norm:
+  #     policy: standard
   
   # - jointscale:
   #     scale_scheme: score
@@ -156,9 +156,8 @@ model_type:
 model_path: results_model/default_path
 seed: 2025
 seed_num: 15
-gpu: 6
+gpu: 2
 tune: true
 tune_transform: false
-tune_param: true
 load_tune_config: false
 n_trials: 100

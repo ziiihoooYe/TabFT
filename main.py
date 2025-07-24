@@ -43,7 +43,7 @@ def main():
         train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
 
         # ---------- Pre‑process the dataset once ----------
-        need_pretransform = not (getattr(args, "tune_transform", False) and args.tune)
+        need_pretransform = not (getattr(args, "tune_transform", False) and args.tune) # only if tuning transform, do not pre-transform
         pipeline = None
         pre_transformed = False
 
@@ -63,6 +63,7 @@ def main():
         if args.tune and not is_loaded:
             args = tune_hyper_parameters(args,opt_space,train_val_data,info,pipeline,pre_transformed)
         
+        # if not pre_transformed, we still need to transform the data here
         if not pre_transformed:
             pipeline = DataTransformPipeline(args.transform_list, args, info['task_type']=='regression')
             N_trainval, C_trainval, y_trainval = pipeline.fit_transform(*train_val_data)
@@ -74,15 +75,15 @@ def main():
 
 
         ### ----------- Training and Testing ------------
-        for seed in tqdm(range(args.seed, args.seed + args.seed_num)):
-            # get unmodified dataset 
-            # train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
-            
+        for seed in tqdm(range(args.seed, args.seed + args.seed_num)): 
+
             args.seed = seed    # update seed  
             set_seeds(args.seed)
+
             method = get_method(args.model_type)(args, info['task_type'] == 'regression')
             method.data_transform_pipeline = copy.deepcopy(pipeline)
             method.pre_transformed = pre_transformed
+
             time_cost = method.fit(train_val_data, info)    
             vl, vres, metric_name, predict_logits = method.predict(test_data, info, model_name=args.evaluate_option)
 

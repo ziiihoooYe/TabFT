@@ -1,9 +1,11 @@
+import torch.nn as nn
 import abc
 import torch
 import numpy as np
 import time
 import os.path as osp
 from tqdm import tqdm
+from copy import deepcopy
 import sklearn.metrics as skm
 
 from model.utils import (
@@ -111,7 +113,7 @@ class Method(object, metaclass=abc.ABCMeta):
                 self.d_out = 1
             else:
                 self.d_out = len(np.unique(self.y['train']))
-            self.d_in = 0 if self.N is None else self.N['train'].shape[1]
+            self.d_in = 0 if self.N is None else self.shared_state.get('d_in', None) or self.N['train'].shape[1]
             self.categories = get_categories(self.C)
             self.N, self.C, self.y, self.train_loader, self.val_loader, self.criterion = data_loader_process(self.is_regression, (self.N, self.C), self.y, self.y_info, self.args.device, self.args.batch_size, is_train = True,is_float=self.args.use_float)
         else:
@@ -154,19 +156,20 @@ class Method(object, metaclass=abc.ABCMeta):
         self.n_num_features = N['train'].shape[1] if N is not None else self.n_num_features
         self.construct_model()
  
-        params = self.model.parameters()
-        # if self.shared_state.get('encoders', None) is not None:
-        #     params = list(self.model.parameters()) + [ {'params': encoder.model.parameters()} for encoder in self.shared_state['encoders'] ]
-        # else:
-        #     params = self.model.parameters()
-        
+        # params = self.model.parameters()
+        if self.shared_state.get('encoder', None) is not None:
+            self.encoder = deepcopy(self.shared_state['encoder']) 
+            params = [{'params': self.model.parameters()}, {'params': self.encoder.parameters()}]
+        else:
+            from transform.context_transform import IdentityEncoder
+            self.encoder = IdentityEncoder()
+            params = [{'params': self.model.parameters()}]
 
         self.optimizer = torch.optim.AdamW(
             params,
             lr=self.args.config['training']['lr'], 
             weight_decay=self.args.config['training']['weight_decay']
         )
-        # if not train, skip the training process. such as load the checkpoint and directly predict the results
         if not train:
             return
 
@@ -177,7 +180,6 @@ class Method(object, metaclass=abc.ABCMeta):
             self.validate(epoch)
             elapsed = time.time() - tic
             time_cost += elapsed
-            # print(f'Epoch: {epoch}, Time cost: {elapsed}')
             if not self.continue_training:
                 break
         torch.save(
@@ -200,6 +202,8 @@ class Method(object, metaclass=abc.ABCMeta):
         # print('best epoch {}, best val res={:.4f}'.format(self.trlog['best_epoch'], self.trlog['best_res']))
         ## Evaluation Stage
         self.model.eval()
+        if getattr(self, 'encoder', None) is not None:
+            self.encoder.eval()
 
         self.data_format(False, N, C, y)
         
@@ -211,9 +215,9 @@ class Method(object, metaclass=abc.ABCMeta):
                 elif self.C is not None and self.N is None:
                     X_num, X_cat = None, X
                 else:
-                    X_num, X_cat = X, None  
-                        
-                pred = self.model(X_num, X_cat)
+                    X_num, X_cat = X, None
+
+                pred = self.model(*self.encoder.encode(X_num, X_cat))
 
                 test_logit.append(pred)
                 test_label.append(y)
@@ -239,6 +243,8 @@ class Method(object, metaclass=abc.ABCMeta):
         :param epoch: int, the current epoch
         """
         self.model.train()
+        if getattr(self, 'encoder', None) is not None:
+            self.encoder.train()
         tl = Averager()
         for i, (X, y) in enumerate(self.train_loader, 1):
             self.train_step = self.train_step + 1
@@ -251,7 +257,7 @@ class Method(object, metaclass=abc.ABCMeta):
 
             # X_num = self.pre_module(X_num)
 
-            loss = self.criterion(self.model(X_num, X_cat), y)
+            loss = self.criterion(self.model(*self.encoder.encode(X_num, X_cat)), y)
 
             tl.add(loss.item())
             self.optimizer.zero_grad()
@@ -277,6 +283,8 @@ class Method(object, metaclass=abc.ABCMeta):
         
         ## Evaluation Stage
         self.model.eval()
+        if getattr(self, 'encoder', None) is not None:
+            self.encoder.eval()
         test_logit, test_label = [], []
         with torch.no_grad():
             for i, (X, y) in tqdm(enumerate(self.val_loader), disable=True):
@@ -287,7 +295,7 @@ class Method(object, metaclass=abc.ABCMeta):
                 else:
                     X_num, X_cat = X, None                            
 
-                pred = self.model(X_num, X_cat)
+                pred = self.model(*self.encoder.encode(X_num, X_cat))
 
                 test_logit.append(pred)
                 test_label.append(y)

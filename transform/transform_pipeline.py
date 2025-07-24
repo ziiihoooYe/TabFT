@@ -2,6 +2,7 @@ from transform.nan_transform import NanTransform
 from transform.label_transform import LabelTransform
 from transform.norm_transform import NormalizationTransform
 from transform.enc_transform import *
+from transform.context_transform import *
 import os
 import json
 from pathlib import Path
@@ -84,8 +85,8 @@ class DataTransformPipeline:
                 pipeline.append(HierarchicalPleTransform(transform_config))
             elif transform_name == 'stretch_opt':
                 pipeline.append(SlopeEqualizeStretchTransform(transform_config, self.is_regression))
-            elif transform_name == 'rbf_eigenfuntion':
-                pipeline.append(RBFSpectralContextTransform(transform_config))
+            elif transform_name == 'rbf_marginal':
+                pipeline.append(RBFContextTransform(transform_config))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline
