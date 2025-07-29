@@ -81,6 +81,8 @@ class DataTransformPipeline:
                 pipeline.append(TargetRankingIndiceTransform(transform_config))
             elif transform_name == 'uniple':
                 pipeline.append(UniPiecewiseCDFTransform(transform_config))
+            elif transform_name == 'multi_uniple':
+                pipeline.append(MultiResolutionUniPiecewiseCDFTransform(transform_config))
             elif transform_name == 'hierarchical_ple':
                 pipeline.append(HierarchicalPleTransform(transform_config))
             elif transform_name == 'stretch_opt':
@@ -113,9 +115,6 @@ class DataTransformPipeline:
         """
         Convenience method: fit on the data, then transform it in place.
         """
-        # set seeds for reproducibility
-        np.random.seed(0)
-        torch.manual_seed(0)
         
         for transform_obj in self.pipeline:
             # 1) Fit on the current state of the data

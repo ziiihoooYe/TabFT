@@ -234,7 +234,7 @@ class JohnsonTransform(BaseTransform):
             out_t = self.encoder_(arr_t)
             N_data[partition] = out_t.cpu().numpy()
         return N_data, C_data, y_data
-    
+
 
 class QuantileTransform(BaseTransform):
     """
@@ -298,7 +298,6 @@ class QuantileTransform(BaseTransform):
 
 
 # categorical encoding transforms
-
 class OrdinalTransform(BaseTransform):
     """
     Replaces categorical values with integer codes. 
@@ -395,7 +394,7 @@ class IndiceTransform(BaseTransform):
                         transformed[i, col] = col_mapping.get(val, self.unknown_index)
                 C_data[part] = transformed
         return N_data, C_data, y_data
-    
+
 
 class OneHotTransform(BaseTransform):
     """
@@ -534,7 +533,7 @@ class CatBoostTransform(BaseTransform):
             arr = self.encoder_.transform(C_data[part].astype(str)).values
             C_data[part] = arr
         return N_data, C_data, y_data 
-    
+
 
 class TargetRankingIndiceTransform(BaseTransform):
     
@@ -605,7 +604,7 @@ class TargetRankingIndiceTransform(BaseTransform):
             C_data[part_name] = transformed
         
         return N_data, C_data, y_data
-    
+
 
 class RobustScaleTransform:
     def __init__(self, args):
@@ -678,12 +677,13 @@ class SmoothClipTransform:
 
     def smooth_clip(self, X):
         return X / np.sqrt(1.0 + (X / 3.0)**2)
-     
+
 
 ##########################################################################
 #                           Custom Transform                             #
 ##########################################################################
-
+import pickle
+import json
 class CdfTransform(BaseTransform):
     def __init__(self, args: Dict, dataset=None):
         super().__init__()
@@ -746,6 +746,8 @@ class CdfTransform(BaseTransform):
         if not N_data or "train" not in N_data:
             return self
         shared_state = shared_state or {}
+        if N_data['train'].shape[0] <= self.n_components:
+            self.n_components = N_data['train'].shape[0] - 1
 
         cfile = self._cache_file()
         if cfile and os.path.exists(cfile):
@@ -1012,42 +1014,44 @@ class UniPiecewiseCDFTransform(BaseTransform):
         self.bin_edges_: list[np.ndarray] | None = None  # per‑feature edges
 
 
-    def fit(self, N_data, C_data, y_data=None, shared_state=None):
-            if not (N_data and "train" in N_data):
-                return self
-
-            X = N_data["train"]
-            n_samples, n_features = X.shape
-            self.bin_edges_ = []
-
-            if isinstance(self.n_bins, (list, tuple, np.ndarray)):
-                if len(self.n_bins) != n_features:
-                    raise ValueError(
-                        f"n_bins list length ({len(self.n_bins)}) "
-                        f"≠ number of features ({n_features})"
-                    )
-
-            for j in range(n_features):
-                col = X[:, j]
-
-                if isinstance(self.n_bins, (list, tuple, np.ndarray)):
-                    nb = int(max(1, self.n_bins[j]))
-                else:
-                    nb = int(max(1, self.n_bins))
-
-                nb = min(nb, n_samples - 1)
-
-                edges = np.percentile(col, np.linspace(0, 100, nb + 1))
-                edges[0], edges[-1] = col.min(), col.max()
-                edges = np.unique(edges)
-                if edges.size < 2:
-                    edges = np.array([0.0, 1.0], dtype=float)
-
-                self.bin_edges_.append(edges.astype(np.float32))
-
+    def fit(self, N_data, C_data=None, y_data=None, shared_state=None):
+        if not (N_data and "train" in N_data):
             return self
 
-    def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        X = N_data["train"]
+        if torch.is_tensor(X):
+            X = X.cpu().numpy()
+        n_samples, n_features = X.shape
+        self.bin_edges_ = []
+
+        if isinstance(self.n_bins, (list, tuple, np.ndarray)):
+            if len(self.n_bins) != n_features:
+                raise ValueError(
+                    f"n_bins list length ({len(self.n_bins)}) "
+                    f"≠ number of features ({n_features})"
+                )
+
+        for j in range(n_features):
+            col = X[:, j]
+
+            if isinstance(self.n_bins, (list, tuple, np.ndarray)):
+                nb = int(max(1, self.n_bins[j]))
+            else:
+                nb = int(max(1, self.n_bins))
+
+            nb = min(nb, n_samples - 1)
+
+            edges = np.percentile(col, np.linspace(0, 100, nb + 1))
+            edges[0], edges[-1] = col.min(), col.max()
+            edges = np.unique(edges)
+            if edges.size < 2:
+                edges = np.array([0.0, 1.0], dtype=float)
+
+            self.bin_edges_.append(edges.astype(np.float32))
+
+        return self
+
+    def transform(self, N_data, C_data=None, y_data=None, shared_state=None):
         if not self.bin_edges_:
             return N_data, C_data, y_data
 
@@ -1071,6 +1075,92 @@ class UniPiecewiseCDFTransform(BaseTransform):
                 X_out[:, j] = (idx + frac) / (edges.size - 1)
 
             N_data[part] = X_out
+
+        return N_data, C_data, y_data
+
+
+class MultiResolutionUniPiecewiseCDFTransform(BaseTransform):
+    """
+    Applies UniPiecewiseCDFTransform at multiple resolutions (bin counts)
+    and concatenates the results.
+    """
+    def __init__(self, args):
+        super().__init__()
+        # 从 args 获取 bin 数量的列表，如果未提供，则使用默认列表
+        self.bin_counts = args.get(
+            "n_bins", 16
+        )
+        self.bin_counts = [2**i for i in range(math.ceil(math.log2(self.bin_counts)) + 1)]
+        
+        # 为每个分辨率创建一个 UniPiecewiseCDFTransform 实例
+        self.transforms_ = []
+        for n_bins in self.bin_counts:
+            transform_args = {"n_bins": n_bins}
+            self.transforms_.append(UniPiecewiseCDFTransform(transform_args))
+
+    def fit(self, N_data, C_data, y_data=None, shared_state=None):
+        """
+        Fits each of the internal transforms on the training data.
+        """
+        print("Fitting MultiResolution transform...")
+        # 依次训练每一个内部的 transform
+        for transform in self.transforms_:
+            # 注意：fit 方法不应修改 N_data，所以可以直接传递
+            transform.fit(N_data, C_data, y_data, shared_state)
+        print("Fit complete.")
+        
+        if shared_state is None:
+            shared_state = {}
+        n_features = N_data["train"].shape[1]
+        shared_state["feature_map_"] = [
+            {"orig_idx": j, "new_start": None, "size": len(self.bin_counts)}
+            for j in range(n_features)
+        ]
+
+        return self
+
+    def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        """
+        Transforms the data using each internal transform and concatenates the results,
+        grouping by original feature.
+        """
+        if not self.transforms_ or not self.transforms_[0].bin_edges_:
+            return N_data, C_data, y_data
+            
+        print("Transforming with MultiResolution transform...")
+        
+        for part in N_data.keys():
+            original_X = N_data[part]
+            if original_X.shape[1] == 0: # 如果没有数值特征，跳过
+                continue
+                
+            n_samples, n_features = original_X.shape
+            transformed_chunks = []
+
+            # 1. 先像之前一样，获取每个分辨率的变换结果
+            for inner_transform in self.transforms_:
+                temp_N_data = {part: original_X.copy()}
+                transformed_data_dict, _, _ = inner_transform.transform(
+                    temp_N_data, C_data, y_data, shared_state
+                )
+                transformed_chunks.append(transformed_data_dict[part])
+            
+            # 2. 核心改动：重新排序和拼接
+            # 我们要创建一个新的列列表，顺序为 [f1_r1, f1_r2, ..., f2_r1, f2_r2, ...]
+            ordered_columns = []
+            # 按原始特征的顺序循环
+            for j in range(n_features):
+                # 对每个特征，收集它在所有分辨率下的变换结果
+                for chunk in transformed_chunks:
+                    # chunk 是一个 (n_samples, n_features) 的数组
+                    # 我们只取第 j 列
+                    ordered_columns.append(chunk[:, j])
+            
+            # 3. 使用 np.column_stack 将所有排好序的列组合成最终的矩阵
+            # np.column_stack 会将一维数组作为列堆叠起来
+            N_data[part] = np.column_stack(ordered_columns)
+            
+            print(f"  - Transformed '{part}' data from shape {original_X.shape} to {N_data[part].shape} (grouped by feature)")
 
         return N_data, C_data, y_data
 
@@ -1348,4 +1438,5 @@ class HierarchicalPleTransform(BaseTransform):
             N_data[part_k] = np.hstack([gating_vector, X_zscored.astype(np.float32)])
 
         return N_data, C_data, y_data
+
 

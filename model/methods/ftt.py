@@ -24,7 +24,7 @@ class FTTMethod(Method):
         # -------------------------------------------------------------
         # 1) gather per‑feature vector sizes from the transform pipeline
         # -------------------------------------------------------------
-        fmap = getattr(self, 'feature_map_', None)
+        fmap = getattr(self, 'feature_map_', None) or self.data_transform_pipeline.shared_state.get('feature_map', None)
         if fmap is not None:
             # store for later use / debugging
             self.feature_map_ = fmap

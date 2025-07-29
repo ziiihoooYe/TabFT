@@ -1,6 +1,6 @@
 {
-    "uniple": {
-        "n_bins": [
+    "num_cdf": {
+        "n_components": [
             "int",
             2,
             256

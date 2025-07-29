@@ -133,7 +133,7 @@ class Method(object, metaclass=abc.ABCMeta):
             self.y_test = y_test['test']
     
     
-    def fit(self, data, info, train = True, config = None, tune = False):
+    def fit(self, data, info, train = True, config = None, tune = False, **kwargs):
         """
         Fit the method to the data.
 
@@ -244,7 +244,8 @@ class Method(object, metaclass=abc.ABCMeta):
         """
         self.model.train()
         if getattr(self, 'encoder', None) is not None:
-            self.encoder.train()
+            # self.encoder.train()
+            self.encoder.eval() 
         tl = Averager()
         for i, (X, y) in enumerate(self.train_loader, 1):
             self.train_step = self.train_step + 1

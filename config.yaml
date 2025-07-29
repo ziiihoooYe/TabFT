@@ -105,7 +105,9 @@ transform_list:
   #     policy: standard
 
   # - uniple:
-  #     n_bins: 1000000
+  #     n_bins: 4
+  # - multi_uniple:
+  #     n_bins: 1
   # - hierarchical_ple:
   #     bin_order: 0
   # - stretch_opt:
@@ -115,13 +117,16 @@ transform_list:
   # - num_cdf: 
   #     cdf_type: uniform # uniform, gaussian, dynamic
   #     cache_path: fit_cache
-  #     n_components: 32
+  #     n_components: 100000
   #     binning_method: quantile # quantile, hdbscan, hierarchical
   - norm:
       policy: standard
 
-  - rbf_marginal:
-      output_dim: 16
+  # - rbf_marginal:
+  #     mode: implicit # implicit, explicit
+  #     output_dim: 16
+  #     epochs: 2000
+  #     patience: 30
 
   # - norm:
   #     policy: standard
@@ -142,7 +147,9 @@ model_type:
   # - tabtransformer
   # - xgboost
   # - lightgbm
-  - mlp
+  # - mlp
+  # - tabicl
+  # - modernNCA
   # - resnet
   # - mlp_plr
   # - realmlp
@@ -151,12 +158,12 @@ model_type:
   # - tabpfn
   # - PFN-v2
   # - tabm
-  # - tab
+  - tab
 
 model_path: results_model/default_path
 seed: 2025
 seed_num: 15
-gpu: 2
+gpu: 4
 tune: true
 tune_transform: false
 load_tune_config: false

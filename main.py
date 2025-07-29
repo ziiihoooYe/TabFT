@@ -24,7 +24,9 @@ def main():
     parser = argparse.ArgumentParser(description="Run model training and evaluation with specified configurations.")
     parser.add_argument('--config', type=str, default='config.yaml', help='Path to the configuration YAML file.')
     parser.add_argument('--log', type=str, default=None, help='Path to the log file. If not provided, logs will be printed to console.')
+    parser.add_argument('--pre_transform', type=str, default=None)
     args = parser.parse_args() 
+    force_transform = args.pre_transform is not None
     config_file = args.config
     logger = get_logger(__name__, args.log)
 
@@ -64,7 +66,7 @@ def main():
             args = tune_hyper_parameters(args,opt_space,train_val_data,info,pipeline,pre_transformed)
         
         # if not pre_transformed, we still need to transform the data here
-        if not pre_transformed:
+        if not pre_transformed and not force_transform:
             pipeline = DataTransformPipeline(args.transform_list, args, info['task_type']=='regression')
             N_trainval, C_trainval, y_trainval = pipeline.fit_transform(*train_val_data)
             train_val_data = (N_trainval, C_trainval, y_trainval)
@@ -81,10 +83,11 @@ def main():
             set_seeds(args.seed)
 
             method = get_method(args.model_type)(args, info['task_type'] == 'regression')
-            method.data_transform_pipeline = copy.deepcopy(pipeline)
-            method.pre_transformed = pre_transformed
+            if pre_transformed:
+                method.data_transform_pipeline = copy.deepcopy(pipeline)
+                method.pre_transformed = pre_transformed
 
-            time_cost = method.fit(train_val_data, info)    
+            time_cost = method.fit(train_val_data, info, test_data=test_data)    
             vl, vres, metric_name, predict_logits = method.predict(test_data, info, model_name=args.evaluate_option)
 
             loss_list.append(vl)

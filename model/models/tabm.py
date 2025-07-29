@@ -43,8 +43,6 @@ class TabM(nn.Module):
     ) -> None:
         # >>> Validate arguments.
         assert n_num_features >= 0
-        if shared_state is not None:
-            n_num_features = max(list(g['orig_idx'] for g in shared_state['feature_map_']))+1
         assert n_num_features or cat_cardinalities
         if arch_type == 'vanilla':
             assert k is None

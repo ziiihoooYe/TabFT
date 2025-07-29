@@ -1,12 +1,40 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-from __future__ import annotations
-import argparse, copy, os, subprocess, sys, yaml
+import argparse, copy, os, re, subprocess, sys, yaml
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 # ---------- util ----------
+
+# --- Constants for result parsing (inspired by your parsing script) ---
+RE_METRIC = re.compile(r"([A-Za-z0-9_]+)\s+MEAN\s+=\s+([-+0-9eE.]+)")
+CLASS_METRICS = {"Accuracy", "Avg_Recall", "F1", "AUC"}
+REG_METRICS   = {"MAE", "R2", "RMSE"}
+
+def has_results(log_path: Path) -> bool:
+    """
+    Checks if a log file exists and contains a complete set of either
+    classification or regression metrics, indicating a successful run.
+    """
+    if not log_path.is_file():
+        return False
+
+    found_metrics: Set[str] = set()
+    try:
+        with log_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                match = RE_METRIC.search(line)
+                if match:
+                    found_metrics.add(match.group(1))
+    except (IOError, UnicodeDecodeError):
+        # If the file is unreadable or malformed, treat it as not having results.
+        return False
+
+    # A run is complete if it has all metrics for either task type.
+    is_classification_complete = CLASS_METRICS.issubset(found_metrics)
+    is_regression_complete = REG_METRICS.issubset(found_metrics)
+
+    return is_classification_complete or is_regression_complete
+
 def even_chunks(seq: List[Any], k: int) -> List[List[Any]]:
     k = max(1, min(k, len(seq))); q, r = divmod(len(seq), k)
     sizes = [q + (i < r) for i in range(k)]
@@ -25,7 +53,7 @@ def build_env(gpu: int | None):
         env.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
     return env
 
-def run_cmd(cmd: List[str], env):                  # ← 直接打印好调试
+def run_cmd(cmd: List[str], env):                  # ← Directly print for debugging
     print("⇢", " ".join(cmd), flush=True)
     return subprocess.run(cmd, env=env, check=False).returncode
 
@@ -67,6 +95,12 @@ def main():
             cfg = copy.deepcopy(base); cfg["dataset"] = dchunk
             yml = args.yaml.with_stem(f"{args.yaml.stem}_ds{i}"); save_yaml(cfg, yml)
             log = args.logdir / f"{yml.stem}.log"
+
+            # --- Check if valid results already exist in the log ---
+            if has_results(log):
+                print(f"Skipping '{yml.stem}': Valid results found in log.")
+                continue
+
             gpu = args.gpus[i % len(args.gpus)] if args.gpus else None
             jobs.append((yml, log, gpu))
 
@@ -75,6 +109,12 @@ def main():
             cfg = copy.deepcopy(base); cfg["model_type"] = mchunk
             yml = args.yaml.with_stem(f"{args.yaml.stem}_mdl{i}"); save_yaml(cfg, yml)
             log = args.logdir / f"{yml.stem}.log"
+
+            # --- Check if valid results already exist in the log ---
+            if has_results(log):
+                print(f"Skipping '{yml.stem}': Valid results found in log.")
+                continue
+
             gpu = args.gpus[i % len(args.gpus)] if args.gpus else None
             jobs.append((yml, log, gpu))
 
@@ -83,10 +123,16 @@ def main():
             cfg = copy.deepcopy(base); cfg["dataset"], cfg["model_type"] = [ds], [mdl]
             yml = args.yaml.with_stem(f"{args.yaml.stem}_{ds}__{mdl}"); save_yaml(cfg, yml)
             log = args.logdir / ds / f"{mdl}.log"
+
+            # --- Check if valid results already exist in the log ---
+            if has_results(log):
+                print(f"Skipping '{yml.stem}': Valid results found in log.")
+                continue
+
             gpu = args.gpus[j % len(args.gpus)] if args.gpus else None
             jobs.append((yml, log, gpu))
 
-    print(f"Prepared {len(jobs)} job(s).")
+    print(f"Prepared {len(jobs)} new job(s) to run.")
     if args.dry_run: return
 
     with ProcessPoolExecutor(max_workers=args.max_workers) as pool:

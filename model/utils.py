@@ -26,7 +26,7 @@ deep_model_list = ['mlp', 'resnet', 'ftt', 'node', 'autoint',
                    'dnnr', 'switchtab', 'grownet', 'tabr', 'modernNCA',
                    'hyperfast', 'bishop', 'realmlp', 'protogate', 'mlp_plr',
                    'excelformer', 'grande','amformer','tabptm','trompt','tabm',
-                   'PFN-v2', 't2gformer', 'tab']
+                   'PFN-v2', 't2gformer', 'tab', 'tabicl', 'modernNCA', 'tabaug']
 classical_model_list = ['LogReg', 'NCM', 'RandomForest', 
                         'xgboost', 'catboost', 'lightgbm',
                         'svm','knn', 'NaiveBayes',"dummy","LinearRegression"]
@@ -922,6 +922,12 @@ def get_method(_model):
     elif _model == 'tab':
         from model.methods.Tab import TabMethod
         return TabMethod
+    elif _model == 'tabicl':
+        from model.methods.tabicl import TabICLMethod
+        return TabICLMethod
+    elif _model == 'tabaug':
+        from model.methods.tabaug import TabAugMethod
+        return TabAugMethod
     else:
         raise NotImplementedError("Model \"" + _model + "\" not yet implemented")
 
