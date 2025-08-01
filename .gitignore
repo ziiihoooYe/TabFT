@@ -22,3 +22,6 @@ data/
 
 # yaml file
 yaml/
+
+# llm cache
+llm_cache/

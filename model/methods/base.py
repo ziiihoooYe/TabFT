@@ -133,7 +133,7 @@ class Method(object, metaclass=abc.ABCMeta):
             self.y_test = y_test['test']
     
     
-    def fit(self, data, info, train = True, config = None, tune = False, **kwargs):
+    def fit(self, data, info, train = True, config = None, tune = False):
         """
         Fit the method to the data.
 
@@ -157,16 +157,8 @@ class Method(object, metaclass=abc.ABCMeta):
         self.construct_model()
  
         # params = self.model.parameters()
-        if self.shared_state.get('encoder', None) is not None:
-            self.encoder = deepcopy(self.shared_state['encoder']) 
-            params = [{'params': self.model.parameters()}, {'params': self.encoder.parameters()}]
-        else:
-            from transform.context_transform import IdentityEncoder
-            self.encoder = IdentityEncoder()
-            params = [{'params': self.model.parameters()}]
-
         self.optimizer = torch.optim.AdamW(
-            params,
+            self.model.parameters(),
             lr=self.args.config['training']['lr'], 
             weight_decay=self.args.config['training']['weight_decay']
         )
@@ -202,8 +194,6 @@ class Method(object, metaclass=abc.ABCMeta):
         # print('best epoch {}, best val res={:.4f}'.format(self.trlog['best_epoch'], self.trlog['best_res']))
         ## Evaluation Stage
         self.model.eval()
-        if getattr(self, 'encoder', None) is not None:
-            self.encoder.eval()
 
         self.data_format(False, N, C, y)
         
@@ -217,7 +207,7 @@ class Method(object, metaclass=abc.ABCMeta):
                 else:
                     X_num, X_cat = X, None
 
-                pred = self.model(*self.encoder.encode(X_num, X_cat))
+                pred = self.model(X_num, X_cat)
 
                 test_logit.append(pred)
                 test_label.append(y)
@@ -243,9 +233,6 @@ class Method(object, metaclass=abc.ABCMeta):
         :param epoch: int, the current epoch
         """
         self.model.train()
-        if getattr(self, 'encoder', None) is not None:
-            # self.encoder.train()
-            self.encoder.eval() 
         tl = Averager()
         for i, (X, y) in enumerate(self.train_loader, 1):
             self.train_step = self.train_step + 1
@@ -258,7 +245,7 @@ class Method(object, metaclass=abc.ABCMeta):
 
             # X_num = self.pre_module(X_num)
 
-            loss = self.criterion(self.model(*self.encoder.encode(X_num, X_cat)), y)
+            loss = self.criterion(self.model(X_num, X_cat), y)
 
             tl.add(loss.item())
             self.optimizer.zero_grad()
@@ -284,8 +271,6 @@ class Method(object, metaclass=abc.ABCMeta):
         
         ## Evaluation Stage
         self.model.eval()
-        if getattr(self, 'encoder', None) is not None:
-            self.encoder.eval()
         test_logit, test_label = [], []
         with torch.no_grad():
             for i, (X, y) in tqdm(enumerate(self.val_loader), disable=True):
@@ -296,7 +281,7 @@ class Method(object, metaclass=abc.ABCMeta):
                 else:
                     X_num, X_cat = X, None                            
 
-                pred = self.model(*self.encoder.encode(X_num, X_cat))
+                pred = self.model(X_num, X_cat)
 
                 test_logit.append(pred)
                 test_label.append(y)

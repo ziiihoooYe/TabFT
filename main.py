@@ -87,7 +87,7 @@ def main():
                 method.data_transform_pipeline = copy.deepcopy(pipeline)
                 method.pre_transformed = pre_transformed
 
-            time_cost = method.fit(train_val_data, info, test_data=test_data)    
+            time_cost = method.fit(train_val_data, info)    
             vl, vres, metric_name, predict_logits = method.predict(test_data, info, model_name=args.evaluate_option)
 
             loss_list.append(vl)
