@@ -62,7 +62,7 @@ class Method(object, metaclass=abc.ABCMeta):
             self.trlog['best_res'] = 0 
 
         self.args.device = get_device()
-        
+
         # Flag indicating whether the input data has already been transformed
         self.pre_transformed: bool = False
 
@@ -133,7 +133,7 @@ class Method(object, metaclass=abc.ABCMeta):
             self.y_test = y_test['test']
     
     
-    def fit(self, data, info, train = True, config = None, tune = False):
+    def fit(self, data, info, train = True, config = None):
         """
         Fit the method to the data.
 
@@ -155,8 +155,7 @@ class Method(object, metaclass=abc.ABCMeta):
         self.feature_map_ = self.shared_state.get('feature_map_', None)
         self.n_num_features = N['train'].shape[1] if N is not None else self.n_num_features
         self.construct_model()
- 
-        # params = self.model.parameters()
+
         self.optimizer = torch.optim.AdamW(
             self.model.parameters(),
             lr=self.args.config['training']['lr'], 
@@ -227,11 +226,7 @@ class Method(object, metaclass=abc.ABCMeta):
         return vl, vres, metric_name, test_logit
 
     def train_epoch(self, epoch):
-        """
-        Train the model for one epoch.
 
-        :param epoch: int, the current epoch
-        """
         self.model.train()
         tl = Averager()
         for i, (X, y) in enumerate(self.train_loader, 1):
@@ -242,8 +237,6 @@ class Method(object, metaclass=abc.ABCMeta):
                 X_num, X_cat = None, X
             else:
                 X_num, X_cat = X, None
-
-            # X_num = self.pre_module(X_num)
 
             loss = self.criterion(self.model(X_num, X_cat), y)
 

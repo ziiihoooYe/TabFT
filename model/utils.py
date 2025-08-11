@@ -745,7 +745,7 @@ def tune_hyper_parameters(
             method.data_transform_pipeline = copy.deepcopy(pipeline)
 
         # fit and eval
-        method.fit(copy.deepcopy(train_val_data), info, train=True, config=config, tune=True)
+        method.fit(copy.deepcopy(train_val_data), info, train=True, config=config)
         score = method.trlog['best_res']
 
         full_cfg = copy.deepcopy(config)

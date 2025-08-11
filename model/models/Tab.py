@@ -96,7 +96,6 @@ class Tokenizer(nn.Module):
         categories: ty.Optional[ty.List[int]],
         d_token: int,
         bias: bool,
-        lap_pe: ty.Optional[Tensor] = None,
         d_lap_pe: int = 0,
         n_cls: int = 1
     ) -> None:
@@ -105,20 +104,6 @@ class Tokenizer(nn.Module):
         self.d_token = d_token
         self.d_lap_pe = d_lap_pe
         self.n_cls = n_cls
-
-        if lap_pe is not None:
-            if num_continuous > 0:
-                self.register_buffer('lap_pe_num', lap_pe[:num_continuous])
-            else:
-                self.lap_pe_num = None
-            if categories:
-                lap_pe_cat = lap_pe[num_continuous:]
-                self.pe_embeddings = nn.Embedding.from_pretrained(lap_pe_cat, freeze=True)
-            else:
-                self.pe_embeddings = None
-        else:
-            self.lap_pe_num = None
-            self.pe_embeddings = None
 
         # --- CLS and Numerical Token weights ---
         # Create a separate parameter for CLS tokens
@@ -163,7 +148,6 @@ class Tokenizer(nn.Module):
         x_num: ty.Optional[Tensor],
         x_cat: ty.Optional[Tensor],
     ) -> Tensor:
-        assert x_num is not None or x_cat is not None, "At least one of x_num or x_cat must be provided"
         batch_size = x_cat.shape[0] if x_num is None else x_num.shape[0]
         device = x_num.device if x_num is not None else x_cat.device
 
@@ -184,13 +168,7 @@ class Tokenizer(nn.Module):
             if self.bias is not None:
                 num_bias = self.bias[:self.n_num_features].unsqueeze(0)
                 num_tokens_content = num_tokens_content + num_bias
-
-            if self.lap_pe_num is not None:
-                batch_pe_num = self.lap_pe_num.unsqueeze(0).expand(batch_size, -1, -1)
-                final_num_tokens = torch.cat([num_tokens_content, batch_pe_num], dim=-1)
-            else:
-                final_num_tokens = num_tokens_content
-            final_tokens.append(final_num_tokens)
+            final_tokens.append(num_tokens_content)
 
         # 3. Categorical Tokens (Unchanged logic, just for completeness)
         if x_cat is not None and self.category_embeddings is not None:
@@ -199,17 +177,7 @@ class Tokenizer(nn.Module):
             if self.bias is not None:
                 cat_bias = self.bias[self.n_num_features:].unsqueeze(0)
                 cat_tokens_content = cat_tokens_content + cat_bias
-            if self.pe_embeddings is not None:
-                n_cat = indices.shape[1]
-                field_correction = (torch.arange(n_cat, device=device).view(1, n_cat) + 1)
-                indices_pe = indices - field_correction
-                if torch.any(indices_pe < 0):
-                    raise RuntimeError("FTT_Tokenizer: computed negative PE indices...")
-                cat_pes = self.pe_embeddings(indices_pe)
-                final_cat_tokens = torch.cat([cat_tokens_content, cat_pes], dim=-1)
-            else:
-                final_cat_tokens = cat_tokens_content
-            final_tokens.append(final_cat_tokens)
+            final_tokens.append(cat_tokens_content)
 
         x = torch.cat(final_tokens, dim=1)
         return x

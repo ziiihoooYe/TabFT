@@ -26,6 +26,11 @@
                 0.0,
                 1e-06,
                 0.001
+            ],
+            "encoder_lr": [
+                "loguniform",
+                1e-07,
+                1e-04
             ]
         },
         "general": {}

@@ -3,24 +3,47 @@
         "model": {
             "token_bias": true,
             "n_layers": 3,
-            "d_token": 192,
+            "d_token": 128,
             "n_heads": 8,
             "d_ffn_factor": 1.3333333333333333,
             "attention_dropout": 0.2,
             "ffn_dropout": 0.1,
             "residual_dropout": 0.0,
-            "activation": "reglu",
+            "activation": "geglu",
             "prenormalization": false,
             "initialization": "kaiming",
-            "kv_compression": null,
-            "kv_compression_sharing": null,
-            "d_lap_pe": 16,
-            "n_cls": 4
+            "n_knots": 10,
+            "numeric_basis_standardize": true,
+            "numeric_cumulative": true,
+            "numeric_decoder_mode": "tied_plus_linear",
+            "numeric_init": "base",
+            "spline_extrapolation": "constant",
+            "spline_degree": 3,
+            "spline_include_bias": false,
+            "use_tied_decoders": true,
+            "numeric_mode": "identity",
+            "ple_n_bins": 10
         },
         "training": {
             "lr": 0.0001,
-            "weight_decay": 1e-05
+            "weight_decay": 1e-05,
+            "epochs": 400,
+            "batch_size": 1024,
+            "mask_prob": 0.2,
+            "val_split": 0.1,
+            "patience": 40,
+            "min_delta": 1e-4,
+            "label_smoothing_eps": 0.1,
+            "label_smoothing_prior": "empirical",
+            "num_workers": 0
         },
-        "general": {}
+        "general": {
+            "verbose": true,
+            "progress_bar": false
+        },
+        "pretraining": {
+            "label_smoothing_prior": "empirical",
+            "label_smoothing_eps": 0.1
+        }
     }
 }

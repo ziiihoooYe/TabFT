@@ -1,0 +1,219 @@
+*** a/model/methods/Tab.py
+--- b/model/methods/Tab.py
+@@
+ @dataclass
+ class PretrainConfig:
+-    # core
+-    mode: str = 'masked_x'                 # 'masked_x' | 'masked_xy' | 'contrastive'
++    # core（仅 masked_x，字段保留做兼容）
++    mode: str = 'masked_x'
+     epochs: int = 10
+     lr: float = 1e-4
+     batch_size: int = 256
+     # masking
+     mask_prob: float = 0.15
+     keep_original_prob: float = 0.0
+     random_replace_prob: float = 0.0
+     numeric_random_mode: str = 'batch_shuffle'
+     numeric_noise_std_scale: float = 1.0
+     cat_random_mode: str = 'uniform'
+-    y_mask_ratio_boost: float = 1.0
+-    block_y_to_x_attn: bool = False
+     # smoothing / priors
+     label_smoothing_eps: float = 0.0
+     label_smoothing_prior: str = 'uniform'  # 'uniform' | 'empirical'
+-    # xy loss weights
+-    xy_x_w: float = 1.0
+-    xy_y_w: float = 1.0
+-    # contrastive
+-    temperature: float = 0.07
+     # early-stop / val split
+     val_split: float = 0.1
+     patience: int = 30
+     min_delta: float = 1e-4
+     restore_best: bool = True
+@@
+     def from_dict(cfg: Dict[str, Any]) -> 'PretrainConfig':
+         c = PretrainConfig()
+         if cfg is None:
+             return c
+         c.mode = cfg.get('pretrain_mode', cfg.get('mode', c.mode))
+         c.epochs = int(cfg.get('pretrain_epochs', c.epochs))
+         c.lr = float(cfg.get('lr', c.lr))
+         c.batch_size = int(cfg.get('batch_size', c.batch_size))
+         c.mask_prob = float(cfg.get('mask_prob', c.mask_prob))
+         c.keep_original_prob = float(cfg.get('keep_original_prob', c.keep_original_prob))
+         c.random_replace_prob = float(cfg.get('random_replace_prob', c.random_replace_prob))
+         c.numeric_random_mode = cfg.get('numeric_random_mode', c.numeric_random_mode)
+         c.numeric_noise_std_scale = float(cfg.get('numeric_noise_std_scale', c.numeric_noise_std_scale))
+         c.cat_random_mode = cfg.get('cat_random_mode', c.cat_random_mode)
+-        c.y_mask_ratio_boost = float(cfg.get('y_mask_ratio_boost', c.y_mask_ratio_boost))
+-        c.block_y_to_x_attn = bool(cfg.get('block_y_to_x_attn', c.block_y_to_x_attn))
+         c.label_smoothing_eps = float(cfg.get('label_smoothing_eps', c.label_smoothing_eps))
+         c.label_smoothing_prior = cfg.get('label_smoothing_prior', c.label_smoothing_prior)
+-        xy = cfg.get('xy', {})
+-        c.xy_x_w = float(xy.get('x_loss_weight', c.xy_x_w))
+-        c.xy_y_w = float(xy.get('y_loss_weight', c.xy_y_w))
+-        con = cfg.get('contrastive', {})
+-        c.temperature = float(con.get('temperature', c.temperature))
+         c.val_split = float(cfg.get('val_split', c.val_split))
+         c.patience = int(cfg.get('patience', c.patience))
+         c.min_delta = float(cfg.get('min_delta', c.min_delta))
+         c.restore_best = bool(cfg.get('restore_best', c.restore_best))
+         c.num_workers = int(cfg.get('num_workers', c.num_workers))
+         return c
+@@
+ class _PretrainData:
+-    def __init__(self,
+-                 train_loader: DataLoader,
+-                 val_loader: Optional[DataLoader],
+-                 has_num: bool,
+-                 has_cat: bool,
+-                 use_y_tok: bool):
++    def __init__(self,
++                 train_loader: DataLoader,
++                 val_loader: Optional[DataLoader],
++                 has_num: bool,
++                 has_cat: bool):
+         self.train_loader = train_loader
+         self.val_loader = val_loader
+         self.has_num = has_num
+         self.has_cat = has_cat
+-        self.use_y_tok = use_y_tok
+@@
+     def build(self) -> _PretrainData:
+         has_num = self.M.N is not None and 'train' in self.M.N
+         has_cat = self.M.C is not None and 'train' in self.M.C
+-        use_y_tok = bool(self.M.args.config.get('model', {}).get('use_y_token', False))
+ 
+         tensors = []
+         if has_num:
+             tensors.append(torch.from_numpy(self.M.N['train']).float())
+         if has_cat:
+             tensors.append(torch.from_numpy(self.M.C['train']).long())
+-        if use_y_tok:
+-            if self.M.is_regression:
+-                assert self.M.y_token_data is not None and 'train' in self.M.y_token_data, "y_token_data missing"
+-                tensors.append(torch.from_numpy(self.M.y_token_data['train']).float())
+-            else:
+-                tensors.append(torch.from_numpy(self.M.y['train']).long())
+@@
+-        return _PretrainData(train, val, has_num, has_cat, use_y_tok)
++        return _PretrainData(train, val, has_num, has_cat)
+@@
+ class MaskedPretrainer(BasePretrainer):
+-    """Unified masked reconstruction pretrainer.
+-    - mode='masked_x': only mask/reconstruct X (ignore y token even if available)
+-    - mode='masked_xy': include y token (if configured) and combine x/y losses by weights
+-    """
++    """Unified masked reconstruction pretrainer (sampling done here; model only reconstructs)."""
+@@
+-    def _unpack(self, batch):
+-        idx = 0
+-        x_num = batch[idx].to(self.device) if self.data.has_num else None
+-        idx += 1 if self.data.has_num else 0
+-        x_cat = batch[idx].to(self.device) if self.data.has_cat else None
+-        idx += 1 if self.data.has_cat else 0
+-        y_tok = None
+-        if self.data.use_y_tok:
+-            y_tok = batch[idx].to(self.device)
+-            idx += 1
+-        return x_num, x_cat, y_tok
++    def _unpack(self, batch):
++        idx = 0
++        x_num = batch[idx].to(self.device) if self.data.has_num else None
++        idx += 1 if self.data.has_num else 0
++        x_cat = batch[idx].to(self.device) if self.data.has_cat else None
++        return x_num, x_cat
+@@
+-    def step_batch(self, batch, train: bool) -> Optional[torch.Tensor]:
+-        x_num, x_cat, y_tok = self._unpack(batch)
+-        y_for_pass = (y_tok if (self.cfg.mode == 'masked_xy') else None)
+-        total, logs = self.model.pretrain_pass(
+-            x_num, x_cat,
+-            mask_prob=self.cfg.mask_prob,
+-            keep_original_prob=self.cfg.keep_original_prob,
+-            random_replace_prob=self.cfg.random_replace_prob,
+-            numeric_random_mode=self.cfg.numeric_random_mode,
+-            numeric_noise_std_scale=self.cfg.numeric_noise_std_scale,
+-            cat_random_mode=self.cfg.cat_random_mode,
+-            y_token=y_for_pass,
+-            y_mask_ratio_boost=self.cfg.y_mask_ratio_boost,
+-            block_y_to_x_attn=self.cfg.block_y_to_x_attn,
+-            eps=self.cfg.label_smoothing_eps,
+-            prior_mode=self.cfg.label_smoothing_prior,
+-            cat_priors=self.M.cat_priors_,
+-            xy_x_w=self.cfg.xy_x_w, xy_y_w=self.cfg.xy_y_w,
+-        )
+-        return total
++    def step_batch(self, batch, train: bool) -> Optional[torch.Tensor]:
++        # 1) unpack
++        x_num, x_cat = self._unpack(batch)
++        B = (x_num.shape[0] if x_num is not None else x_cat.shape[0])
++        L_num = (self.M.n_num_features or 0)
++        L_cat = (len(self.M.categories) if self.M.categories is not None else 0)
++        L_total = L_num + L_cat
++        device = self.device
++        dtype_num = (x_num.dtype if x_num is not None else torch.float32)
++\n+        # 2) selected mask (Bernoulli per feature)\n+        selected = (torch.rand(B, L_total, device=device) < float(self.cfg.mask_prob))\n+        if not selected.any():\n+            selected[torch.randint(0, B, (1,), device=device), torch.randint(0, L_total, (1,), device=device)] = True\n+\n+        # 3) actions (0=mask,1=keep,2=random)\n+        keep_p = float(self.cfg.keep_original_prob); rand_p = float(self.cfg.random_replace_prob)\n+        p_mask = max(0.0, 1.0 - keep_p - rand_p)\n+        probs = torch.tensor([p_mask, keep_p, rand_p], device=device)\n+        if probs.sum() <= 0: probs = torch.tensor([1.0, 0.0, 0.0], device=device)\n+        probs = probs / probs.sum()\n+        actions = torch.ones(B, L_total, device=device, dtype=torch.long)  # default keep\n+        sel_idx = torch.nonzero(selected, as_tuple=False)\n+        if sel_idx.numel() > 0:\n+            choices = torch.multinomial(probs, sel_idx.shape[0], replacement=True)\n+            for (b, f), a in zip(sel_idx.tolist(), choices.tolist()):\n+                actions[b, f] = int(a)\n+\n+        # 4) prepare numeric slices\n+        num_slices = []\n+        if x_num is not None and L_num > 0:\n+            off = 0\n+            for j in range(L_num):\n+                name = f\"num_{j:04d}\"\n+                Bj = int(self.M.spline_specs[name])\n+                num_slices.append((name, off, off + Bj))\n+                off += Bj\n+\n+        # 5) build rand_num / rand_cat only where needed\n+        rand_num = None\n+        if x_num is not None and L_num > 0:\n+            rand_num = x_num.clone()\n+            for b in range(B):\n+                for f in range(L_num):\n+                    if not selected[b, f] or actions[b, f] != 2:\n+                        continue\n+                    name, s, e = num_slices[f]\n+                    if self.cfg.numeric_random_mode == 'batch_shuffle' and B > 1:\n+                        j = int(torch.randint(0, B-1, (1,), device=device))\n+                        if j >= b: j += 1\n+                        rand_num[b, s:e] = x_num[j, s:e]\n+                    else:\n+                        stats = self.M.spline_stats.get(name, None)\n+                        if stats is not None and ('std' in stats):\n+                            sd = torch.as_tensor(stats['std'], device=device, dtype=dtype_num)\n+                            scale = float(self.cfg.numeric_noise_std_scale)\n+                            noise = torch.randn_like(sd) * (scale * torch.clamp(sd.mean(), min=1e-6))\n+                        else:\n+                            noise = torch.randn(e - s, device=device, dtype=dtype_num) * float(self.cfg.numeric_noise_std_scale)\n+                        rand_num[b, s:e] = x_num[b, s:e] + noise\n+\n+        rand_cat = None\n+        if x_cat is not None and L_cat > 0:\n+            rand_cat = x_cat.clone()\n+            for b in range(B):\n+                for j in range(L_cat):\n+                    f = L_num + j\n+                    if not selected[b, f] or actions[b, f] != 2:\n+                        continue\n+                    K = int(self.M.categories[j])\n+                    rand_cat[b, j] = torch.randint(0, max(1, K), (1,), device=device).item()\n+\n+        # 6) forward + loss\n+        preds, targets, specs = self.model(\n+            x_num, x_cat,\n+            selected=selected, actions=actions,\n+            rand_num=rand_num, rand_cat=rand_cat,\n+        )\n+        if preds is None:\n+            return None\n+        loss = self.model._compute_masked_losses(\n+            preds, targets, specs,\n+            eps=self.cfg.label_smoothing_eps,\n+            prior_mode=self.cfg.label_smoothing_prior,\n+            cat_priors=self.M.cat_priors_,\n+        )\n+        return loss
+@@
+-class ContrastivePretrainer(BasePretrainer):
+-    def __init__(self, method: 'TabMethod', cfg: PretrainConfig, data: _PretrainData):
+-        super().__init__(method, cfg, data)
+-        # precompute numeric slices for augmentation
+-        self.num_slices = self._build_num_slices()
+-    ... (delete entire class definition) ...
++# （对比学习分支已删除）
+@@
+     def construct_model(self, model_config=None):
+         if model_config is None:
+             model_config = self.args.config['model']
+         from model.models.Tab import Tab
+         self.model = Tab(
+             config=model_config,
+             d_out=self.d_out,
+             num_continuous_features=self.n_num_features or 0,
+             categories=self.categories,
+             spline_specs=self.spline_specs,
+             spline_stats=self.spline_stats,
+             is_regression=self.is_regression,
+-            use_y_token=bool(model_config.get('use_y_token', False)),
+-            y_spline_spec=getattr(self, 'y_spline_spec', None),
+-            y_spline_stats=getattr(self, 'y_spline_stats', None),
+             n_layers=model_config.get('n_layers', 3),
+             n_heads=model_config.get('n_heads', 8)
+         ).to(self.args.device)
+         if self.args.use_float:
+             self.model.float()
+@@
+-        # Keep raw-like handles for base.Method (it checks self.N/self.C)
+-        self._prepare_y_token(self.y, is_train=True)
++        # （y-token 已移除，不再准备）
+@@
+-        # Stage C: format loaders for finetuning
+-        if verbose: print(">>> Stage C: building finetune loaders ...")
+-        self.data_format(N=self.N, C=self.C, y=self.y, is_train=True)
++        # Stage C: 可选的监督 loader（如果你仍需下游监督可保留）；否则可以跳过
++        if verbose: print(\">>> Stage C: building loaders (optional) ...\")
++        self.data_format(N=self.N, C=self.C, y=self.y, is_train=True)
+@@
+-        if pre_cfg.epochs > 0:
++        if pre_cfg.epochs > 0:
+             data_builder = PretrainDataBuilder(self, pre_cfg)
+             pdata = data_builder.build()
+-            if pre_cfg.mode in ('masked_x', 'masked_xy'):
+-                pre = MaskedPretrainer(self, pre_cfg, pdata)
+-            elif pre_cfg.mode == 'contrastive':
+-                pre = ContrastivePretrainer(self, pre_cfg, pdata)
+-            else:
+-                raise ValueError(f\"Unknown pretrain mode: {pre_cfg.mode}\")
+-            pre.run()
++            pre = MaskedPretrainer(self, pre_cfg, pdata)
++            pre.run()
+ 
+-        # Stage F: finetuning
+-        if verbose: print(\"\\n--- Starting Fine-tuning ---\\n\")
+-        ... (delete the entire fine-tune block to the end of Stage F) ...
+-        return 0.0
++        if verbose: print(\"[Unified] Training finished after masked reconstruction.\")
++        return 0.0

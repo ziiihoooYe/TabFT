@@ -4,7 +4,6 @@
     "normalization": "standard",
     "num_nan_policy": "mean",
     "num_policy": "none",
-    "n_bins": 2,
     "cat_min_frequency": 0.0,
     "n_trials": 100,
     "seed": 2015,

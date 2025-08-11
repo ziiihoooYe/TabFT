@@ -2,7 +2,6 @@ from transform.nan_transform import NanTransform
 from transform.label_transform import LabelTransform
 from transform.norm_transform import NormalizationTransform
 from transform.enc_transform import *
-from transform.context_transform import *
 import os
 import json
 from pathlib import Path
@@ -81,14 +80,8 @@ class DataTransformPipeline:
                 pipeline.append(TargetRankingIndiceTransform(transform_config))
             elif transform_name == 'uniple':
                 pipeline.append(UniPiecewiseCDFTransform(transform_config))
-            elif transform_name == 'multi_uniple':
-                pipeline.append(MultiResolutionUniPiecewiseCDFTransform(transform_config))
-            elif transform_name == 'hierarchical_ple':
-                pipeline.append(HierarchicalPleTransform(transform_config))
             elif transform_name == 'stretch_opt':
                 pipeline.append(SlopeEqualizeStretchTransform(transform_config, self.is_regression))
-            elif transform_name == 'rbf_marginal':
-                pipeline.append(RBFContextTransform(transform_config))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline
