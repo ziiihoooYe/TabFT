@@ -20,8 +20,6 @@ class Tab(nn.Module):
         # Tokenizer args
         num_continuous: int,
         categories: ty.Optional[ty.List[int]],
-        lap_pe: ty.Optional[Tensor] = None,
-        n_cls: int = 1,
         n_layers: int = 3,
         n_heads: int = 8,
         d_ff_factor: float = 4.0,
@@ -37,24 +35,17 @@ class Tab(nn.Module):
             setattr(self, key, value)
 
         super().__init__()
-
-        self.d_lap_pe = lap_pe.shape[1] if lap_pe is not None else 0
-        
-        effective_d_model = self.d_token + self.d_lap_pe
         
         self.tokenizer = Tokenizer(
             num_continuous=num_continuous,
             categories=categories,
             d_token=self.d_token,
-            bias=self.token_bias,
-            lap_pe=lap_pe,
-            d_lap_pe=self.d_lap_pe,
-            n_cls=self.n_cls
+            bias=self.token_bias
         ) 
 
         self.encoder = Encoder(
             n_layers=self.n_layers,
-            d_model=effective_d_model,
+            d_model=self.d_token,
             n_heads=self.n_heads,
             d_ffn_factor=self.d_ffn_factor,
             attention_dropout=self.attention_dropout,
@@ -62,12 +53,11 @@ class Tab(nn.Module):
             residual_dropout=self.residual_dropout,
             activation=self.activation,
             prenormalization=self.prenormalization,
-            initialization=self.initialization,
-            n_cls=self.n_cls
+            initialization=self.initialization
         )
         
         self.head = Head(
-            d_model=effective_d_model,
+            d_model=self.d_token,
             d_out=d_out,
             activation=self.activation,
             prenormalization=self.prenormalization
@@ -95,19 +85,15 @@ class Tokenizer(nn.Module):
         num_continuous: int,
         categories: ty.Optional[ty.List[int]],
         d_token: int,
-        bias: bool,
-        d_lap_pe: int = 0,
-        n_cls: int = 1
+        bias: bool
     ) -> None:
         super().__init__()
         self.n_num_features = num_continuous
         self.d_token = d_token
-        self.d_lap_pe = d_lap_pe
-        self.n_cls = n_cls
 
         # --- CLS and Numerical Token weights ---
         # Create a separate parameter for CLS tokens
-        self.cls_tokens = nn.Parameter(Tensor(n_cls, d_token))
+        self.cls_tokens = nn.Parameter(Tensor(1, d_token))
         nn_init.kaiming_uniform_(self.cls_tokens, a=math.sqrt(5))
 
         # The main weight parameter is only for numerical features
@@ -141,7 +127,7 @@ class Tokenizer(nn.Module):
     @property
     def n_tokens(self) -> int:
         n_cat = 0 if self.category_offsets is None else len(self.category_offsets)
-        return self.n_cls + self.n_num_features + n_cat
+        return 1 + self.n_num_features + n_cat
 
     def forward(
         self,
@@ -155,12 +141,7 @@ class Tokenizer(nn.Module):
 
         # --- 1. CLS Tokens ---
         cls_token_content = self.cls_tokens.expand(batch_size, -1, -1)
-        if self.d_lap_pe > 0:
-            cls_pe = torch.zeros(batch_size, self.n_cls, self.d_lap_pe, device=device)
-            final_cls_tokens = torch.cat([cls_token_content, cls_pe], dim=-1)
-        else:
-            final_cls_tokens = cls_token_content
-        final_tokens.append(final_cls_tokens)
+        final_tokens.append(cls_token_content)
 
         # --- 2. Numerical Tokens ---
         if x_num is not None:
@@ -318,7 +299,6 @@ class EncoderLayer(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
-        self.n_cls = kwargs.get('n_cls', 1)
         self.layers = nn.ModuleList(
             [EncoderLayer(**kwargs, layer_idx=i) for i in range(kwargs['n_layers'])]
         )
@@ -330,7 +310,7 @@ class Encoder(nn.Module):
             # --- Custom query for last layer ---
             if is_last_layer:
                 # In the last layer, only the CLS tokens act as queries
-                q = x[:, :self.n_cls]
+                q = x[:, :1]
             else:
                 # In other layers, all tokens attend to all other tokens
                 q = x
@@ -351,7 +331,7 @@ class Head(nn.Module):
         self.head = nn.Linear(d_model, d_out)
 
     def forward(self, x: Tensor) -> Tensor:
-        # x comes from the encoder with shape (batch_size, n_cls, d_model)
+        # x comes from the encoder with shape (batch_size, 1, d_model)
         x = x.mean(dim=1)
 
         if self.last_normalization is not None:

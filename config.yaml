@@ -92,7 +92,7 @@ transform_list:
   # ----------------------------------------------------------------
   # categorical encoding process
   # - cat_onehot: {}
-  # - cat_indice: {}
+  - cat_indice: {}
   # - cat_sincos: {}
   # - cat_targetindice: {}
   # - cat_target: {}
@@ -109,17 +109,14 @@ transform_list:
   # - stretch_opt:
   #     lambda_: 1.0
   #     n_bins: 128
-
   # - num_cdf: 
   #     cdf_type: uniform # uniform, gaussian, dynamic
   #     cache_path: fit_cache
   #     n_components: 100000
   #     binning_method: quantile # quantile, hdbscan, hierarchical
-  # - norm:
-  #     policy: standard
 
-  # - norm:
-  #     policy: standard
+  - norm:
+      policy: standard
   
 
     
