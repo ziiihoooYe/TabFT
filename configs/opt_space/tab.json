@@ -48,37 +48,18 @@
         true,
         false
       ],
-      "n_knots": [
-        "categorical",
-        5,
-        10,
-        20,
-        30,
-        50
-      ]
+      "num_encoding": {
+        "n_knots": [
+          "categorical",
+          5,
+          10,
+          20,
+          30,
+          50
+        ]
+      }
     },
-    "pretraining": {
-      "lr": [
-        "loguniform",
-        1e-5,
-        3e-4
-      ],
-      "mask_prob": [
-        "uniform",
-        0.10,
-        0.30
-      ],
-      "label_smoothing_eps": [
-        "categorical",
-        0.0,
-        0.1
-      ],
-      "min_delta": [
-        "loguniform",
-        1e-5,
-        1e-3
-      ]
-    },
+    "pretraining": {},
     "training": {
       "lr": [
         "loguniform",
@@ -89,11 +70,6 @@
         "loguniform",
         1e-6,
         1e-3
-      ],
-      "label_smoothing_eps": [
-        "categorical",
-        0.0,
-        0.1
       ]
     },
     "general": {}

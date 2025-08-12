@@ -3,6 +3,7 @@
 import torch
 import math
 import typing as ty
+from dataclasses import dataclass
 import torch.nn as nn
 import torch.nn.init as nn_init
 from torch import Tensor
@@ -40,8 +41,10 @@ class Tab(nn.Module):
             num_continuous=num_continuous,
             categories=categories,
             d_token=self.d_token,
-            bias=self.token_bias
-        ) 
+            bias=self.token_bias,
+            num_encoding=getattr(self, 'num_encoding', None),
+            x_num_train=kwargs.get('x_num_train', None)
+        )
 
         self.encoder = Encoder(
             n_layers=self.n_layers,
@@ -85,7 +88,9 @@ class Tokenizer(nn.Module):
         num_continuous: int,
         categories: ty.Optional[ty.List[int]],
         d_token: int,
-        bias: bool
+        bias: bool,
+        num_encoding: ty.Optional[dict] = None,
+        x_num_train: ty.Optional[Tensor] = None
     ) -> None:
         super().__init__()
         self.n_num_features = num_continuous
@@ -93,12 +98,151 @@ class Tokenizer(nn.Module):
 
         # --- CLS and Numerical Token weights ---
         # Create a separate parameter for CLS tokens
-        self.cls_tokens = nn.Parameter(Tensor(1, d_token))
+        self.cls_tokens = nn.Parameter(torch.empty(1, d_token))
         nn_init.kaiming_uniform_(self.cls_tokens, a=math.sqrt(5))
 
-        # The main weight parameter is only for numerical features
-        self.weight = nn.Parameter(Tensor(self.n_num_features, d_token))
-        nn_init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        # ================= Numeric Encoder (RAW / PLE / SPLINE) =================
+        self.num_enc_cfg = (num_encoding or {"method": "raw"}).copy()
+        self.num_enc_cfg.setdefault("method", "raw")
+        self.num_enc_cfg.setdefault("k", 10)             # number of basis per feature for RAW/PLE
+        self.num_enc_cfg.setdefault("n_knots", 10)       # internal knots for spline (excluding end repeats)
+        self.num_enc_cfg.setdefault("degree", 3)
+        self.num_enc_cfg.setdefault("quantile", True)   # use quantiles for knots/bin edges
+        self.num_enc_cfg.setdefault("eps", 1e-6)
+
+        # Helper to move numpy -> torch and ensure float dtype
+        def _to_tensor(x):
+            if x is None:
+                return None
+            if isinstance(x, Tensor):
+                return x.detach()
+            import numpy as _np
+            if isinstance(x, _np.ndarray):
+                import torch as _torch
+                return _torch.from_numpy(x)
+            return x
+
+        x_train_num = _to_tensor(x_num_train)
+        if x_train_num is not None:
+            x_train_num = x_train_num.float()
+
+        # Per-feature basis parameters and normalization stats
+        # We store means/stds AFTER encoding (basis space), used for z-score at runtime.
+        # (No pre-assignment of _phi_mean/_phi_std/_ple_edges/_spl_knots; buffers are registered below)
+        self._spl_degree = int(self.num_enc_cfg.get("degree", 3))
+
+        method = (self.num_enc_cfg.get("method") or "raw").lower()
+        if self.n_num_features == 0:
+            # Edge case: no numeric features
+            self.num_basis = 0
+        elif method == "raw":
+            self.num_basis = 1
+            if x_train_num is not None:
+                mu = x_train_num.mean(dim=0)              # (n_num,)
+                sd = x_train_num.std(dim=0).clamp_min(self.num_enc_cfg["eps"])  # (n_num,)
+                self.register_buffer("_phi_mean", mu.unsqueeze(-1))              # (n_num,1)
+                self.register_buffer("_phi_std", sd.unsqueeze(-1))               # (n_num,1)
+            else:
+                # Fallback zeros/ones
+                self.register_buffer("_phi_mean", torch.zeros(self.n_num_features, 1))
+                self.register_buffer("_phi_std", torch.ones(self.n_num_features, 1))
+
+        elif method == "ple":
+            # Piecewise Linear Encoding with k knot points per feature (linear hat over adjacent knots)
+            k = int(self.num_enc_cfg.get("k", 8))
+            self.num_basis = k
+            if x_train_num is None:
+                raise ValueError("PLE encoding requires x_num_train to compute bin edges.")
+            # Compute per-feature knot points by quantiles or linspace
+            if self.num_enc_cfg.get("quantile", True):
+                qs = torch.linspace(0.0, 1.0, steps=k, device=x_train_num.device)
+                edges = torch.quantile(x_train_num, qs, dim=0).T  # (n_num, k)
+            else:
+                xmin, xmax = x_train_num.min(dim=0).values, x_train_num.max(dim=0).values
+                edges = torch.stack([xmin + (xmax - xmin) * (i / (k - 1)) for i in range(k)], dim=1)  # (n_num,k)
+            self.register_buffer("_ple_edges", edges)
+            # Compute basis on train to get mean/std
+            phi_train = self._ple_encode(x_train_num, edges)    # (B, n_num, k)
+            mu = phi_train.mean(dim=0)                          # (n_num,k)
+            sd = phi_train.std(dim=0).clamp_min(self.num_enc_cfg["eps"])  # (n_num,k)
+            self.register_buffer("_phi_mean", mu)
+            self.register_buffer("_phi_std", sd)
+
+        elif method == "spline":
+            # Cubic B-spline basis (degree p) with clamped knots. `n_knots` internal knots per feature.
+            p = int(self.num_enc_cfg.get("degree", 3))
+            n_int = int(self.num_enc_cfg.get("n_knots", 10))
+            if x_train_num is None:
+                raise ValueError("Spline encoding requires x_num_train to compute knots.")
+            # Internal knots: quantiles or linspace
+            if self.num_enc_cfg.get("quantile", True):
+                # use open interval quantiles to avoid duplicates at ends
+                qs = torch.linspace(0.0, 1.0, steps=n_int + 2, device=x_train_num.device)[1:-1]  # exclude 0 and 1
+                internal = torch.quantile(x_train_num, qs, dim=0).T   # (n_num, n_int)
+            else:
+                xmin, xmax = x_train_num.min(dim=0).values, x_train_num.max(dim=0).values
+                internal = torch.stack([xmin + (xmax - xmin) * (i / (n_int + 1)) for i in range(1, n_int + 1)], dim=1)
+            # Build clamped knot vectors per feature: [xmin repeated p+1] + internal + [xmax repeated p+1]
+            xmin, xmax = x_train_num.min(dim=0).values, x_train_num.max(dim=0).values
+            left = xmin.unsqueeze(1).repeat(1, p + 1)
+            right = xmax.unsqueeze(1).repeat(1, p + 1)
+            knots = torch.cat([left, internal, right], dim=1)  # (n_num, n_int + 2p + 2)
+            self.register_buffer("_spl_knots", knots)
+            self._spl_degree = p
+            # Number of basis functions m = n_total_knots - p - 1
+            self.num_basis = knots.shape[1] - p - 1
+            # Compute basis on train for zscore
+            phi_train = self._bspline_encode(x_train_num, knots, p)  # (B, n_num, m)
+            mu = phi_train.mean(dim=0)
+            sd = phi_train.std(dim=0).clamp_min(self.num_enc_cfg["eps"]) 
+            self.register_buffer("_phi_mean", mu)
+            self.register_buffer("_phi_std", sd)
+
+        elif method == "cumspline":
+            # Cumulative of B-spline basis: phi_cum = cumsum(Bspline(x), dim=-1) dropping the last always-1 dim.
+            p = int(self.num_enc_cfg.get("degree", 3))
+            n_int = int(self.num_enc_cfg.get("n_knots", 10))
+            if x_train_num is None:
+                raise ValueError("Cumulative spline encoding requires x_num_train to compute knots.")
+            # Internal knots: quantiles or linspace
+            if self.num_enc_cfg.get("quantile", True):
+                qs = torch.linspace(0.0, 1.0, steps=n_int + 2, device=x_train_num.device)[1:-1]  # exclude 0 and 1
+                internal = torch.quantile(x_train_num, qs, dim=0).T   # (n_num, n_int)
+            else:
+                xmin_lin, xmax_lin = x_train_num.min(dim=0).values, x_train_num.max(dim=0).values
+                internal = torch.stack(
+                    [xmin_lin + (xmax_lin - xmin_lin) * (i / (n_int + 1)) for i in range(1, n_int + 1)], dim=1
+                )
+            # Clamped knot vector per feature as in spline
+            xmin, xmax = x_train_num.min(dim=0).values, x_train_num.max(dim=0).values
+            left = xmin.unsqueeze(1).repeat(1, p + 1)
+            right = xmax.unsqueeze(1).repeat(1, p + 1)
+            knots = torch.cat([left, internal, right], dim=1)  # (n_num, n_int + 2p + 2)
+            self.register_buffer("_spl_knots", knots)
+            self._spl_degree = p
+            m = knots.shape[1] - p - 1                          # number of B-spline bases
+            # Drop the last cumulative dim which is identically 1
+            self.num_basis = max(m - 1, 1)
+            # Train-time encodings for z-score
+            phi_train_raw = self._bspline_encode(x_train_num, knots, p)          # (B, n_num, m)
+            phi_train = torch.cumsum(phi_train_raw, dim=-1)[..., :self.num_basis]# (B, n_num, m-1)
+            mu = phi_train.mean(dim=0)
+            sd = phi_train.std(dim=0).clamp_min(self.num_enc_cfg["eps"])
+            self.register_buffer("_phi_mean", mu)
+            self.register_buffer("_phi_std", sd)
+        else:
+            raise ValueError(f"Unknown numeric encoding method: {method}")
+
+        self.num_basis = int(self.num_basis)
+        self.method = method
+
+        # =================== Projection parameters to token space ===================
+        if self.n_num_features > 0:
+            # Project basis (k) -> token dimension per feature using a learned matrix W_i in R^{k x d_token}
+            self.num_weight = nn.Parameter(torch.empty(self.n_num_features, self.num_basis, d_token))
+            nn_init.kaiming_uniform_(self.num_weight, a=math.sqrt(5))
+        else:
+            self.num_weight = None
 
         if categories is None:
             d_bias_extra = 0
@@ -118,11 +262,130 @@ class Tokenizer(nn.Module):
         self.bias = None
         if bias:
             total_bias_dim = self.n_num_features + d_bias_extra
-            self.bias = nn.Parameter(Tensor(total_bias_dim, d_token))
+            self.bias = nn.Parameter(torch.empty(total_bias_dim, d_token))
             nn_init.kaiming_uniform_(self.bias, a=math.sqrt(5))
             if self.bias is not None and d_bias_extra > 0:
                 with torch.no_grad():
                     self.bias[self.n_num_features:].zero_()
+
+    def _ple_encode(self, x_num: Tensor, edges: Tensor) -> Tensor:
+        """Quantile-based Piecewise Linear Encoding (hat basis) per numeric feature.
+        Args:
+            x_num: (B, n_num) numeric values.
+            edges: (n_num, k) monotonic knot values per feature.
+        Returns:
+            phi: (B, n_num, k) hat-basis activations that sum to 1 per-feature.
+        """
+        B = x_num.shape[0]
+        n_num, k = edges.shape
+        device = x_num.device
+        dtype = x_num.dtype
+
+        # Shapes:
+        #   x      : (B, n_num)
+        #   e      : (n_num, k)
+        #   eB     : (B, n_num, k)
+        x = x_num
+        e = edges
+        eB = e.unsqueeze(0).expand(B, -1, -1)
+
+        pos = (x.unsqueeze(-1) >= e.unsqueeze(0)).sum(dim=-1) - 1  # (B, n_num)
+        idx = pos.clamp(0, k - 2)  # (B, n_num)
+
+        # Gather left/right edges per sample-feature
+        left = torch.gather(eB, 2, idx.unsqueeze(-1)).squeeze(-1)           # (B, n_num)
+        right = torch.gather(eB, 2, (idx + 1).unsqueeze(-1)).squeeze(-1)    # (B, n_num)
+        denom = (right - left).clamp_min(self.num_enc_cfg["eps"])          # (B, n_num)
+
+        # Linear weights within the active interval
+        w_right = ((x - left) / denom).clamp(0, 1)
+        w_left = 1.0 - w_right
+
+        # Build hat-basis activations
+        phi = torch.zeros(B, n_num, k, device=device, dtype=dtype)
+        phi.scatter_(2, idx.unsqueeze(-1), w_left.unsqueeze(-1))
+        phi.scatter_(2, (idx + 1).unsqueeze(-1), w_right.unsqueeze(-1))
+
+        # Handle out-of-range values explicitly
+        below = x <= e[None, :, 0]      # (B, n_num)
+        above = x >= e[None, :, -1]     # (B, n_num)
+        if below.any():
+            flat = phi.reshape(-1, k)
+            bmask = below.reshape(-1)
+            flat[bmask] = 0.0
+            flat[bmask, 0] = 1.0
+        if above.any():
+            flat = phi.reshape(-1, k)
+            amask = above.reshape(-1)
+            flat[amask] = 0.0
+            flat[amask, -1] = 1.0
+
+        return phi
+
+    def _bspline_encode(self, x_num: Tensor, knots: Tensor, degree: int) -> Tensor:
+        """Evaluate clamped B-spline basis of given degree for each feature.
+        knots: (n_num, n_knots_total). Returns (B, n_num, m) with m = n_knots_total - degree - 1.
+        """
+        B = x_num.shape[0]
+        n_num, nK = knots.shape
+        p = degree
+        m = nK - p - 1
+        device = x_num.device
+
+        # Broadcast tensors
+        x = x_num.unsqueeze(-1)                # (B, n_num, 1)
+        t = knots.unsqueeze(0)                 # (1, n_num, nK)
+
+        # Initialize zeroth-degree basis: N_{i,0}(x) = 1 if t_i <= x < t_{i+1}
+        N = []
+        i_idx = torch.arange(m, device=device).view(1, 1, m).expand(B, n_num, m)
+        t_i = t[..., :m]
+        t_ip1 = t[..., 1:m+1]
+        N0 = ((x >= t_i) & (x < t_ip1)).to(x.dtype)
+        # Include the rightmost endpoint
+        N0 = torch.where((x >= t[..., -2: -1]) & (i_idx == (m - 1)), torch.ones_like(N0), N0)
+        Nl = N0
+        for d in range(1, p + 1):
+            # Compute N_{i,d}
+            t_i = t[..., :m]
+            t_id = t[..., :m]     # t_i
+            t_i_d = t[..., d:m + d]
+            t_ip1_d = t[..., 1:d+1]
+            # Left term
+            left_denom = (t_i_d - t_id).clamp_min(self.num_enc_cfg["eps"])  # (1,n_num,m)
+            left_num = (x - t_id)
+            left = (left_num / left_denom) * Nl
+            # Right term
+            t_i1 = t[..., 1:m+1]
+            t_i1_d1 = t[..., d+1:m + d + 1]
+            right_denom = (t_i1_d1 - t_i1).clamp_min(self.num_enc_cfg["eps"])  # (1,n_num,m)
+            right_num = (t_i1_d1 - x)
+            # For shifting Nl by one index to the right, pad last with zeros
+            Nl_shift = torch.zeros_like(Nl)
+            Nl_shift[..., 1:] = Nl[..., :-1]
+            right = (right_num / right_denom) * Nl_shift
+            Nl = left + right
+        # Nl is (B,n_num,m)
+        return Nl
+
+    def _encode_numeric(self, x_num: Tensor) -> Tensor:
+        if x_num is None or self.n_num_features == 0:
+            return None
+        if self.method == "raw":
+            phi = x_num.unsqueeze(-1)  # (B, n_num, 1)
+        elif self.method == "ple":
+            phi = self._ple_encode(x_num, self._ple_edges)
+        elif self.method == "spline":
+            phi = self._bspline_encode(x_num, self._spl_knots, self._spl_degree)
+        elif self.method == "cumspline":
+            phi_raw = self._bspline_encode(x_num, self._spl_knots, self._spl_degree)
+            phi = torch.cumsum(phi_raw, dim=-1)[..., :self.num_basis]
+        else:
+            raise RuntimeError("Unexpected encoding method")
+        # z-score per feature & per basis dim
+        mu, sd = self._phi_mean, self._phi_std
+        phi = (phi - mu.unsqueeze(0)) / (sd.unsqueeze(0))
+        return phi  # (B, n_num, k)
 
     @property
     def n_tokens(self) -> int:
@@ -144,8 +407,10 @@ class Tokenizer(nn.Module):
         final_tokens.append(cls_token_content)
 
         # --- 2. Numerical Tokens ---
-        if x_num is not None:
-            num_tokens_content = x_num.unsqueeze(-1) * self.weight.unsqueeze(0)
+        if x_num is not None and self.n_num_features > 0:
+            # Encode -> z-score -> project to token space
+            phi = self._encode_numeric(x_num.float())            # (B, n_num, k)
+            num_tokens_content = torch.einsum('bnk,nkd->bnd', phi, self.num_weight)
             if self.bias is not None:
                 num_bias = self.bias[:self.n_num_features].unsqueeze(0)
                 num_tokens_content = num_tokens_content + num_bias

@@ -42,7 +42,7 @@ dataset:
   # - kContaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   # - Diamonds
   # - E-CommereShippingData
-  - FOREX_audjpy-day-High
+  # - FOREX_audjpy-day-High
   # - FOREX_audsgd-hour-High
   # - Fitness_Club_c
   # - IEEE80211aa-GATS
@@ -53,7 +53,7 @@ dataset:
   # - NHANES_age_prediction
   # - Shop_Customer_Data
   # - VulNoneVul
-  # - Waterstress
+  - Waterstress
   # - htru
   # - ibm-employee-performance
   # - internet_firewall
@@ -115,8 +115,8 @@ transform_list:
   #     n_components: 100000
   #     binning_method: quantile # quantile, hdbscan, hierarchical
 
-  - norm:
-      policy: standard
+  # - norm:
+  #     policy: standard
   
 
     
