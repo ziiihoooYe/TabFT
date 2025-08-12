@@ -138,10 +138,13 @@ class Tokenizer(nn.Module):
         elif method == "raw":
             self.num_basis = 1
             if x_train_num is not None:
-                mu = x_train_num.mean(dim=0)              # (n_num,)
-                sd = x_train_num.std(dim=0).clamp_min(self.num_enc_cfg["eps"])  # (n_num,)
-                self.register_buffer("_phi_mean", mu.unsqueeze(-1))              # (n_num,1)
-                self.register_buffer("_phi_std", sd.unsqueeze(-1))               # (n_num,1)
+                # Compute statistics in the *encoded* space: phi = x.unsqueeze(-1)
+                phi_train = x_train_num.unsqueeze(-1)           # (B, n_num, 1)
+                mu = phi_train.mean(dim=0)                      # (n_num, 1)
+                sd = phi_train.std(dim=0, unbiased=False)       # (n_num, 1)
+                sd = sd.clamp_min(self.num_enc_cfg["eps"])     # numerical safety
+                self.register_buffer("_phi_mean", mu)
+                self.register_buffer("_phi_std", sd)
             else:
                 # Fallback zeros/ones
                 self.register_buffer("_phi_mean", torch.zeros(self.n_num_features, 1))
@@ -154,17 +157,13 @@ class Tokenizer(nn.Module):
             if x_train_num is None:
                 raise ValueError("PLE encoding requires x_num_train to compute bin edges.")
             # Compute per-feature knot points by quantiles or linspace
-            if self.num_enc_cfg.get("quantile", True):
-                qs = torch.linspace(0.0, 1.0, steps=k, device=x_train_num.device)
-                edges = torch.quantile(x_train_num, qs, dim=0).T  # (n_num, k)
-            else:
-                xmin, xmax = x_train_num.min(dim=0).values, x_train_num.max(dim=0).values
-                edges = torch.stack([xmin + (xmax - xmin) * (i / (k - 1)) for i in range(k)], dim=1)  # (n_num,k)
+            qs = torch.linspace(0.0, 1.0, steps=k, device=x_train_num.device)
+            edges = torch.quantile(x_train_num, qs, dim=0).T  # (n_num, k)
             self.register_buffer("_ple_edges", edges)
             # Compute basis on train to get mean/std
             phi_train = self._ple_encode(x_train_num, edges)    # (B, n_num, k)
             mu = phi_train.mean(dim=0)                          # (n_num,k)
-            sd = phi_train.std(dim=0).clamp_min(self.num_enc_cfg["eps"])  # (n_num,k)
+            sd = phi_train.std(dim=0, unbiased=False).clamp_min(self.num_enc_cfg["eps"])  # (n_num,k)
             self.register_buffer("_phi_mean", mu)
             self.register_buffer("_phi_std", sd)
 
@@ -175,13 +174,8 @@ class Tokenizer(nn.Module):
             if x_train_num is None:
                 raise ValueError("Spline encoding requires x_num_train to compute knots.")
             # Internal knots: quantiles or linspace
-            if self.num_enc_cfg.get("quantile", True):
-                # use open interval quantiles to avoid duplicates at ends
-                qs = torch.linspace(0.0, 1.0, steps=n_int + 2, device=x_train_num.device)[1:-1]  # exclude 0 and 1
-                internal = torch.quantile(x_train_num, qs, dim=0).T   # (n_num, n_int)
-            else:
-                xmin, xmax = x_train_num.min(dim=0).values, x_train_num.max(dim=0).values
-                internal = torch.stack([xmin + (xmax - xmin) * (i / (n_int + 1)) for i in range(1, n_int + 1)], dim=1)
+            qs = torch.linspace(0.0, 1.0, steps=n_int + 2, device=x_train_num.device)[1:-1]  # exclude 0 and 1
+            internal = torch.quantile(x_train_num, qs, dim=0).T   # (n_num, n_int)
             # Build clamped knot vectors per feature: [xmin repeated p+1] + internal + [xmax repeated p+1]
             xmin, xmax = x_train_num.min(dim=0).values, x_train_num.max(dim=0).values
             left = xmin.unsqueeze(1).repeat(1, p + 1)
@@ -194,7 +188,8 @@ class Tokenizer(nn.Module):
             # Compute basis on train for zscore
             phi_train = self._bspline_encode(x_train_num, knots, p)  # (B, n_num, m)
             mu = phi_train.mean(dim=0)
-            sd = phi_train.std(dim=0).clamp_min(self.num_enc_cfg["eps"]) 
+            sd = phi_train.std(dim=0, unbiased=False)
+            sd = sd.clamp_min(self.num_enc_cfg["eps"])  # numerical safety aligned across encoders
             self.register_buffer("_phi_mean", mu)
             self.register_buffer("_phi_std", sd)
 
@@ -227,7 +222,8 @@ class Tokenizer(nn.Module):
             phi_train_raw = self._bspline_encode(x_train_num, knots, p)          # (B, n_num, m)
             phi_train = torch.cumsum(phi_train_raw, dim=-1)[..., :self.num_basis]# (B, n_num, m-1)
             mu = phi_train.mean(dim=0)
-            sd = phi_train.std(dim=0).clamp_min(self.num_enc_cfg["eps"])
+            sd = phi_train.std(dim=0, unbiased=False)
+            sd = sd.clamp_min(self.num_enc_cfg["eps"])  # numerical safety aligned across encoders
             self.register_buffer("_phi_mean", mu)
             self.register_buffer("_phi_std", sd)
         else:
@@ -240,7 +236,10 @@ class Tokenizer(nn.Module):
         if self.n_num_features > 0:
             # Project basis (k) -> token dimension per feature using a learned matrix W_i in R^{k x d_token}
             self.num_weight = nn.Parameter(torch.empty(self.n_num_features, self.num_basis, d_token))
-            nn_init.kaiming_uniform_(self.num_weight, a=math.sqrt(5))
+            proto = torch.empty(self.n_num_features, d_token)
+            nn_init.kaiming_uniform_(proto, a=math.sqrt(5))
+            with torch.no_grad():
+                self.num_weight.copy_(proto.unsqueeze(1).expand(-1, self.num_basis, -1))
         else:
             self.num_weight = None
 
@@ -269,46 +268,44 @@ class Tokenizer(nn.Module):
                     self.bias[self.n_num_features:].zero_()
 
     def _ple_encode(self, x_num: Tensor, edges: Tensor) -> Tensor:
-        """Quantile-based Piecewise Linear Encoding (hat basis) per numeric feature.
-        Args:
-            x_num: (B, n_num) numeric values.
-            edges: (n_num, k) monotonic knot values per feature.
-        Returns:
-            phi: (B, n_num, k) hat-basis activations that sum to 1 per-feature.
-        """
         B = x_num.shape[0]
         n_num, k = edges.shape
         device = x_num.device
         dtype = x_num.dtype
 
-        # Shapes:
-        #   x      : (B, n_num)
-        #   e      : (n_num, k)
-        #   eB     : (B, n_num, k)
         x = x_num
         e = edges
-        eB = e.unsqueeze(0).expand(B, -1, -1)
+        eB = e.unsqueeze(0).expand(B, -1, -1)  # (B, n_num, k)
 
+        # Interval index j so that e_j <= x < e_{j+1}; clamp to [0, k-2]
         pos = (x.unsqueeze(-1) >= e.unsqueeze(0)).sum(dim=-1) - 1  # (B, n_num)
-        idx = pos.clamp(0, k - 2)  # (B, n_num)
+        idx = pos.clamp(0, k - 2)
 
-        # Gather left/right edges per sample-feature
-        left = torch.gather(eB, 2, idx.unsqueeze(-1)).squeeze(-1)           # (B, n_num)
-        right = torch.gather(eB, 2, (idx + 1).unsqueeze(-1)).squeeze(-1)    # (B, n_num)
-        denom = (right - left).clamp_min(self.num_enc_cfg["eps"])          # (B, n_num)
+        # Gather e_j and e_{j+1}
+        left = torch.gather(eB, 2, idx.unsqueeze(-1)).squeeze(-1)            # (B, n_num)
+        right = torch.gather(eB, 2, (idx + 1).unsqueeze(-1)).squeeze(-1)     # (B, n_num)
+        denom = (right - left).clamp_min(self.num_enc_cfg["eps"])           # (B, n_num)
 
-        # Linear weights within the active interval
-        w_right = ((x - left) / denom).clamp(0, 1)
-        w_left = 1.0 - w_right
+        # Linear fill for the (j+1)-th bin only
+        w_right = ((x - left) / denom).clamp(0, 1)                            # (B, n_num)
 
-        # Build hat-basis activations
+        # Build thermometer output: prefix ones, bin j set to 1, bin j+1 fractional, rest zeros
         phi = torch.zeros(B, n_num, k, device=device, dtype=dtype)
-        phi.scatter_(2, idx.unsqueeze(-1), w_left.unsqueeze(-1))
+
+        # prefix ones for bins strictly to the left of idx
+        j = torch.arange(k, device=device).view(1, 1, k)                      # (1,1,k)
+        prefix_mask = j < idx.unsqueeze(-1)                                   # (B,n_num,k)
+        phi[prefix_mask] = 1.0
+
+        # bin j is fully 1
+        phi.scatter_(2, idx.unsqueeze(-1), torch.ones_like(idx, dtype=dtype).unsqueeze(-1))
+        # bin j+1 carries the linear remainder
         phi.scatter_(2, (idx + 1).unsqueeze(-1), w_right.unsqueeze(-1))
 
         # Handle out-of-range values explicitly
         below = x <= e[None, :, 0]      # (B, n_num)
         above = x >= e[None, :, -1]     # (B, n_num)
+
         if below.any():
             flat = phi.reshape(-1, k)
             bmask = below.reshape(-1)
@@ -317,56 +314,59 @@ class Tokenizer(nn.Module):
         if above.any():
             flat = phi.reshape(-1, k)
             amask = above.reshape(-1)
-            flat[amask] = 0.0
-            flat[amask, -1] = 1.0
+            flat[amask] = 1.0  # saturate to all 1s when x is to the right of the last knot
 
         return phi
 
     def _bspline_encode(self, x_num: Tensor, knots: Tensor, degree: int) -> Tensor:
-        """Evaluate clamped B-spline basis of given degree for each feature.
-        knots: (n_num, n_knots_total). Returns (B, n_num, m) with m = n_knots_total - degree - 1.
-        """
+        eps = float(self.num_enc_cfg.get("eps", 1e-6))
         B = x_num.shape[0]
         n_num, nK = knots.shape
-        p = degree
+        p = int(degree)
         m = nK - p - 1
         device = x_num.device
+        dtype = x_num.dtype
 
-        # Broadcast tensors
-        x = x_num.unsqueeze(-1)                # (B, n_num, 1)
-        t = knots.unsqueeze(0)                 # (1, n_num, nK)
+        # Shapes
+        x = x_num.unsqueeze(-1)          # (B, n_num, 1)
+        t = knots.unsqueeze(0)           # (1, n_num, nK)
 
-        # Initialize zeroth-degree basis: N_{i,0}(x) = 1 if t_i <= x < t_{i+1}
-        N = []
-        i_idx = torch.arange(m, device=device).view(1, 1, m).expand(B, n_num, m)
-        t_i = t[..., :m]
-        t_ip1 = t[..., 1:m+1]
-        N0 = ((x >= t_i) & (x < t_ip1)).to(x.dtype)
-        # Include the rightmost endpoint
-        N0 = torch.where((x >= t[..., -2: -1]) & (i_idx == (m - 1)), torch.ones_like(N0), N0)
-        Nl = N0
+        # Degree-0 indicators: N_{i,0}(x) = 1 if t_i <= x < t_{i+1}, except include rightmost endpoint for i=m-1
+        t_i   = t[..., :m]               # (1, n_num, m)
+        t_ip1 = t[..., 1:m+1]            # (1, n_num, m)
+        N = ((x >= t_i) & (x < t_ip1)).to(dtype)  # (B, n_num, m)
+        # include the very right endpoint (x == t_{nK-1}) for the last basis
+        right_endpoint = (x >= t[..., -2:-1])  # (B, n_num, 1) because t[-2] == t[-1] == xmax in clamped case
+        last_idx = torch.arange(m, device=device).view(1,1,m) == (m - 1)
+        N = torch.where(right_endpoint & last_idx, torch.ones_like(N), N)
+
+        # Cox–de Boor recursion
+        # For d = 1..p:
+        # N_{i,d} = ((x - t_i)/(t_{i+d}-t_i)) * N_{i,d-1} + ((t_{i+d+1}-x)/(t_{i+d+1}-t_{i+1})) * N_{i+1,d-1}
         for d in range(1, p + 1):
-            # Compute N_{i,d}
-            t_i = t[..., :m]
-            t_id = t[..., :m]     # t_i
-            t_i_d = t[..., d:m + d]
-            t_ip1_d = t[..., 1:d+1]
-            # Left term
-            left_denom = (t_i_d - t_id).clamp_min(self.num_enc_cfg["eps"])  # (1,n_num,m)
-            left_num = (x - t_id)
-            left = (left_num / left_denom) * Nl
-            # Right term
-            t_i1 = t[..., 1:m+1]
-            t_i1_d1 = t[..., d+1:m + d + 1]
-            right_denom = (t_i1_d1 - t_i1).clamp_min(self.num_enc_cfg["eps"])  # (1,n_num,m)
-            right_num = (t_i1_d1 - x)
-            # For shifting Nl by one index to the right, pad last with zeros
-            Nl_shift = torch.zeros_like(Nl)
-            Nl_shift[..., 1:] = Nl[..., :-1]
-            right = (right_num / right_denom) * Nl_shift
-            Nl = left + right
-        # Nl is (B,n_num,m)
-        return Nl
+            # left term indices
+            ti      = t[..., :m]                 # t_i
+            ti_d    = t[..., d:m+d]              # t_{i+d}
+            left_den = (ti_d - ti).clamp_min(eps)
+            left_num = (x - ti)
+            left = (left_num / left_den) * N     # uses N_{i, d-1}
+
+            # right term indices
+            ti1     = t[..., 1:m+1]              # t_{i+1}
+            ti1_d1  = t[..., d+1:m+d+1]          # t_{i+d+1}
+            right_den = (ti1_d1 - ti1).clamp_min(eps)
+            right_num = (ti1_d1 - x)
+            N_shift = torch.zeros_like(N)
+            N_shift[..., :-1] = N[..., 1:]       # N_{i+1, d-1}
+            right = (right_num / right_den) * N_shift
+
+            N = left + right
+
+        # 数值清理：截断极小负数，并做单位和归一（防止 1e-6 级误差积累）
+        N = N.clamp_min(0)
+        s = N.sum(dim=-1, keepdim=True).clamp_min(eps)
+        N = N / s
+        return N
 
     def _encode_numeric(self, x_num: Tensor) -> Tensor:
         if x_num is None or self.n_num_features == 0:
@@ -382,9 +382,9 @@ class Tokenizer(nn.Module):
             phi = torch.cumsum(phi_raw, dim=-1)[..., :self.num_basis]
         else:
             raise RuntimeError("Unexpected encoding method")
-        # z-score per feature & per basis dim
+        # z-score per feature & per basis dim (enforce normalization)
         mu, sd = self._phi_mean, self._phi_std
-        phi = (phi - mu.unsqueeze(0)) / (sd.unsqueeze(0))
+        phi = (phi - mu.unsqueeze(0)) / sd.unsqueeze(0)
         return phi  # (B, n_num, k)
 
     @property
@@ -403,7 +403,7 @@ class Tokenizer(nn.Module):
         final_tokens = []
 
         # --- 1. CLS Tokens ---
-        cls_token_content = self.cls_tokens.expand(batch_size, -1, -1)
+        cls_token_content = self.cls_tokens.unsqueeze(0).expand(batch_size, 1, -1)
         final_tokens.append(cls_token_content)
 
         # --- 2. Numerical Tokens ---

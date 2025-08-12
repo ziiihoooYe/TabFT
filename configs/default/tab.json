@@ -16,7 +16,6 @@
                 "method": "cumspline",
                 "k": 10,
                 "n_knots": 10,
-                "quantile": true,
                 "degree": 3
             }
         },
