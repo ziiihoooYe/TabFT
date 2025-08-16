@@ -16,7 +16,8 @@
                 "method": "cumspline",
                 "k": 10,
                 "n_knots": 10,
-                "degree": 3
+                "degree": 3,
+                "quantile": false
             }
         },
         "training": {
@@ -26,7 +27,6 @@
             "batch_size": 1024,
             "patience": 40
         },
-        "general": {},
-        "pretraining": {}
+        "general": {}
     }
 }

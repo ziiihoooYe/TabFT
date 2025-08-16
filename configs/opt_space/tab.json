@@ -47,19 +47,8 @@
         "categorical",
         true,
         false
-      ],
-      "num_encoding": {
-        "n_knots": [
-          "categorical",
-          5,
-          10,
-          20,
-          30,
-          50
-        ]
-      }
+      ]
     },
-    "pretraining": {},
     "training": {
       "lr": [
         "loguniform",

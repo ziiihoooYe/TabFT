@@ -312,7 +312,10 @@ def sample_parameters(trial, space, base_config):
                 if base_config['model']['activation'].endswith('glu'):
                     args = (args[0] * 2 / 3, args[1] * 2 / 3)
                 result[label] = trial.suggest_uniform('d_ffn_factor', *args)
-
+                
+            elif distribution == 'loguniformint':
+                low, high = args
+                result[label] = trial.suggest_float(label, low, high, log=True)
             else:
                 result[label] = get_distribution(distribution)(label, *args)
     return result

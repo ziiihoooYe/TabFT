@@ -1,7 +1,6 @@
 import os.path as osp
 import time
 import math
-import torch.nn.functional as F
 import numpy as np
 from copy import deepcopy
 from model.methods.base import Method
@@ -31,7 +30,7 @@ class TabMethod(Method):
             num_continuous=self.n_num_features or 0,
             categories=self.categories,
             d_out=self.d_out,
-            x_num_train=self.N['train']
+            x_num_train=self.N['train'] if self.N is not None else None,
         ).to(self.args.device)
 
         if self.args.use_float:
@@ -81,7 +80,7 @@ class TabMethod(Method):
             weight_decay=self.args.config['training']['weight_decay']
         )
         if not train:
-            return        
+            return
 
         # supervised learning
         time_cost = 0
@@ -142,38 +141,17 @@ class TabMethod(Method):
             self.val_count = 0
         else:
             self.val_count += 1
-            if self.val_count > 40:
+            if self.val_count > self.args.config['training']['patience']:
                 self.continue_training = False
         torch.save(self.trlog, osp.join(self.args.save_path, 'trlog'))   
 
-    def train_epoch(self, epoch):
-        self.model.train()
-        tl = Averager()
-        for i, (X, y) in enumerate(self.train_loader, 1):
-            self.train_step = self.train_step + 1
-            if self.N is not None and self.C is not None:
-                X_num, X_cat = X[0], X[1]
-            elif self.C is not None and self.N is None:
-                X_num, X_cat = None, X
-            else:
-                X_num, X_cat = X, None
-
-            loss = self.criterion(self.model(X_num, X_cat), y)
-
-            tl.add(loss.item())
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-            
-            del loss
-        tl = tl.item()
-        self.trlog['train_loss'].append(tl)    
 
     def predict(self, data, info, model_name):
         N,C,y = data
         N, C = self.delete_const_col(N, C)
         self.model.load_state_dict(torch.load(osp.join(self.args.save_path, model_name + '-{}.pth'.format(str(self.args.seed))))['params'])
         self.model.eval()
+
         self.data_format(False, N, C, y)
         
         test_logit, test_label = [], []
@@ -187,13 +165,22 @@ class TabMethod(Method):
                     X_num, X_cat = X, None
 
                 pred = self.model(X_num, X_cat)
+
                 test_logit.append(pred)
                 test_label.append(y)
                 
         test_logit = torch.cat(test_logit, 0)
         test_label = torch.cat(test_label, 0)
         
-        vl = self.criterion(test_logit, test_label).item()
+        vl = self.criterion(test_logit, test_label).item()     
+
         vres, metric_name = self.metric(test_logit, test_label, self.y_info)
+
+        # print('Test: loss={:.4f}'.format(vl))
+        # for name, res in zip(metric_name, vres):
+        #     print('[{}]={:.4f}'.format(name, res)mean_std)
+
         
         return vl, vres, metric_name, test_logit
+
+

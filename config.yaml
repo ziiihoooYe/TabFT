@@ -117,9 +117,7 @@ transform_list:
 
   # - norm:
   #     policy: standard
-  
 
-    
 
 
 model_type: 
@@ -146,7 +144,7 @@ model_type:
 model_path: results_model/default_path
 seed: 2025
 seed_num: 15
-gpu: 2
+gpu: 0
 tune: true
 tune_transform: false
 load_tune_config: false

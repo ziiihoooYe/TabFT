@@ -125,6 +125,16 @@ class Tokenizer(nn.Module):
         x_train_num = _to_tensor(x_num_train)
         if x_train_num is not None:
             x_train_num = x_train_num.float()
+        # ---- Raw x stats for numeric reconstruction loss normalization ----
+        if self.n_num_features > 0 and x_train_num is not None:
+            x_mu = x_train_num.mean(dim=0)  # (n_num,)
+            x_sd = x_train_num.std(dim=0, unbiased=False)
+            x_sd = x_sd.clamp_min(self.num_enc_cfg["eps"])  # numerical safety
+            self.register_buffer("_x_raw_mean", x_mu)
+            self.register_buffer("_x_raw_std", x_sd)
+        else:
+            self.register_buffer("_x_raw_mean", torch.zeros(self.n_num_features))
+            self.register_buffer("_x_raw_std", torch.ones(self.n_num_features))
 
         # Per-feature basis parameters and normalization stats
         # We store means/stds AFTER encoding (basis space), used for z-score at runtime.
@@ -196,7 +206,7 @@ class Tokenizer(nn.Module):
         elif method == "cumspline":
             # Cumulative of B-spline basis: phi_cum = cumsum(Bspline(x), dim=-1) dropping the last always-1 dim.
             p = int(self.num_enc_cfg.get("degree", 3))
-            n_int = int(self.num_enc_cfg.get("n_knots", 10))
+            n_int = int(self.num_enc_cfg.get("n_knots", 30))
             if x_train_num is None:
                 raise ValueError("Cumulative spline encoding requires x_num_train to compute knots.")
             # Internal knots: quantiles or linspace
@@ -571,7 +581,7 @@ class Encoder(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         for i, layer in enumerate(self.layers):
             is_last_layer = i + 1 == len(self.layers)
-            
+
             # --- Custom query for last layer ---
             if is_last_layer:
                 # In the last layer, only the CLS tokens act as queries
@@ -579,7 +589,7 @@ class Encoder(nn.Module):
             else:
                 # In other layers, all tokens attend to all other tokens
                 q = x
-            
+
             x = layer(x, q_custom=q)
 
         return x
