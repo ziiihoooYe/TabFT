@@ -1,0 +1,10 @@
+name: tabft
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - graphviz
+  - python-graphviz
+  - ipykernel
+prefix: /usr2/zihaoye/miniconda3/envs/tabft
