@@ -315,7 +315,7 @@ def sample_parameters(trial, space, base_config):
                 
             elif distribution == 'loguniformint':
                 low, high = args
-                result[label] = trial.suggest_float(label, low, high, log=True)
+                result[label] = trial.suggest_int(label, low, high, log=True)
             else:
                 result[label] = get_distribution(distribution)(label, *args)
     return result
@@ -938,7 +938,7 @@ def get_logger(logger_name: str, log_file: str = None, level: int = __import__('
     import logging
     import datetime
     if log_file is None:
-        log_file = f"log/defalt_log.log"
+        log_file = f"log/default_log.log"
     logger = logging.getLogger(logger_name)
     logger.setLevel(level)
     # Clear any existing handlers to avoid duplicate logs

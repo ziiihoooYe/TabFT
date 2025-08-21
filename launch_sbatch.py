@@ -184,7 +184,7 @@ def main():
     ap.add_argument("--gpus-per-task", type=int, default=0, help="GPUs per task (Slurm level).")
     ap.add_argument("--mem", type=str, default="32G", help="Memory per task, e.g., 32G.")
     ap.add_argument("--partition", type=str, default="general", help="Slurm partition name.")
-    ap.add_argument("--time", type=str, default="1-00:00:00", help="Time limit, e.g., 1-00:00:00.")
+    ap.add_argument("--time", type=str, default="2-00:00:00", help="Time limit, e.g., 1-00:00:00.")
     ap.add_argument("--max-parallel", type=int, default=8, help="Max concurrent array tasks, e.g., 8 for clusters that cap per-user concurrency.")
     ap.add_argument("--conda-env", type=str, default=None, help="Conda env to activate inside the job.")
     ap.add_argument("--dry-run", action="store_true", help="Only generate the SBATCH script; do not submit.")

@@ -22,6 +22,7 @@ data/
 
 # yaml file
 yaml/
+yaml_config/
 
-# llm cache
-llm_cache/
+# sbatch files
+sbatch/

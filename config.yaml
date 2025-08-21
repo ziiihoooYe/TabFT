@@ -31,7 +31,7 @@
 # --------------------------------------------------------------------------------
 
 dataset:
-  # - ASP-POTASSCO-classification
+  - ASP-POTASSCO-classification
   # - Amazon_employee_access
   # - Ailerons
   # - BNG(tic-tac-toe)
@@ -39,10 +39,10 @@ dataset:
   # - Click_prediction_small
   # - electricity
   # - estimation_of_obesity_levels
-  # - kContaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
+  # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   # - Diamonds
   # - E-CommereShippingData
-  # - FOREX_audjpy-day-High
+  - FOREX_audjpy-day-High
   # - FOREX_audsgd-hour-High
   # - Fitness_Club_c
   # - IEEE80211aa-GATS
@@ -114,9 +114,13 @@ transform_list:
   #     cache_path: fit_cache
   #     n_components: 100000
   #     binning_method: quantile # quantile, hdbscan, hierarchical
+  # - stretch: {}
+  # - adaptive_cdf: {}
+  - stretch_con: 
+      sample_fraction: 1.0
 
-  # - norm:
-  #     policy: standard
+  - norm:
+      policy: standard
 
 
 
@@ -131,17 +135,17 @@ model_type:
   # - mlp
   # - tabicl
   # - modernNCA
-  # - resnet
+  - resnet
   # - mlp_plr
-  # - realmlp
+  - realmlp
   # - xgboost
   # - catboost
   # - tabpfn
   # - PFN-v2
   # - tabm
-  - tab
+  # - tab
 
-model_path: results_model/default_path
+model_path: /data/user_data/zihaoye/TabFT/results_model/default_path
 seed: 2025
 seed_num: 15
 gpu: 0

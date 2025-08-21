@@ -137,8 +137,6 @@ class Tokenizer(nn.Module):
             self.register_buffer("_x_raw_std", torch.ones(self.n_num_features))
 
         # Per-feature basis parameters and normalization stats
-        # We store means/stds AFTER encoding (basis space), used for z-score at runtime.
-        # (No pre-assignment of _phi_mean/_phi_std/_ple_edges/_spl_knots; buffers are registered below)
         self._spl_degree = int(self.num_enc_cfg.get("degree", 3))
 
         method = (self.num_enc_cfg.get("method") or "raw").lower()

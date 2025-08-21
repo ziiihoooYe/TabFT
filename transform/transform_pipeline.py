@@ -80,8 +80,12 @@ class DataTransformPipeline:
                 pipeline.append(TargetRankingIndiceTransform(transform_config))
             elif transform_name == 'uniple':
                 pipeline.append(UniPiecewiseCDFTransform(transform_config))
-            elif transform_name == 'stretch_opt':
+            elif transform_name == 'adaptive_cdf':
+                pipeline.append(AdaptiveBandwidthCdfTransform(transform_config))
+            elif transform_name == 'stretch':
                 pipeline.append(SlopeEqualizeStretchTransform(transform_config, self.is_regression))
+            elif transform_name == 'stretch_con':
+                pipeline.append(DensityWeightedSlopeStretchTransform(transform_config, self.is_regression))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline

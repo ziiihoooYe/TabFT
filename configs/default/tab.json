@@ -3,21 +3,21 @@
         "model": {
             "token_bias": true,
             "n_layers": 3,
-            "d_token": 128,
+            "d_token": 192,
             "n_heads": 8,
             "d_ffn_factor": 1.3333333333333333,
             "attention_dropout": 0.2,
             "ffn_dropout": 0.1,
             "residual_dropout": 0.0,
             "activation": "geglu",
-            "prenormalization": false,
+            "prenormalization": true,
             "initialization": "kaiming",
             "num_encoding": {
                 "method": "cumspline",
                 "k": 10,
                 "n_knots": 10,
                 "degree": 3,
-                "quantile": false
+                "quantile": true
             }
         },
         "training": {
