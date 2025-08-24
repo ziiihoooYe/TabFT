@@ -86,6 +86,8 @@ class DataTransformPipeline:
                 pipeline.append(SlopeEqualizeStretchTransform(transform_config, self.is_regression))
             elif transform_name == 'stretch_con':
                 pipeline.append(DensityWeightedSlopeStretchTransform(transform_config, self.is_regression))
+            elif transform_name == 'stretch_oof':
+                pipeline.append(OofSampleStretchTransform(transform_config, self.is_regression))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline

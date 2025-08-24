@@ -1,0 +1,9 @@
+{
+    "adaptive_cdf": {
+        "k": [
+            "loguniformint",
+            1,
+            256
+        ]
+    }
+}

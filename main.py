@@ -35,6 +35,7 @@ def main():
     
     for recipe in recipes:
         args, default_para, opt_space = recipe
+        set_seeds(args.seed)
         loss_list, results_list, time_list = [], [], []
         logger.info("------------------------------------")
         logger.info(f"Dataset: {args.dataset}")

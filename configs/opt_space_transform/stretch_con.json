@@ -1,0 +1,9 @@
+{
+    "stretch_con": {
+        "lowpass_tau": [
+            "uniform",
+            0.0,
+            1.0
+        ]
+    }
+}

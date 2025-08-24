@@ -42,9 +42,9 @@ dataset:
   # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   # - Diamonds
   # - E-CommereShippingData
-  - FOREX_audjpy-day-High
+  # - FOREX_audjpy-day-High
   # - FOREX_audsgd-hour-High
-  # - Fitness_Club_c
+  - Fitness_Club_c
   # - IEEE80211aa-GATS
   # - Intersectional-Bias-Assessment
   # - Job_Profitability
@@ -115,9 +115,17 @@ transform_list:
   #     n_components: 100000
   #     binning_method: quantile # quantile, hdbscan, hierarchical
   # - stretch: {}
-  # - adaptive_cdf: {}
-  - stretch_con: 
-      sample_fraction: 1.0
+  # - adaptive_cdf: 
+  #     k: 1
+  # - stretch_con:
+  #     viz_enable: true
+  #     oof_n_splits: 10
+  #     lowpass_tau: 0.2
+  - stretch_oof:
+      oof_n_splits: 10
+      n_bins: 32
+      viz_enable: true
+
 
   - norm:
       policy: standard
@@ -132,7 +140,7 @@ model_type:
   # - tabtransformer
   # - xgboost
   # - lightgbm
-  # - mlp
+  - mlp
   # - tabicl
   # - modernNCA
   - resnet
@@ -150,6 +158,6 @@ seed: 2025
 seed_num: 15
 gpu: 0
 tune: true
-tune_transform: false
+tune_transform: true
 load_tune_config: false
 n_trials: 100

@@ -1008,150 +1008,11 @@ class CdfTransform(BaseTransform):
         return edges
 
 
-
-# Inserted: AdaptiveBandwidthCdfTransform
-class AdaptiveBandwidthCdfTransform(BaseTransform):
-    """
-    Adaptive-bandwidth Gaussian-KDE CDF transform (per feature, 1D).
-
-    For each numeric feature j, on the training set we compute a per-sample
-    bandwidth σ_i as the distance to its k-th nearest neighbor along the 1D axis.
-    We then subsample up to `n_ref` reference points (value + σ) to build a
-    variable-bandwidth Gaussian mixture CDF:
-        F_hat(x) = (1/M) * sum_{r=1}^M Phi( (x - v_r) / sigma_r ),
-    where Phi is the standard Gaussian CDF.
-
-    At transform time, each value x is mapped to F_hat(x) in [0,1].
-    Optionally, `concat_raw=True` will append the raw x as an extra column.
-
-    Args (dict):
-        k: int, default 5. k in kNN for per-point bandwidth.
-        n_ref: int, default 2048. Max number of reference points kept per feature.
-        bandwidth_scale: float, default 1.0. Multiplicative scale on σ.
-        min_sigma: float, default 1e-6. Lower floor to avoid degeneracy.
-        concat_raw: bool, default False. If True, concatenate raw x to the output.
-        random_state: int, default 0. For reproducible reference subsampling.
-
-    Output shape:
-        If concat_raw=False: (N, d)
-        If concat_raw=True:  (N, sum_j (1 + 1)) = (N, 2d)
-    """
-    def __init__(self, args):
-        super().__init__()
-        self.k = int(args.get("k", 5))
-        self.n_ref = int(args.get("n_ref", 2048))
-        self.bandwidth_scale = float(args.get("bandwidth_scale", 1.0))
-        self.min_sigma = float(args.get("min_sigma", 1e-6))
-        self.concat_raw = bool(args.get("concat_raw", False))
-        self.random_state = int(args.get("random_state", 0))
-
-        # Per-feature references: list of dicts with keys {'v': np.ndarray, 'sigma': np.ndarray}
-        self.refs_ = []
-
-    @staticmethod
-    def _knn_sigma_sorted(xs: np.ndarray, k: int, min_sigma: float) -> np.ndarray:
-        """
-        Given a sorted 1D array xs, return per-point radius to the k-th neighbor
-        (on either side), as a robust local bandwidth. Boundary points use the
-        farthest available neighbor within k steps.
-        """
-        n = xs.size
-        if n == 1:
-            return np.array([1.0], dtype=float)
-        idx = np.arange(n)
-        left_idx  = np.maximum(idx - k, 0)
-        right_idx = np.minimum(idx + k, n - 1)
-
-        left_dist  = xs - xs[left_idx]
-        right_dist = xs[right_idx] - xs
-        radius = np.maximum(left_dist, right_dist)
-        # Numerical floor
-        radius = np.maximum(radius, min_sigma)
-        return radius
-
-    def fit(self, N_data, C_data, y_data=None, shared_state=None):
-        if not N_data or "train" not in N_data:
-            return self
-
-        X = N_data["train"]
-        if X.ndim != 2:
-            raise ValueError("Expected 2D numeric array for N_data['train'].")
-
-        rng = np.random.RandomState(self.random_state)
-        n, d = X.shape
-        self.refs_ = []
-
-        for j in range(d):
-            col = X[:, j].astype(np.float64)
-            # Handle degenerate/constant columns
-            uniq = np.unique(col)
-            if uniq.size <= 1:
-                v_ref = np.array([uniq[0] if uniq.size == 1 else 0.0], dtype=np.float64)
-                s_ref = np.array([1.0], dtype=np.float64)  # arbitrary nonzero
-                self.refs_.append({"v": v_ref, "sigma": s_ref})
-                continue
-
-            # Sort and compute kNN bandwidths on the 1D axis
-            order = np.argsort(col)
-            xs = col[order]
-            sig_all = self._knn_sigma_sorted(xs, self.k, self.min_sigma)
-            sig_all = self.bandwidth_scale * sig_all
-
-            # Subsample reference pairs (value, sigma) to cap compute
-            m = min(self.n_ref, xs.size)
-            if m == xs.size:
-                ref_idx = np.arange(xs.size)
-            else:
-                # Evenly spaced quantile subsampling to preserve coverage
-                ref_idx = np.linspace(0, xs.size - 1, num=m).astype(int)
-
-            v_ref = xs[ref_idx].astype(np.float64)
-            s_ref = sig_all[ref_idx].astype(np.float64)
-
-            self.refs_.append({"v": v_ref, "sigma": s_ref})
-
-        return self
-
-    def transform(self, N_data, C_data, y_data=None, shared_state=None):
-        # If not fitted or no numeric data, no-op
-        if not self.refs_ or not N_data:
-            return N_data, C_data, y_data
-
-        for part, arr in N_data.items():
-            if arr.ndim != 2:
-                raise ValueError(f"N_data[{part}] must be a 2D array.")
-            n, d = arr.shape
-            if d != len(self.refs_):
-                raise ValueError(f"Feature dimension mismatch: data has {d}, refs has {len(self.refs_)}.")
-
-            cols_out = []
-            for j in range(d):
-                ref = self.refs_[j]
-                v = ref["v"]      # (M,)
-                s = ref["sigma"]  # (M,)
-                x = arr[:, j].astype(np.float64)  # (n,)
-
-                # Evaluate variable-bandwidth mixture CDF: mean_r Phi((x - v_r)/s_r)
-                # Broadcasting: (n,1) - (1,M) divided by (1,M) -> (n,M)
-                z = (x[:, None] - v[None, :]) / s[None, :]
-                out = norm.cdf(z).mean(axis=1)  # (n,)
-
-                if self.concat_raw:
-                    cols_out.append(np.stack([out.astype(np.float32), x.astype(np.float32)], axis=1))
-                else:
-                    cols_out.append(out.astype(np.float32)[:, None])
-
-            N_data[part] = np.hstack(cols_out)
-
-        return N_data, C_data, y_data
-
-
 class UniPiecewiseCDFTransform(BaseTransform):
     def __init__(self, args):
         super().__init__()
         self.n_bins = args.get("n_bins", 10)
         self.bin_edges_: list[np.ndarray] | None = None  # per‑feature edges
-
 
     def fit(self, N_data, C_data=None, y_data=None, shared_state=None):
         if not (N_data and "train" in N_data):
@@ -1410,342 +1271,381 @@ class SlopeEqualizeStretchTransform(BaseTransform):
         return N_data, C_data, y_data
 
 
-class DensityWeightedSlopeStretchTransform(BaseTransform):
-    """
-    Method B (density‑weighted Dirichlet): learn a 1D monotone reparameterization per numeric feature
-    that minimizes roughness under the **data measure**. For each feature j, on the training set:
 
-        1) Adaptive‑bandwidth KDE (x‑domain):
-             - Sort x, use k‑NN radius as local σ_i.
-             - Subsample up to n_ref reference pairs (v_r, σ_r).
-             - Build a variable‑bandwidth Gaussian mixture **pdf** on an evaluation grid x_grid:
-                   p_hat(x) = mean_r  φ((x - v_r)/σ_r) / σ_r,   φ = N(0,1) pdf.
 
-        2) Target smoothing in x‑domain (Nadaraya–Watson with Gaussian kernel, bandwidth h_x):
-             - m(x) ≈ E[Y|X=x] (or one‑vs‑rest probs).
-             - m'(x) via np.gradient on the same x_grid; for multiclass aggregate
-               |m'(x)| across classes by L1/L2.
-
-        3) Density‑weighted slope:
-               s'(x) ∝ ( |m'(x)|^2 * p_hat(x) )^{1/3}.
-           Clamp to [s_min, s_max], normalize ∫ s'(x) dx = 1, then integrate to obtain
-           a monotone mapping s(x) ∈ [0,1]. Store (x_grid, s_vals).
-
-        4) Transform:
-             - For any partition, y = s(x) by linear interpolation on (x_grid, s_vals).
-
-    This realizes the closed‑form optimizer of the small‑bandwidth limit under data‑measure
-    Dirichlet energy, in contrast to the unweighted Version‑A where s'(x) ∝ |m'(x)|.
-    """
-
-    def __init__(self, args, is_regression: bool | None = None):
+# Inserted: AdaptiveBandwidthCdfTransform
+class AdaptiveBandwidthCdfTransform(BaseTransform):
+    def __init__(self, args):
         super().__init__()
-        # ----- KDE(pdf) controls -----
-        self.k                  = int(args.get("k", 5))           # k-NN radius for adaptive σ
-        self.n_ref              = int(args.get("n_ref", 2048))    # max reference points
-        self.bandwidth_scale    = float(args.get("bandwidth_scale", 1.0))
-        self.min_sigma          = float(args.get("min_sigma", 1e-6))
+        self.k = int(args.get("k", 5))
+        self.n_ref = int(args.get("n_ref", 2048))
+        self.min_sigma = float(args.get("min_sigma", 1e-6))
+        self.random_state = int(args.get("random_state", 0))
 
-        # ----- regression on x-domain -----
-        self.grid_size          = int(args.get("grid_size", 256)) # x-grid size
-        self.bandwidth_x        = args.get("bandwidth_x", None)   # None => Silverman
-        self.bandwidth_x_scale  = float(args.get("bandwidth_x_scale", 1.0))
-        self.kr_eps             = float(args.get("kr_eps", 1e-12))
+        # Per-feature references: list of dicts with keys {'v': np.ndarray, 'sigma': np.ndarray}
+        self.refs_ = []
 
-        # ----- slope aggregation & regularization -----
-        self.norm               = str(args.get("norm", "l2")).lower()  # 'l1' or 'l2' for multiclass
-        self.s_min              = float(args.get("s_min", 1e-3))
-        self.s_max              = float(args.get("s_max", 1e3))
-        self.concat_raw         = bool(args.get("concat_raw", False))
-        self.is_regression      = is_regression
-
-        # ----- optional subsampling to mitigate overfitting -----
-        # If any of the following triggers are set, the transform will use only a subset
-        # of the training rows to construct s(x). For classification, sampling can be
-        # approximately class‑balanced.
-        self.sample_fraction      = float(args.get("sample_fraction", 1.0))  # in (0,1]; 1.0 = use all
-        self.max_samples          = args.get("max_samples", None)            # Optional[int]
-        self.per_class_max        = args.get("per_class_max", None)          # Optional[int]
-        self.class_balance        = bool(args.get("class_balance", True))    # only matters if classification
-
-        # learned artifacts per feature j:
-        #   grids_: list of (x_min_j, x_max_j) for clipping
-        #   maps_:  list of (x_grid_j: (M,), s_vals_j: (M,))
-        self.grids_: list[tuple[float, float]] = []
-        self.maps_:  list[tuple[np.ndarray, np.ndarray]] = []
-
-        # task mode
-        self._mode: str | None = None
-        self._n_classes: int | None = None
-
-    # ---------------- helpers ----------------
     @staticmethod
     def _knn_sigma_sorted(xs: np.ndarray, k: int, min_sigma: float) -> np.ndarray:
-        """1D k-NN radius on sorted xs as local bandwidth; boundary uses farthest available."""
+        """
+        Given a sorted 1D array xs, return per-point radius to the k-th neighbor
+        (on either side), as a robust local bandwidth. Boundary points use the
+        farthest available neighbor within k steps.
+        """
         n = xs.size
         if n == 1:
             return np.array([1.0], dtype=float)
         idx = np.arange(n)
         left_idx  = np.maximum(idx - k, 0)
         right_idx = np.minimum(idx + k, n - 1)
+
         left_dist  = xs - xs[left_idx]
         right_dist = xs[right_idx] - xs
-        sigma = np.maximum(left_dist, right_dist)
-        sigma = np.maximum(sigma, min_sigma)
-        return sigma
+        radius = np.maximum(left_dist, right_dist)
+        # Numerical floor
+        radius = np.maximum(radius, min_sigma)
+        return radius
 
-    @staticmethod
-    def _silverman_bandwidth(x: np.ndarray) -> float:
-        """Silverman's rule for 1D data (robust to outliers via IQR)."""
-        n = max(1, x.size)
-        if n <= 1:
-            return 0.1
-        std = np.std(x, ddof=1)
-        iqr = np.subtract(*np.percentile(x, [75, 25]))
-        sigma = min(std, iqr / 1.34) if (std > 0 or iqr > 0) else 0.1
-        h = 0.9 * sigma * (n ** (-1/5))
-        return max(h, 1e-3)
-
-    def _nadaraya_watson(self, x_train: np.ndarray, Y: np.ndarray,
-                         x_grid: np.ndarray, h: float) -> np.ndarray:
-        """
-        Gaussian Nadaraya–Watson regression on x-domain grid.
-        x_train: (n,)
-        Y: (n,) for regression/binary, or (n, C) for multiclass one-hot
-        x_grid: (M,)
-        return: (M,) or (M, C)
-        """
-        z = (x_grid[:, None] - x_train[None, :]) / max(h, 1e-12)   # (M,n)
-        W = np.exp(-0.5 * z * z)                                   # (M,n)
-        Wsum = np.maximum(W.sum(axis=1, keepdims=True), self.kr_eps)
-        if Y.ndim == 1:
-            num = W @ Y
-            return (num / Wsum[:, 0])
-        else:
-            num = W @ Y
-            return (num / Wsum)
-
-    @staticmethod
-    def _grad_on_grid(vals: np.ndarray, grid: np.ndarray) -> np.ndarray:
-        """Central finite-difference gradient."""
-        return np.gradient(vals, grid, edge_order=2)
-
-    def _detect_mode(self, y: np.ndarray) -> None:
-        uniq = np.unique(y)
-        if self.is_regression is True:
-            self._mode = "regression"
-        elif self.is_regression is False:
-            self._mode = "binary" if uniq.size == 2 else "multiclass"
-        else:
-            if np.issubdtype(y.dtype, np.floating) and uniq.size > 2:
-                self._mode = "regression"
-            elif uniq.size == 2:
-                self._mode = "binary"
-            else:
-                self._mode = "multiclass"
-        if self._mode == "multiclass":
-            self._n_classes = int(uniq.max()) + 1
-
-    # ---------------- API ----------------
     def fit(self, N_data, C_data, y_data=None, shared_state=None):
-        """
-        Build per-feature s(x) on training set only.
-        """
-        if not (N_data and "train" in N_data and y_data and "train" in y_data):
+        if not N_data or "train" not in N_data:
             return self
 
-        # --- keep full data for bounds; optionally subsample for smoothing/KDE to reduce overfitting ---
-        X_all = N_data["train"].astype(np.float64)
-        y_all = y_data["train"].ravel()
-        self._detect_mode(y_all)
+        X = N_data["train"]
+        if X.ndim != 2:
+            raise ValueError("Expected 2D numeric array for N_data['train'].")
 
-        n_all, d_all = X_all.shape
-        # compute per-feature full-support bounds (used later to avoid shrinking support due to subsampling)
-        bounds = [(float(np.nanmin(X_all[:, j])), float(np.nanmax(X_all[:, j]))) for j in range(d_all)]
-
-        rng = np.random.RandomState()
-        idx_all = np.arange(n_all)
-
-        # decide whether to sample
-        use_sampling = (self.sample_fraction < 1.0) or (self.max_samples is not None) or (self.per_class_max is not None)
-
-        if use_sampling:
-            if self._mode in ("binary", "multiclass") and self.class_balance:
-                # approximately balanced per‑class sampling
-                C_ = int(self._n_classes if self._mode == "multiclass" else 2)
-                n_target = n_all
-                if self.max_samples is not None:
-                    n_target = min(n_target, int(self.max_samples))
-                if self.sample_fraction < 1.0:
-                    n_target = min(n_target, int(np.ceil(self.sample_fraction * n_all)))
-                # target per class (rounded up), optionally capped by per_class_max
-                per_class_target = int(np.ceil(n_target / max(1, C_))) if n_target < n_all else None
-                if self.per_class_max is not None:
-                    per_class_target = min(per_class_target or int(self.per_class_max), int(self.per_class_max))
-
-                samples = []
-                # assume classes are labeled 0..C_-1; if not, we will fall back to whatever labels exist
-                unique_classes = np.unique(y_all)
-                for c in unique_classes:
-                    idx_c = np.where(y_all == c)[0]
-                    if idx_c.size == 0:
-                        continue
-                    if per_class_target is None:
-                        # only cap per_class_max if provided
-                        s = min(idx_c.size, int(self.per_class_max)) if self.per_class_max is not None else idx_c.size
-                    else:
-                        s = min(idx_c.size, per_class_target)
-                    take = idx_c if s >= idx_c.size else rng.choice(idx_c, size=s, replace=False)
-                    samples.append(take)
-
-                if samples:
-                    idx_keep = np.concatenate(samples)
-                    rng.shuffle(idx_keep)
-                else:
-                    idx_keep = idx_all
-            else:
-                # regression or unbalanced sampling
-                n_target = n_all
-                if self.max_samples is not None:
-                    n_target = min(n_target, int(self.max_samples))
-                if self.sample_fraction < 1.0:
-                    n_target = min(n_target, int(np.ceil(self.sample_fraction * n_all)))
-                if n_target < n_all:
-                    idx_keep = rng.choice(idx_all, size=n_target, replace=False)
-                else:
-                    idx_keep = idx_all
-        else:
-            idx_keep = idx_all
-
-        X = X_all[idx_keep]
-        y = y_all[idx_keep]
-
+        rng = np.random.RandomState(self.random_state)
         n, d = X.shape
-        self.maps_.clear()
-        self.grids_.clear()
-
-        # Prepare Y for smoothing (based on sampled y)
-        if self._mode == "multiclass":
-            C = self._n_classes
-            Y_train = np.eye(C, dtype=float)[y.astype(int)]
-        else:
-            Y_train = y.astype(float)
+        self.refs_ = []
 
         for j in range(d):
-            x_col = X[:, j]
-            x_min_full, x_max_full = bounds[j]
-
-            # Degenerate / constant column
-            if not np.isfinite(x_min_full) or not np.isfinite(x_max_full) or np.allclose(x_min_full, x_max_full):
-                x_grid = np.linspace(0.0, 1.0, num=max(2, self.grid_size), endpoint=True)
-                s_vals = x_grid.copy()  # identity
-                self.grids_.append((0.0, 1.0))
-                self.maps_.append((x_grid.astype(np.float64), s_vals.astype(np.float64)))
+            col = X[:, j].astype(np.float64)
+            # Handle degenerate/constant columns
+            uniq = np.unique(col)
+            if uniq.size <= 1:
+                v_ref = np.array([uniq[0] if uniq.size == 1 else 0.0], dtype=np.float64)
+                s_ref = np.array([1.0], dtype=np.float64)  # arbitrary nonzero
+                self.refs_.append({"v": v_ref, "sigma": s_ref})
                 continue
 
-            # ----- (1) Adaptive-bandwidth references for KDE(pdf) -----
-            order = np.argsort(x_col)
-            xs = x_col[order]
+            # Sort and compute kNN bandwidths on the 1D axis
+            order = np.argsort(col)
+            xs = col[order]
             sig_all = self._knn_sigma_sorted(xs, self.k, self.min_sigma)
-            sig_all = self.bandwidth_scale * sig_all
+            sig_all = sig_all
 
-            # Subsample evenly along quantiles to cap compute
-            Mref = min(self.n_ref, xs.size)
-            if Mref == xs.size:
+            # Subsample reference pairs (value, sigma) to cap compute
+            m = min(self.n_ref, xs.size)
+            if m == xs.size:
                 ref_idx = np.arange(xs.size)
             else:
-                ref_idx = np.linspace(0, xs.size - 1, num=Mref).astype(int)
-            v_ref = xs[ref_idx].astype(np.float64)   # (Mref,)
+                # Evenly spaced quantile subsampling to preserve coverage
+                ref_idx = np.linspace(0, xs.size - 1, num=m).astype(int)
+
+            v_ref = xs[ref_idx].astype(np.float64)
             s_ref = sig_all[ref_idx].astype(np.float64)
 
-            # ----- (2) Define x-grid for all computations -----
-            M = max(16, self.grid_size)
-            # Use a slightly expanded linear grid in [x_min_full, x_max_full] for stability
-            span = x_max_full - x_min_full
-            a, b = x_min_full - 1e-12 * max(1.0, span), x_max_full + 1e-12 * max(1.0, span)
-            x_grid = np.linspace(a, b, num=M, endpoint=True)
-
-            # ----- (3) KDE pdf on x_grid -----
-            # φ((x - v)/σ)/σ averaged over references
-            z = (x_grid[:, None] - v_ref[None, :]) / s_ref[None, :]
-            pdf_mix = np.exp(-0.5 * z * z) / (np.sqrt(2.0 * np.pi) * s_ref[None, :])
-            p_hat = pdf_mix.mean(axis=1)  # (M,)
-            # Numerical guard: ensure positivity
-            p_hat = np.maximum(p_hat, 1e-12)
-
-            # ----- (4) NW regression on x-domain to get m and m' -----
-            if self.bandwidth_x is None:
-                h_x = self._silverman_bandwidth(x_col) * self.bandwidth_x_scale
-            else:
-                h_x = float(self.bandwidth_x) * self.bandwidth_x_scale
-                h_x = max(h_x, 1e-3)
-
-            if self._mode == "multiclass":
-                M_vals = self._nadaraya_watson(x_col, Y_train, x_grid, h_x)  # (M,C)
-                dM = np.stack([self._grad_on_grid(M_vals[:, c], x_grid) for c in range(self._n_classes)], axis=1)  # (M,C)
-                if self.norm == "l1":
-                    slope_mag = np.abs(dM).sum(axis=1)   # (M,)
-                else:
-                    slope_mag = np.sqrt((dM ** 2).sum(axis=1))
-            else:
-                m_vals = self._nadaraya_watson(x_col, Y_train, x_grid, h_x)  # (M,)
-                dm = self._grad_on_grid(m_vals, x_grid)                      # (M,)
-                slope_mag = np.abs(dm)
-
-            # ----- (5) Density‑weighted slope and integration -----
-            s_prime = ( (np.maximum(slope_mag, 0.0) ** 2) * p_hat ) ** (1.0 / 3.0)
-            s_prime = np.nan_to_num(s_prime, nan=0.0, posinf=0.0, neginf=0.0)
-            s_prime = np.clip(s_prime, self.s_min, self.s_max)
-
-            area = float(np.trapz(s_prime, x_grid))
-            if not np.isfinite(area) or area <= 0:
-                # fallback: identity on [x_min_full, x_max_full]
-                s_vals = (x_grid - x_grid[0]) / max(1e-12, (x_grid[-1] - x_grid[0]))
-            else:
-                s_norm = s_prime / area
-                # cumulative integral (trapezoid)
-                s_vals = np.cumsum((s_norm[:-1] + s_norm[1:]) * 0.5 * np.diff(x_grid))
-                s_vals = np.concatenate([[0.0], s_vals])
-                # normalize to [0,1]
-                if s_vals[-1] > 0:
-                    s_vals = s_vals / s_vals[-1]
-                else:
-                    s_vals = (x_grid - x_grid[0]) / max(1e-12, (x_grid[-1] - x_grid[0]))
-
-            # Save artifacts
-            self.grids_.append((x_min_full, x_max_full))
-            self.maps_.append((x_grid.astype(np.float64), s_vals.astype(np.float64)))
+            self.refs_.append({"v": v_ref, "sigma": s_ref})
 
         return self
 
     def transform(self, N_data, C_data, y_data=None, shared_state=None):
-        if not self.maps_:
+        # If not fitted or no numeric data, no-op
+        if not self.refs_ or not N_data:
             return N_data, C_data, y_data
 
-        for part, X in N_data.items():
-            if X is None:
-                continue
-            X = X.astype(np.float64, copy=True)
-            n, d = X.shape
-            assert d == len(self.maps_) == len(self.grids_), \
-                f"Per-feature artifacts not aligned: d={d}, maps={len(self.maps_)}, grids={len(self.grids_)}"
+        for part, arr in N_data.items():
+            if arr.ndim != 2:
+                raise ValueError(f"N_data[{part}] must be a 2D array.")
+            n, d = arr.shape
+            if d != len(self.refs_):
+                raise ValueError(f"Feature dimension mismatch: data has {d}, refs has {len(self.refs_)}.")
 
-            out_cols = []
+            cols_out = []
             for j in range(d):
-                (x_grid, s_vals) = self.maps_[j]
-                (xmin, xmax) = self.grids_[j]
-                col = X[:, j]
-                # Clip to training support for stable interpolation
-                col_clip = np.clip(col, xmin, xmax)
-                y_stretched = np.interp(col_clip, x_grid, s_vals).astype(np.float32)
+                ref = self.refs_[j]
+                v = ref["v"]      # (M,)
+                s = ref["sigma"]  # (M,)
+                x = arr[:, j].astype(np.float64)  # (n,)
 
-                if self.concat_raw:
-                    out_cols.append(np.stack([y_stretched, col.astype(np.float32)], axis=1))
-                else:
-                    out_cols.append(y_stretched[:, None])
+                # Evaluate variable-bandwidth mixture CDF: mean_r Phi((x - v_r)/s_r)
+                # Broadcasting: (n,1) - (1,M) divided by (1,M) -> (n,M)
+                z = (x[:, None] - v[None, :]) / s[None, :]
+                out = norm.cdf(z).mean(axis=1)  # (n,)
 
-            X_out = np.hstack(out_cols)
-            N_data[part] = X_out
+                cols_out.append(out.astype(np.float32)[:, None])
+
+            N_data[part] = np.hstack(cols_out)
 
         return N_data, C_data, y_data
 
+
+class OofSampleStretchTransform(BaseTransform):
+    def __init__(self, args, is_regression: bool | None = None):
+        super().__init__()
+        self.oof_n_splits = int(args.get("oof_n_splits", 10))
+        self.adaptive_k = int(args.get("k", 10))
+        self.min_h = float(args.get("min_h", 1e-6))
+        self.norm = str(args.get("norm", "l2")).lower()
+        self.n_bins = int(args.get("n_bins", 1))
+        self.min_unique = int(args.get("min_unique", 3))
+        self.eps = float(args.get("eps", 1e-9))
+
+        # viz
+        self.viz_enable = bool(args.get("viz_enable", False))
+        self.viz_dir = str(args.get("viz_dir", "viz_oofbin"))
+        self.viz_max_features = int(args.get("viz_max_features", 12))
+        self.viz_dpi = int(args.get("viz_dpi", 120))
+
+        self.is_regression = bool(is_regression) if is_regression is not None else False
+        self._feats_: list[dict] = []
+
+    # ---------- helpers ----------
+    @staticmethod
+    def _silverman_bandwidth(x: np.ndarray) -> float:
+        x = np.asarray(x, float).ravel()
+        n = max(1, x.size)
+        std = np.std(x) + 1e-12
+        iqr = np.subtract(*np.percentile(x, [75, 25]))
+        a = min(std, iqr / 1.349) if iqr > 0 else std
+        return 0.9 * a * n ** (-1/5)
+
+    def _auto_k(self, n: int) -> int:
+        """Adaptive k: ~2% of samples, clipped to [5, 200]."""
+        return int(np.clip(round(0.02 * max(1, n)), 5, 200))
+
+    def _local_bandwidth(self, x_tr_sorted: np.ndarray, x_ev: np.ndarray, k: int) -> np.ndarray:
+        x_tr_sorted = np.asarray(x_tr_sorted, float).ravel()
+        x_ev = np.asarray(x_ev, float).ravel()
+        n = x_tr_sorted.size
+        pos = np.searchsorted(x_tr_sorted, x_ev, side='left')
+        left_idx = np.clip(pos - k, 0, n - 1)
+        right_idx = np.clip(pos + k, 0, n - 1)
+        left_dist = x_ev - x_tr_sorted[left_idx]
+        right_dist = x_tr_sorted[right_idx] - x_ev
+        h = np.maximum.reduce([left_dist, right_dist, np.full_like(left_dist, self.min_h)])
+        return h
+
+    def _nadaraya_watson_adaptive(self, x_tr: np.ndarray, Y_tr: np.ndarray, x_ev: np.ndarray, k: int) -> np.ndarray:
+        order = np.argsort(x_tr, kind='mergesort')
+        xs = x_tr[order]
+        if Y_tr.ndim == 1:
+            Ys = Y_tr[order][:, None]  # (n,1)
+        else:
+            Ys = Y_tr[order]           # (n,C)
+        h = self._local_bandwidth(xs, x_ev, k)[:, None]  # (m,1)
+        r = (x_ev[:, None] - xs[None, :]) / h            # (m,n)
+        K = np.exp(-0.5 * r * r)
+        W = np.maximum(K.sum(axis=1, keepdims=True), self.eps)
+        num = K @ Ys
+        out = num / W
+        return out[:, 0] if out.shape[1] == 1 else out
+
+    def _row_diffs(self, A: np.ndarray) -> np.ndarray:
+        if A.ndim == 1:
+            return np.abs(np.diff(A)).astype(float)
+        D = np.diff(A, axis=0)
+        if self.norm == 'l1':
+            return np.abs(D).sum(axis=1).astype(float)
+        return np.sqrt((D * D).sum(axis=1)).astype(float)
+
+    # ---------- fit/transform ----------
+    def fit(self, N_data, C_data, y_data=None, shared_state=None):
+        if not (N_data and 'train' in N_data and y_data and 'train' in y_data):
+            self._feats_ = []
+            return self
+
+        X = np.asarray(N_data['train'], float)
+        ytr = np.asarray(y_data['train'])
+        n, d = X.shape
+
+        if not self.is_regression and ytr.ndim == 1:
+            # Map labels (possibly non-consecutive) to [0..C-1]
+            classes = np.unique(ytr)
+            cls2idx = {c: i for i, c in enumerate(classes)}
+            y_idx = np.vectorize(cls2idx.get)(ytr)
+            C = len(classes)
+            Yall = np.eye(C, dtype=float)[y_idx]
+            y_for_strat = y_idx
+            use_stratified = True
+        elif not self.is_regression and ytr.ndim > 1:
+            # Already one-hot / multi-target
+            Yall = ytr.astype(float)
+            y_for_strat = np.argmax(Yall, axis=1)
+            use_stratified = True
+        else:
+            # Regression
+            Yall = ytr.astype(float)
+            y_for_strat = None
+            use_stratified = False
+
+        from sklearn.model_selection import KFold, StratifiedKFold
+        if use_stratified:
+            counts = np.bincount(y_for_strat.astype(int))
+            max_splits = int(counts.min()) if counts.size else 2
+            n_splits = int(min(max(2, self.oof_n_splits), max_splits))
+            kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=0)
+            splits = list(kf.split(X, y_for_strat))
+        else:
+            n_splits = int(min(max(2, self.oof_n_splits), len(X)))
+            kf = KFold(n_splits=n_splits, shuffle=True, random_state=0)
+            splits = list(kf.split(X))
+
+        self._feats_.clear()
+
+        for j in range(d):
+            xj = X[:, j]
+            uniq = np.unique(xj)
+            if uniq.size < self.min_unique or np.std(xj) == 0.0:
+                self._feats_.append({
+                    'identity': True,
+                    'x_knots': np.array([float(xj.min()), float(xj.max())]),
+                    't_knots': np.array([0.0, 1.0], float),
+                })
+                continue
+
+            # OOF mbar(x) with either global or adaptive bandwidths
+            mbar = np.zeros((n, Yall.shape[1]), dtype=float) if Yall.ndim == 2 else np.zeros(n, dtype=float)
+            for tr_idx, ho_idx in splits:
+                x_tr, x_ho = xj[tr_idx], xj[ho_idx]
+                Y_tr = Yall[tr_idx]
+                n_tr = int(tr_idx.size)
+                k_use = max(int(self.adaptive_k), self._auto_k(n_tr))
+                preds = self._nadaraya_watson_adaptive(x_tr, Y_tr, x_ho, k_use)
+                mbar[ho_idx] = preds
+
+            # Sort by x and bin on x directly
+            ord_idx = np.argsort(xj, kind='mergesort')
+            x_sorted = xj[ord_idx]
+            m_sorted = mbar[ord_idx]
+
+            B = max(1, int(self.n_bins))
+            edges = np.quantile(x_sorted, np.linspace(0.0, 1.0, B + 1))
+            edges[0], edges[-1] = float(x_sorted[0]), float(x_sorted[-1])
+            edges = np.unique(edges)
+            if edges.size < 2:
+                self._feats_.append({
+                    'identity': True,
+                    'x_knots': np.array([float(x_sorted[0]), float(x_sorted[-1])]),
+                    't_knots': np.array([0.0, 1.0], float),
+                })
+                continue
+
+            # per-bin variation S_b over x
+            S_list = []
+            for b in range(edges.size - 1):
+                l, r = edges[b], edges[b + 1]
+                if b < edges.size - 2:
+                    mask = (x_sorted >= l) & (x_sorted < r)
+                else:
+                    mask = (x_sorted >= l) & (x_sorted <= r)
+                idxs = np.nonzero(mask)[0]
+                if idxs.size < 2:
+                    S_list.append(0.0)
+                else:
+                    S_list.append(self._row_diffs(m_sorted[idxs]).sum())
+            S = np.asarray(S_list, dtype=float)
+
+            # allocate bin lengths
+            if S.sum() <= self.eps:
+                t_knots = np.linspace(0.0, 1.0, edges.size, dtype=float)
+            else:
+                w = S / S.sum()
+                t_knots = np.zeros(edges.size, dtype=float)
+                t_knots[1:] = np.cumsum(w)
+                t_knots[-1] = 1.0
+
+            self._feats_.append({
+                'identity': False,
+                'x_knots': edges.astype(float),  # domain in raw x
+                't_knots': t_knots.astype(float),
+            })
+
+        # quick viz
+        if self.viz_enable and self._feats_:
+            try:
+                import os, matplotlib.pyplot as plt
+                os.makedirs(self.viz_dir, exist_ok=True)
+
+                # ---------------- Fig 1: mapping y = t(x) per feature ----------------
+                nfeat = min(len(self._feats_), self.viz_max_features)
+                ncols = int(np.ceil(np.sqrt(nfeat)))
+                nrows = int(np.ceil(nfeat / ncols))
+                fig1, axes1 = plt.subplots(nrows, ncols, figsize=(4*ncols, 3*nrows), dpi=self.viz_dpi)
+                axes1 = np.atleast_1d(axes1).ravel()
+                for j in range(nfeat):
+                    ax = axes1[j]
+                    st = self._feats_[j]
+                    ax.plot(st['x_knots'], st['t_knots'], lw=1.5)
+                    ax.set_title(f'feat {j} bin-stretch (raw x)')
+                for k in range(nfeat, axes1.size):
+                    axes1[k].axis('off')
+                fig1.tight_layout()
+                fig1.savefig(os.path.join(self.viz_dir, 'oof_bin_t_of_x.png'))
+                plt.close(fig1)
+
+                # ---------------- Fig 2: conditional means E[target|x] and E[target|y] ----------------
+                # Build a two-column grid: left column is E[target|x], right column is E[target|y]
+                fig2, axes2 = plt.subplots(nfeat, 2, figsize=(8, 3*nfeat), dpi=self.viz_dpi)
+                axes2 = np.atleast_2d(axes2)
+                # choose evaluation grid sizes
+                GX = 200
+                GY = 200
+                for j in range(nfeat):
+                    st = self._feats_[j]
+                    xcol = X[:, j].astype(float)
+                    # map to y via learned knots; if identity, use min-max normalization for a stable axis
+                    if st['identity']:
+                        xmin, xmax = float(np.min(xcol)), float(np.max(xcol))
+                        denom = (xmax - xmin) if (xmax > xmin) else 1.0
+                        ycol = (xcol - xmin) / denom
+                    else:
+                        ycol = np.interp(xcol, st['x_knots'], st['t_knots'])
+
+                    gx = np.linspace(np.min(xcol), np.max(xcol), GX)
+                    gy = np.linspace(0.0, 1.0, GY)
+
+                    # Smooth conditional means using the same kernel options as training
+                    ex = self._nadaraya_watson_adaptive(xcol, Yall, gx, self.adaptive_k)
+                    ey = self._nadaraya_watson_adaptive(ycol, Yall, gy, self.adaptive_k)
+
+                    ax_left, ax_right = axes2[j, 0], axes2[j, 1]
+                    # Plot depending on target dimensionality
+                    if ex.ndim == 1:
+                        ax_left.plot(gx, ex, lw=1.2)
+                        ax_right.plot(gy, ey, lw=1.2)
+                    else:
+                        Cplot = ex.shape[1]
+                        for c in range(Cplot):
+                            ax_left.plot(gx, ex[:, c], lw=1.0, alpha=0.9, label=f'c={c}')
+                            ax_right.plot(gy, ey[:, c], lw=1.0, alpha=0.9)
+                        # show legend only on the left to reduce clutter
+                        ax_left.legend(fontsize=8, ncol=3, frameon=False)
+
+                    ax_left.set_title(f'E[target|x_{j}]')
+                    ax_right.set_title(f'E[target|y_{j}]')
+
+                fig2.tight_layout()
+                fig2.savefig(os.path.join(self.viz_dir, 'oof_bin_conditional_means.png'))
+                plt.close(fig2)
+            except Exception:
+                pass
+
+        return self
+
+    def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        if not self._feats_ or not N_data:
+            return N_data, C_data, y_data
+
+        for part, X in N_data.items():
+            X = np.asarray(X, float)
+            n, d = X.shape
+            X_out = X.copy()
+            for j in range(d):
+                st = self._feats_[j]
+                if st['identity']:
+                    continue
+                xcol = X_out[:, j].astype(float)
+                X_out[:, j] = np.interp(xcol, st['x_knots'], st['t_knots']).astype(np.float32)
+            N_data[part] = X_out.astype(np.float32)
+        return N_data, C_data, y_data
