@@ -58,8 +58,8 @@ class DataTransformPipeline:
                 pipeline.append(RobustScaleTransform(transform_config))
             elif transform_name == 'num_smoothclip':
                 pipeline.append(SmoothClipTransform(transform_config))
-            elif transform_name == 'num_cdf':
-                pipeline.append(CdfTransform(transform_config, self.dataset))
+            elif transform_name == 'ple':
+                pipeline.append(PLETransform(transform_config, self.dataset))
             elif transform_name == 'cat_ordinal':
                 pipeline.append(OrdinalTransform(transform_config))
             elif transform_name == 'cat_indice':
@@ -79,13 +79,11 @@ class DataTransformPipeline:
             elif transform_name == 'cat_targetindice':
                 pipeline.append(TargetRankingIndiceTransform(transform_config))
             elif transform_name == 'uniple':
-                pipeline.append(UniPiecewiseCDFTransform(transform_config))
+                pipeline.append(PLEUNITransform(transform_config))
             elif transform_name == 'adaptive_cdf':
                 pipeline.append(AdaptiveBandwidthCdfTransform(transform_config))
             elif transform_name == 'stretch':
                 pipeline.append(SlopeEqualizeStretchTransform(transform_config, self.is_regression))
-            elif transform_name == 'stretch_con':
-                pipeline.append(DensityWeightedSlopeStretchTransform(transform_config, self.is_regression))
             elif transform_name == 'stretch_oof':
                 pipeline.append(OofSampleStretchTransform(transform_config, self.is_regression))
             else:

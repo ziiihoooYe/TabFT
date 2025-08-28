@@ -683,332 +683,103 @@ class SmoothClipTransform:
 ##########################################################################
 #                           Custom Transform                             #
 ##########################################################################
-import pickle
-import json
-class CdfTransform(BaseTransform):
+import numpy as np
+from typing import Dict, List
+
+class PLETransform(BaseTransform):
     def __init__(self, args: Dict, dataset=None):
         super().__init__()
-        self.cdf_type  = args.get("cdf_type", "uniform").lower()
-        self.cdf_path  = args.get("cache_path", None)
-        self.dataset   = dataset
+        self.n_bins: int = int(args.get("n_bins", 10))
+        self.dataset = dataset
 
-        # uniform
-        self.binning_method   = args.get("binning_method", "quantile")
-        self.linkage_method   = args.get("linkage_method", "ward")
-        self.min_cluster_size = args.get("min_cluster_size", 10)
+        # learned state
+        self.bin_edges_: List[np.ndarray] = []    # per-column edges (size: K+1)
+        self.feature_map_: List[Dict] = []        # [{orig_idx, new_start, size}, ...]
 
-        # shared
-        self.n_components = args.get("n_components", 100)
-        self.min_sigma    = args.get("min_sigma", 1e-6)
-
-        # gaussian
-        self.weight_threshold = float(args.get("weight_threshold", 1e-4))
-        self.weight_concentration_prior_type = args.get(
-            "weight_concentration_prior_type", "dirichlet_process"
-        )
-        self.reg_covar = args.get("reg_covar", 1e-6)
-
-        # dynamic
-        self.dynamic_ks_thresh      = args.get("dynamic_ks_thresh", 0.05)
-        self.feature_types_: List[str] = []     # per‑column decision
-
-        # misc
-        self.concat_raw = args.get("concat_raw", False)
-
-        # learned
-        self.bin_edges_, self.bin_stats_, self.bin_weights_ = [], [], []
-        self.feature_map_: List[Dict] = []
-
-        # --- config used for cache key ---
-        self.config = (
-            "dataset", "cdf_type", "binning_method", "n_components",
-            "linkage_method", "min_cluster_size", "min_sigma"
-        ) if self.cdf_type == "uniform" else (
-            "dataset", "cdf_type", "n_components",
-            "weight_threshold", "weight_concentration_prior_type",
-            "reg_covar"
-        )
-        if self.cdf_type == "dynamic":
-            self.config += ("dynamic_ks_thresh",)
-
-
-    def _cfg(self):  # dict used for hashing
-        return {k: getattr(self, k) for k in self.config}
-
-    def _hash(self):
-        return hashlib.md5(json.dumps(self._cfg(), sort_keys=True).encode()).hexdigest()[:16]
-
-    def _cache_file(self):
-        if not self.cdf_path:
-            return None
-        return os.path.join(self.cdf_path, f"{self._hash()}.pkl")
-
+    # ---------------- fit ----------------
     def fit(self, N_data, C_data, y_data=None, shared_state=None):
         if not N_data or "train" not in N_data:
             return self
         shared_state = shared_state or {}
-        if N_data['train'].shape[0] <= self.n_components:
-            self.n_components = N_data['train'].shape[0] - 1
-
-        cfile = self._cache_file()
-        if cfile and os.path.exists(cfile):
-            state = pickle.load(open(cfile, "rb"))
-            if state.get("config") == self._cfg():
-                if "feature_types_" in state:
-                    self.feature_types_ = state["feature_types_"]
-                self.__dict__.update({k: state[k] for k in (
-                    "bin_edges_", "bin_stats_", "bin_weights_", "feature_map_"
-                )})
-                shared_state["feature_map_"] = self.feature_map_
-                return self
 
         X = N_data["train"]
         n, d = X.shape
-        self.bin_edges_, self.bin_stats_, self.bin_weights_, self.feature_map_ = [], [], [], []
-        if self.cdf_type == "dynamic":
-            self.feature_types_.clear()
+        self.bin_edges_.clear()
+        self.feature_map_.clear()
 
         for j in range(d):
-            col = X[:, j]
+            col = X[:, j].astype(float)
+            edges = self._quantile_edges(col, self.n_bins)
+            self.bin_edges_.append(edges)
 
-            # --------------- gaussian path ---------------
-            if self.cdf_type == "gaussian":
-                self._fit_gaussian(col)
-            # --------------- uniform path ----------------
-            elif self.cdf_type == "uniform":
-                self._fit_uniform(col)
-            # --------------- dynamic path ----------------
-            elif self.cdf_type == "dynamic":
-                self._fit_dynamic(col)
-            else:
-                raise ValueError(f"Unknown cdf_type: {self.cdf_type}")
-
-            # feature map bookkeeping
-            size = len(self.bin_weights_[-1])
-            if self.concat_raw:
-                size += 1
+            size = len(edges) - 1
             self.feature_map_.append({"orig_idx": j, "new_start": None, "size": size})
 
-        # assign start indices
         offset = 0
         for meta in self.feature_map_:
             meta["new_start"] = offset
             offset += meta["size"]
         shared_state["feature_map_"] = self.feature_map_
-
-        # ---------- save cache ----------
-        if cfile:
-            os.makedirs(os.path.dirname(cfile), exist_ok=True)
-            pickle.dump(
-                {
-                    "config": self._cfg(),
-                    "bin_edges_": self.bin_edges_,
-                    "bin_stats_": self.bin_stats_,
-                    "bin_weights_": self.bin_weights_,
-                    "feature_map_": self.feature_map_,
-                    "feature_types_": self.feature_types_,
-                },
-                open(cfile, "wb"),
-            )
         return self
 
-    # ============ helper sub‑fit methods =============
-    def _fit_gaussian(self, col):
-        bgmm = BayesianGaussianMixture(
-            n_components=self.n_components,
-            weight_concentration_prior_type=self.weight_concentration_prior_type,
-            random_state=0,
-            reg_covar=max(col.var() * 1e-6, 1e-8),
-        ).fit(col.reshape(-1, 1))
-        w, m, c = bgmm.weights_, bgmm.means_.ravel(), bgmm.covariances_
-        idx = np.where(w > self.weight_threshold)[0]
-        if not idx.size:
-            idx = np.array([np.argmax(w)])
-        w, m, c = w[idx], m[idx], c[idx]
-        order = np.argsort(m)
-        m, w, c = m[order], w[order], c[order]
-        s = np.sqrt(np.atleast_1d(c).ravel())
-
-        self.bin_edges_.append(m.astype(float))
-        self.bin_stats_.append(np.vstack([m, s]).T.astype(float))
-        self.bin_weights_.append(w.astype(float))
-
-    def _fit_uniform(self, col):
-        edges = self._sort_bins(self._find_bins_1d(col))
-        # edges = self._adjust_edges_max_samples(edges, col)
-        cnt, _ = np.histogram(col, bins=edges)
-        w = cnt / cnt.sum() if cnt.sum() else np.full(len(cnt), 1 / len(cnt))
-        stats = []
-        for k in range(len(edges) - 1):
-            mask = (col >= edges[k]) & (col <= edges[k + 1])
-            mu = col[mask].mean() if mask.any() else 0.5 * (edges[k] + edges[k + 1])
-            sg = col[mask].std(ddof=0) if mask.any() else self.min_sigma
-            stats.append((mu, max(sg, self.min_sigma)))
-
-        self.bin_edges_.append(edges.astype(float))
-        self.bin_stats_.append(np.asarray(stats, float))
-        self.bin_weights_.append(w.astype(float))
-
-    def _fit_dynamic(self, col):
-        # single BGMM fit
-        bgmm = BayesianGaussianMixture(
-            n_components=self.n_components,
-            weight_concentration_prior_type=self.weight_concentration_prior_type,
-            random_state=0,
-            reg_covar=max(col.var() * 1e-6, 1e-8),
-        ).fit(col.reshape(-1, 1))
-
-        w_all, m_all, c_all = bgmm.weights_, bgmm.means_.ravel(), bgmm.covariances_
-        idx = np.where(w_all > self.weight_threshold)[0]
-        if not idx.size:
-            idx = np.array([np.argmax(w_all)])
-        w, m, c = w_all[idx], m_all[idx], c_all[idx]
-        order = np.argsort(m)
-        w, m, c = w[order], m[order], c[order]
-        s = np.sqrt(np.atleast_1d(c).ravel())
-
-        # KS distance
-        xs = np.sort(col)
-        emp_cdf = np.arange(1, len(xs) + 1) / len(xs)
-        mix_cdf = (norm.cdf((xs[:, None] - m) / s) * w).sum(axis=1)
-        ks_D = np.max(np.abs(emp_cdf - mix_cdf))
-
-        if ks_D <= self.dynamic_ks_thresh:
-            self.bin_edges_.append(m.astype(float))
-            self.bin_stats_.append(np.vstack([m, s]).T.astype(float))
-            self.bin_weights_.append(w.astype(float))
-            self.feature_types_.append("gaussian")
-        else:
-            self._fit_uniform(col)
-            self.feature_types_.append("uniform")
-
-    # ---------------- transform ----------------------
+    # --------------- transform ---------------
     def transform(self, N_data, C_data, y_data=None, shared_state=None):
         if not self.feature_map_:
             return N_data, C_data, y_data
 
         for part, arr in N_data.items():
+            X = arr.astype(float)
             cols_out = []
             for j, meta in enumerate(self.feature_map_):
-                v = arr[:, meta["orig_idx"]]
-
-                is_gauss = (
-                    self.cdf_type == "gaussian" or
-                    (self.cdf_type == "dynamic" and self.feature_types_[j] == "gaussian")
-                )
-                if is_gauss:
-                    m = self.bin_stats_[j][:, 0]
-                    s = self.bin_stats_[j][:, 1]
-                    w = self.bin_weights_[j]
-                    z = (v[:, None] - m) / s
-                    out = norm.cdf(z)
-                else:
-                    edges = self.bin_edges_[j]
-                    denom = edges[1:] - edges[:-1]
-                    denom[denom == 0] = 1
-                    out = np.clip((v[:, None] - edges[:-1]) / denom, 0, 1)
-
-                if self.concat_raw:
-                    out = np.concatenate([out, v[:, None]], axis=1)
-                cols_out.append(out.astype(np.float32))
-
+                v = X[:, meta["orig_idx"]]
+                edges = self.bin_edges_[j]  # shape: (K+1,)
+                widths = edges[1:] - edges[:-1]
+                widths = np.where(widths == 0, 1.0, widths)
+                out = np.clip((v[:, None] - edges[:-1]) / widths, 0.0, 1.0).astype(np.float32)
+                cols_out.append(out)
             N_data[part] = np.hstack(cols_out)
         return N_data, C_data, y_data
 
-    # ========== helper for uniform binning ==========
-    def _find_bins_1d(self, x):
-        x = x.ravel()
-        if np.unique(x).size <= 2 or np.var(x) == 0:
-            return np.array([x.min(), x.max()])
-        if self.binning_method == "quantile":
-            nb = self.n_components or 5
-            return np.percentile(x, np.linspace(0, 100, nb + 1))
-        if self.binning_method=="hdbscan":
-            try:
-                import hdbscan
-                lab=hdbscan.HDBSCAN(min_cluster_size=self.min_cluster_size).fit_predict(x[:,None])
-                if np.all(lab==-1): raise ModuleNotFoundError
-                uniq=np.unique(lab[lab>=0])
-                mins=np.array([x[lab==u].min() for u in uniq])
-                maxs=np.array([x[lab==u].max() for u in uniq])
-                order=np.argsort(mins); mins,maxs=mins[order],maxs[order]
-                inner=[0.5*(maxs[i]+mins[i+1]) for i in range(len(maxs)-1)]
-                return np.array([x.min(),*inner,x.max()])
-            except ModuleNotFoundError: self.binning_method="hierarchical"
-        # hierarchical fallback
-        from scipy.cluster.hierarchy import linkage,fcluster
-        Z=linkage(x[:,None],method=self.linkage_method)
-        labels=fcluster(Z,t=self.n_components,criterion="maxclust")
-        uniq=np.unique(labels)
-        mins=np.array([x[labels==u].min() for u in uniq])
-        maxs=np.array([x[labels==u].max() for u in uniq])
-        order=np.argsort(mins); mins,maxs=mins[order],maxs[order]
-        inner=[0.5*(maxs[i]+mins[i+1]) for i in range(len(maxs)-1)]
-        return np.array([x.min(),*inner,x.max()])
-    
-    def _adjust_edges_max_samples(self, edges, col):
-        if self.binning_method == "quantile":
-            return edges
-        # ---------------- STEP-0 : installation -----------------
-        col = col.ravel()
-        edges = np.sort(np.unique(edges.astype(float)))
-        if edges.size < 2:
-            v = float(col[0]) if edges.size else float(np.mean(col))
-            edges = np.array([v - 1e-6, v + 1e-6], dtype=float)
-
-        quota  = int(math.ceil(len(col) / self.n_components) * 2)
-        min_sz = int(math.ceil(len(col) / self.n_components))
-
-        # ---------------- STEP-1 : split ----------------
-        extra_edges = []
-        for k in range(len(edges) - 1):
-            l, r = edges[k], edges[k + 1]
-            mask = (col >= l) & (col <= r)
-            cnt  = int(mask.sum())
-            if cnt <= quota:
-                continue
-
-            xs_bin = col[mask]
-            uniq_vals = np.unique(xs_bin)
-            ucnt = uniq_vals.size
-
-            if ucnt == 1:
-                continue
-
-            if ucnt == 2:
-                extra_edges.append(0.5 * (uniq_vals[0] + uniq_vals[1]))
-                continue
-
-            nb = int(math.ceil(cnt / quota))
-            if cnt / nb < min_sz:
-                nb = max(1, cnt // min_sz)
-            nb = min(nb, ucnt - 1)
-            if nb <= 1:
-                continue
-
-            sub_edges = np.percentile(xs_bin,
-                                      np.linspace(0, 100, nb + 1))[1:-1]
-            extra_edges.extend(sub_edges)
-
-        if extra_edges:
-            edges = np.sort(np.unique(np.concatenate([edges, extra_edges])))
-
-        # ---------------- STEP-2 : beyond cap → merge ----------------
-        counts, _ = np.histogram(col, bins=edges)
-        while (len(edges) - 1) > self.n_components or counts.min() < min_sz:
-            counts, _ = np.histogram(col, bins=edges)
-            idx_merge = int(np.argmin(counts[:-1] + counts[1:]))  # 最小相邻和
-            edges = np.delete(edges, idx_merge + 1)
-
-        return edges.astype(float)
-    
+    # -------- helper: safe quantile edges --------
     @staticmethod
-    def _sort_bins(edges):
-        edges = np.sort(edges)
+    def _quantile_edges(x: np.ndarray, n_bins: int) -> np.ndarray:
+        x = x.ravel()
+        if np.all(~np.isfinite(x)):
+            return np.array([0.0, 1e-6], dtype=float)
+
+        x = x[np.isfinite(x)]
+        if x.size == 0:
+            return np.array([0.0, 1e-6], dtype=float)
+
+        xmin, xmax = float(np.min(x)), float(np.max(x))
+        if not np.isfinite(xmin) or not np.isfinite(xmax):
+            xmin, xmax = 0.0, 1e-6
+        if xmax - xmin == 0.0:
+            eps = 1e-6 if xmin == 0.0 else abs(xmin) * 1e-6
+            return np.array([xmin - eps, xmin + eps], dtype=float)
+
+        q = np.linspace(0, 100, n_bins + 1)
+        edges = np.percentile(x, q, interpolation="linear").astype(float)
+
+        uniq = np.unique(edges)
+        if uniq.size < 2:
+            eps = max(1e-6, (xmax - xmin) * 1e-9)
+            return np.array([xmin, xmin + eps], dtype=float)
+
+        diffs = np.diff(edges)
+        if np.any(diffs <= 0):
+            eps = max(1e-9, (xmax - xmin) * 1e-12)
+            for k in range(1, len(edges)):
+                if edges[k] <= edges[k - 1]:
+                    edges[k] = edges[k - 1] + eps
+            diffs = np.diff(edges)
+            if np.any(diffs <= 0):
+                edges = np.linspace(edges[0], edges[-1] + 1e-9, len(edges))
+
         return edges
 
 
-class UniPiecewiseCDFTransform(BaseTransform):
+class PLEUNITransform(BaseTransform):
     def __init__(self, args):
         super().__init__()
         self.n_bins = args.get("n_bins", 10)
@@ -1077,200 +848,6 @@ class UniPiecewiseCDFTransform(BaseTransform):
             N_data[part] = X_out
 
         return N_data, C_data, y_data
-
-
-class SlopeEqualizeStretchTransform(BaseTransform):
-    def __init__(self, args, is_regression: bool | None = None):
-        super().__init__()
-        self.norm       = args.get("norm", "l1").lower()
-        self.eps        = float(args.get("eps", 1e-12))
-
-        self.lambda_ = float(args.get("lambda_", 1.0))
-        self.lambda_ = max(0.0, min(self.lambda_, 1.0))
-
-        self.is_regression = is_regression
-
-        self.n_bins = args.get("n_bins", 1)
-
-        self.maps_: list[tuple[np.ndarray, np.ndarray]] = []   # (xs_unique, f_vals)
-
-    # ---------- helper ----------
-    def _vec_dist(self, a: np.ndarray, b: np.ndarray) -> float:
-        if self.norm == "l2":
-            return float(np.linalg.norm(a - b))
-        # default L1
-        return float(np.abs(a - b).sum())
-
-    def fit(self, N_data, C_data, y_data=None, shared_state=None):
-        if not (N_data and "train" in N_data and y_data and "train" in y_data):
-            return self
-
-        X = N_data["train"]
-        y = y_data["train"].ravel()
-        uniq = np.unique(y)
-
-        if self.is_regression is True:
-            mode = "regression"
-        elif self.is_regression is False:
-            mode = "binary" if uniq.size == 2 else "multiclass"
-        else:
-            if np.issubdtype(y.dtype, np.floating) and uniq.size > 2:
-                mode = "regression"
-            elif uniq.size == 2:
-                mode = "binary"
-            else:
-                mode = "multiclass"
-
-        if mode == "multiclass":
-            C = int(uniq.max()) + 1
-
-        self.maps_.clear()
-        n_samples, n_features = X.shape
-
-        for j in range(n_features):
-            x_col = X[:, j]
-            xs_valid, y_valid = x_col, y
-            uniq_vals = np.unique(xs_valid)
-            uniq_cnt  = uniq_vals.size
-            n_bins = min(self.n_bins, uniq_cnt - 1)
-
-            if n_bins <= 1:
-                x_min, x_max = xs_valid.min(), xs_valid.max()
-                if x_max - x_min < self.eps:
-                    self.maps_.append((np.array([x_min], dtype=float),
-                                       np.array([0.0], dtype=float)))
-                else:
-                    self.maps_.append((np.array([x_min, x_max], dtype=float),
-                                       np.array([0.0, 1.0], dtype=float)))
-                continue
-
-            if 1 < n_bins < uniq_cnt - 1:
-                edges = np.percentile(xs_valid, np.linspace(0, 100, n_bins + 1))
-                edges[0], edges[-1] = xs_valid.min(), xs_valid.max()
-                edges = np.unique(edges)
-
-                xs_u = uniq_vals
-                inv  = np.searchsorted(xs_u, xs_valid)
-
-                # --- expected target value per unique x ---
-                if mode == "multiclass":
-                    gs = np.zeros((len(xs_u), C), dtype=float)
-                    for idx_u in range(len(xs_u)):
-                        labs = y_valid[inv == idx_u].astype(int)
-                        if labs.size:
-                            cnts = np.bincount(labs, minlength=C)
-                            gs[idx_u] = cnts / cnts.sum()
-                else:
-                    sums = np.bincount(inv, weights=y_valid, minlength=len(xs_u))
-                    cnts = np.bincount(inv,              minlength=len(xs_u)).astype(float)
-                    gs   = sums / np.maximum(cnts, 1.0)
-
-                if len(xs_u) == 1:
-                    self.maps_.append((xs_u.astype(float),
-                                       np.zeros_like(xs_u, dtype=float)))
-                    continue
-
-                if mode == "multiclass":
-                    neigh = np.array([self._vec_dist(gs[k + 1], gs[k])
-                                      for k in range(len(xs_u) - 1)], dtype=float)
-                else:
-                    neigh = np.abs(np.diff(gs)).astype(float)
-
-                interval_bins = np.searchsorted(edges, xs_u[:-1], side='right') - 1
-                num_bins = edges.size - 1
-                S = np.zeros(num_bins)
-                for b in range(num_bins):
-                    mask = interval_bins == b
-                    if mask.any():
-                        S[b] = neigh[mask].sum()
-
-                total_S = float(S.sum())
-                if total_S < self.eps:
-                    span = xs_u[-1] - xs_u[0]
-                    f_vals = np.zeros_like(xs_u, dtype=float) if span < self.eps \
-                                else (xs_u - xs_u[0]) / span
-                    self.maps_.append((xs_u.astype(float), f_vals.astype(float)))
-                    continue
-
-                alpha   = S / total_S
-                s_vals  = np.zeros(edges.size, dtype=float)
-                for b in range(num_bins):
-                    s_vals[b + 1] = s_vals[b] + alpha[b]
-
-                linear = np.linspace(0.0, 1.0, s_vals.size, dtype=float)
-                s_vals = (1.0 - self.lambda_) * linear + self.lambda_ * s_vals
-
-                self.maps_.append((edges.astype(float), s_vals.astype(float)))
-                continue
-
-            xs_u, inv = np.unique(xs_valid, return_inverse=True)
-
-            if mode == "multiclass":
-                gs = np.zeros((len(xs_u), C), dtype=float)
-                for idx_u in range(len(xs_u)):
-                    labs = y_valid[inv == idx_u].astype(int)
-                    if labs.size:
-                        cnts = np.bincount(labs, minlength=C)
-                        gs[idx_u] = cnts / cnts.sum()
-            else:
-                sums = np.bincount(inv, weights=y_valid, minlength=len(xs_u))
-                cnts = np.bincount(inv, minlength=len(xs_u)).astype(float)
-                gs = sums / np.maximum(cnts, 1.0)
-
-            if len(xs_u) == 1:
-                f_base = np.zeros_like(xs_u, dtype=float)
-            else:
-                span = xs_u[-1] - xs_u[0]
-                f_base = np.zeros_like(xs_u, dtype=float) if span < self.eps \
-                            else (xs_u - xs_u[0]) / span
-
-            if len(xs_u) == 1:
-                TV = 0.0
-                f_star = np.zeros_like(xs_u, dtype=float)
-            else:
-                if mode == "multiclass":
-                    dists = np.array(
-                        [self._vec_dist(gs[k + 1], gs[k]) for k in range(len(xs_u) - 1)],
-                        dtype=float
-                    )
-                else:
-                    dists = np.abs(np.diff(gs)).astype(float)
-
-                TV = dists.sum()
-                if TV < self.eps:
-                    f_star = np.linspace(0.0, 1.0, len(xs_u), dtype=float)
-                else:
-                    gaps = dists / TV
-                    f_star = np.zeros(len(xs_u), dtype=float)
-                    f_star[1:] = np.cumsum(gaps)
-                    f_star[-1] = 1.0
-
-            f_vals = (1.0 - self.lambda_) * f_base + self.lambda_ * f_star
-
-            self.maps_.append((xs_u.astype(float), f_vals.astype(float)))
-
-        return self
-
-    def transform(self, N_data, C_data, y_data=None, shared_state=None):
-        if not self.maps_:
-            return N_data, C_data, y_data
-
-        for part, X in N_data.items():
-            if X is None:
-                continue
-            X_out = X.astype(np.float32, copy=True)
-            for j, mapping in enumerate(self.maps_):
-                if mapping is None:
-                    continue
-                xs_u, f_vals = mapping
-                col = X_out[:, j]
-                X_out[:, j] = np.interp(col, xs_u, f_vals)
-
-            N_data[part] = X_out
-
-        return N_data, C_data, y_data
-
-
 
 
 # Inserted: AdaptiveBandwidthCdfTransform
@@ -1390,12 +967,6 @@ class OofSampleStretchTransform(BaseTransform):
         self.n_bins = int(args.get("n_bins", 1))
         self.min_unique = int(args.get("min_unique", 3))
         self.eps = float(args.get("eps", 1e-9))
-
-        # viz
-        self.viz_enable = bool(args.get("viz_enable", False))
-        self.viz_dir = str(args.get("viz_dir", "viz_oofbin"))
-        self.viz_max_features = int(args.get("viz_max_features", 12))
-        self.viz_dpi = int(args.get("viz_dpi", 120))
 
         self.is_regression = bool(is_regression) if is_regression is not None else False
         self._feats_: list[dict] = []
@@ -1560,76 +1131,6 @@ class OofSampleStretchTransform(BaseTransform):
                 'x_knots': edges.astype(float),  # domain in raw x
                 't_knots': t_knots.astype(float),
             })
-
-        # quick viz
-        if self.viz_enable and self._feats_:
-            try:
-                import os, matplotlib.pyplot as plt
-                os.makedirs(self.viz_dir, exist_ok=True)
-
-                # ---------------- Fig 1: mapping y = t(x) per feature ----------------
-                nfeat = min(len(self._feats_), self.viz_max_features)
-                ncols = int(np.ceil(np.sqrt(nfeat)))
-                nrows = int(np.ceil(nfeat / ncols))
-                fig1, axes1 = plt.subplots(nrows, ncols, figsize=(4*ncols, 3*nrows), dpi=self.viz_dpi)
-                axes1 = np.atleast_1d(axes1).ravel()
-                for j in range(nfeat):
-                    ax = axes1[j]
-                    st = self._feats_[j]
-                    ax.plot(st['x_knots'], st['t_knots'], lw=1.5)
-                    ax.set_title(f'feat {j} bin-stretch (raw x)')
-                for k in range(nfeat, axes1.size):
-                    axes1[k].axis('off')
-                fig1.tight_layout()
-                fig1.savefig(os.path.join(self.viz_dir, 'oof_bin_t_of_x.png'))
-                plt.close(fig1)
-
-                # ---------------- Fig 2: conditional means E[target|x] and E[target|y] ----------------
-                # Build a two-column grid: left column is E[target|x], right column is E[target|y]
-                fig2, axes2 = plt.subplots(nfeat, 2, figsize=(8, 3*nfeat), dpi=self.viz_dpi)
-                axes2 = np.atleast_2d(axes2)
-                # choose evaluation grid sizes
-                GX = 200
-                GY = 200
-                for j in range(nfeat):
-                    st = self._feats_[j]
-                    xcol = X[:, j].astype(float)
-                    # map to y via learned knots; if identity, use min-max normalization for a stable axis
-                    if st['identity']:
-                        xmin, xmax = float(np.min(xcol)), float(np.max(xcol))
-                        denom = (xmax - xmin) if (xmax > xmin) else 1.0
-                        ycol = (xcol - xmin) / denom
-                    else:
-                        ycol = np.interp(xcol, st['x_knots'], st['t_knots'])
-
-                    gx = np.linspace(np.min(xcol), np.max(xcol), GX)
-                    gy = np.linspace(0.0, 1.0, GY)
-
-                    # Smooth conditional means using the same kernel options as training
-                    ex = self._nadaraya_watson_adaptive(xcol, Yall, gx, self.adaptive_k)
-                    ey = self._nadaraya_watson_adaptive(ycol, Yall, gy, self.adaptive_k)
-
-                    ax_left, ax_right = axes2[j, 0], axes2[j, 1]
-                    # Plot depending on target dimensionality
-                    if ex.ndim == 1:
-                        ax_left.plot(gx, ex, lw=1.2)
-                        ax_right.plot(gy, ey, lw=1.2)
-                    else:
-                        Cplot = ex.shape[1]
-                        for c in range(Cplot):
-                            ax_left.plot(gx, ex[:, c], lw=1.0, alpha=0.9, label=f'c={c}')
-                            ax_right.plot(gy, ey[:, c], lw=1.0, alpha=0.9)
-                        # show legend only on the left to reduce clutter
-                        ax_left.legend(fontsize=8, ncol=3, frameon=False)
-
-                    ax_left.set_title(f'E[target|x_{j}]')
-                    ax_right.set_title(f'E[target|y_{j}]')
-
-                fig2.tight_layout()
-                fig2.savefig(os.path.join(self.viz_dir, 'oof_bin_conditional_means.png'))
-                plt.close(fig2)
-            except Exception:
-                pass
 
         return self
 

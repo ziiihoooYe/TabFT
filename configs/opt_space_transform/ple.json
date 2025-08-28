@@ -1,6 +1,6 @@
 {
     "num_cdf": {
-        "n_components": [
+        "n_bins": [
             "int",
             2,
             256

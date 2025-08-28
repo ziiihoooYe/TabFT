@@ -44,7 +44,7 @@ dataset:
   # - E-CommereShippingData
   # - FOREX_audjpy-day-High
   # - FOREX_audsgd-hour-High
-  - Fitness_Club_c
+  # - Fitness_Club_c
   # - IEEE80211aa-GATS
   # - Intersectional-Bias-Assessment
   # - Job_Profitability
@@ -53,7 +53,7 @@ dataset:
   # - NHANES_age_prediction
   # - Shop_Customer_Data
   # - VulNoneVul
-  - Waterstress
+  # - Waterstress
   # - htru
   # - ibm-employee-performance
   # - internet_firewall
@@ -109,11 +109,8 @@ transform_list:
   # - stretch_opt:
   #     lambda_: 1.0
   #     n_bins: 128
-  # - num_cdf: 
-  #     cdf_type: uniform # uniform, gaussian, dynamic
-  #     cache_path: fit_cache
-  #     n_components: 100000
-  #     binning_method: quantile # quantile, hdbscan, hierarchical
+  - ple: 
+      n_bins: 32
   # - stretch: {}
   # - adaptive_cdf: 
   #     k: 1
@@ -121,14 +118,16 @@ transform_list:
   #     viz_enable: true
   #     oof_n_splits: 10
   #     lowpass_tau: 0.2
-  - stretch_oof:
-      oof_n_splits: 10
-      n_bins: 32
-      viz_enable: true
+  # - stretch_oof:
+  #     oof_n_splits: 10
+  #     n_bins: 32
+      # viz_enable: true
 
 
   - norm:
       policy: standard
+  # - norm:
+  #     policy: power
 
 
 
@@ -143,9 +142,9 @@ model_type:
   - mlp
   # - tabicl
   # - modernNCA
-  - resnet
+  # - resnet
   # - mlp_plr
-  - realmlp
+  # - realmlp
   # - xgboost
   # - catboost
   # - tabpfn
@@ -153,11 +152,12 @@ model_type:
   # - tabm
   # - tab
 
-model_path: /data/user_data/zihaoye/TabFT/results_model/default_path
+# model_path: /data/user_data/zihaoye/TabFT/results_model/default_path
+model_path: results_model/default_path
 seed: 2025
 seed_num: 15
 gpu: 0
 tune: true
-tune_transform: true
+tune_transform: false
 load_tune_config: false
 n_trials: 100
