@@ -34,82 +34,87 @@ def main():
     all_results_summary = {}  # e.g., {dataset_name: {model_name: mean_metrics, ...}, ...}
     
     for recipe in recipes:
-        args, default_para, opt_space = recipe
-        set_seeds(args.seed)
-        loss_list, results_list, time_list = [], [], []
-        logger.info("------------------------------------")
-        logger.info(f"Dataset: {args.dataset}")
-        logger.info(f"Model: {args.model_type}")
-        logger.info(f"transform_list: {args.transform_list}")
-        
-        # get dataset
-        train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
 
-        # ---------- Pre‑process the dataset once ----------
-        need_pretransform = not (getattr(args, "tune_transform", False) and args.tune) # only if tuning transform, do not pre-transform
-        pipeline = None
-        pre_transformed = False
-
-        if need_pretransform:
-            pipeline = DataTransformPipeline(args.transform_list, args, info['task_type']=='regression')
-            N_trainval, C_trainval, y_trainval = pipeline.fit_transform(*train_val_data)
-            train_val_data = (N_trainval, C_trainval, y_trainval)
-
-            N_test, C_test, y_test = pipeline.transform(*test_data)
-            test_data = (N_test, C_test, y_test)
-            pre_transformed = True
-        
-        ### ----------- Tuning Hyperparameters ------------
-        is_loaded = False
-        if args.load_tune_config:
-            args, is_loaded = load_tuned_config(args, logger)
-        if args.tune and not is_loaded:
-            args = tune_hyper_parameters(args,opt_space,train_val_data,info,pipeline,pre_transformed)
-        
-        # if not pre_transformed, we still need to transform the data here
-        if not pre_transformed and not force_transform:
-            pipeline = DataTransformPipeline(args.transform_list, args, info['task_type']=='regression')
-            N_trainval, C_trainval, y_trainval = pipeline.fit_transform(*train_val_data)
-            train_val_data = (N_trainval, C_trainval, y_trainval)
-
-            N_test, C_test, y_test = pipeline.transform(*test_data)
-            test_data = (N_test, C_test, y_test)
-            pre_transformed = True
-
-
-        ### ----------- Training and Testing ------------
-        for seed in tqdm(range(args.seed, args.seed + args.seed_num)): 
-
-            args.seed = seed    # update seed  
+        try: 
+            args, default_para, opt_space = recipe
             set_seeds(args.seed)
+            loss_list, results_list, time_list = [], [], []
+            logger.info("------------------------------------")
+            logger.info(f"Dataset: {args.dataset}")
+            logger.info(f"Model: {args.model_type}")
+            logger.info(f"transform_list: {args.transform_list}")
+            
+            # get dataset
+            train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
 
-            method = get_method(args.model_type)(args, info['task_type'] == 'regression')
-            if pre_transformed:
-                method.data_transform_pipeline = copy.deepcopy(pipeline)
-                method.pre_transformed = pre_transformed
+            # ---------- Pre‑process the dataset once ----------
+            need_pretransform = not (getattr(args, "tune_transform", False) and args.tune) # only if tuning transform, do not pre-transform
+            pipeline = None
+            pre_transformed = False
 
-            time_cost = method.fit(train_val_data, info)    
-            vl, vres, metric_name, predict_logits = method.predict(test_data, info, model_name=args.evaluate_option)
+            if need_pretransform:
+                pipeline = DataTransformPipeline(args.transform_list, args, info['task_type']=='regression')
+                N_trainval, C_trainval, y_trainval = pipeline.fit_transform(*train_val_data)
+                train_val_data = (N_trainval, C_trainval, y_trainval)
 
-            loss_list.append(vl)
-            results_list.append(vres)
-            time_list.append(time_cost)
+                N_test, C_test, y_test = pipeline.transform(*test_data)
+                test_data = (N_test, C_test, y_test)
+                pre_transformed = True
+            
+            ### ----------- Tuning Hyperparameters ------------
+            is_loaded = False
+            if args.load_tune_config:
+                args, is_loaded = load_tuned_config(args, logger)
+            if args.tune and not is_loaded:
+                args = tune_hyper_parameters(args,opt_space,train_val_data,info,pipeline,pre_transformed)
+            
+            # if not pre_transformed, we still need to transform the data here
+            if not pre_transformed and not force_transform:
+                pipeline = DataTransformPipeline(args.transform_list, args, info['task_type']=='regression')
+                N_trainval, C_trainval, y_trainval = pipeline.fit_transform(*train_val_data)
+                train_val_data = (N_trainval, C_trainval, y_trainval)
 
-        ### ----------- Show Results ------------
-        mean_metrics, std_metrics, metric_arrays, m_names = show_results(
-            args,
-            info,
-            metric_name,
-            loss_list,
-            results_list,
-            time_list,
-            logger=logger,
-            silent_detail=True
-        )
+                N_test, C_test, y_test = pipeline.transform(*test_data)
+                test_data = (N_test, C_test, y_test)
+                pre_transformed = True
 
-        if args.dataset not in all_results_summary:
-            all_results_summary[args.dataset] = {}
-        all_results_summary[args.dataset][args.model_type] = mean_metrics
+
+            ### ----------- Training and Testing ------------
+            for seed in tqdm(range(args.seed, args.seed + args.seed_num)): 
+
+                args.seed = seed    # update seed  
+                set_seeds(args.seed)
+
+                method = get_method(args.model_type)(args, info['task_type'] == 'regression')
+                if pre_transformed:
+                    method.data_transform_pipeline = copy.deepcopy(pipeline)
+                    method.pre_transformed = pre_transformed
+
+                time_cost = method.fit(train_val_data, info)    
+                vl, vres, metric_name, predict_logits = method.predict(test_data, info, model_name=args.evaluate_option)
+
+                loss_list.append(vl)
+                results_list.append(vres)
+                time_list.append(time_cost)
+
+            ### ----------- Show Results ------------
+            mean_metrics, std_metrics, metric_arrays, m_names = show_results(
+                args,
+                info,
+                metric_name,
+                loss_list,
+                results_list,
+                time_list,
+                logger=logger,
+                silent_detail=True
+            )
+
+            if args.dataset not in all_results_summary:
+                all_results_summary[args.dataset] = {}
+            all_results_summary[args.dataset][args.model_type] = mean_metrics
+        except Exception as e:
+            logger.error(f"Error processing dataset {args.dataset} with model {args.model_type}: {e}")
+            continue
 
     logger.info("\nFinal Summary of All Results\n----------------------------")
     for dataset_name, model_results in all_results_summary.items():

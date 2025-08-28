@@ -106,9 +106,6 @@ transform_list:
 
   # - uniple:
   #     n_bins: 4
-  # - stretch_opt:
-  #     lambda_: 1.0
-  #     n_bins: 128
   - ple: 
       n_bins: 32
   # - stretch: {}
@@ -139,11 +136,11 @@ model_type:
   # - tabtransformer
   # - xgboost
   # - lightgbm
-  - mlp
+  # - mlp
   # - tabicl
   # - modernNCA
   # - resnet
-  # - mlp_plr
+  - mlp_plr
   # - realmlp
   # - xgboost
   # - catboost
@@ -158,6 +155,6 @@ seed: 2025
 seed_num: 15
 gpu: 0
 tune: true
-tune_transform: false
+tune_transform: true
 load_tune_config: false
 n_trials: 100
