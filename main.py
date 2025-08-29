@@ -112,6 +112,29 @@ def main():
             if args.dataset not in all_results_summary:
                 all_results_summary[args.dataset] = {}
             all_results_summary[args.dataset][args.model_type] = mean_metrics
+            
+            #### ------- Save Metrics ---------------
+            results = {
+                'mean_metrics': mean_metrics,
+                'std_metrics': std_metrics, 
+                'metric_arrays': metric_arrays,
+                'metric_names': m_names, 
+            }
+            
+            with open(os.path.join(args.save_path, 'metrics.json'), 'w') as f:
+                    json.dump(results, f, indent=2)
+                    
+            ### And also log the optuna opt space (for reproducibility)
+            opt_space = {
+                'namespace': args.__dict__,
+                'defaults': default_para,
+                'opt_space': opt_space
+            }
+            
+            with open(os.path.join(args.save_path, 'opt_space.json'), 'w') as f:
+                json.dump(opt_space, f, indent=2)
+            
+            
         except Exception as e:
             logger.error(f"Error processing dataset {args.dataset} with model {args.model_type}: {e}")
             continue
