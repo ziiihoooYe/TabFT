@@ -52,7 +52,7 @@ class DataTransformPipeline:
                 pipeline.append(BinIndexTransform(transform_config))
             elif transform_name == 'num_johnson':
                 pipeline.append(JohnsonTransform(transform_config))
-            elif transform_name == 'num_quantiletransform':
+            elif transform_name == 'quantile':
                 pipeline.append(QuantileTransform(transform_config))
             elif transform_name == 'num_robustscale':
                 pipeline.append(RobustScaleTransform(transform_config))
