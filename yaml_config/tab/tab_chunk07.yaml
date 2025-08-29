@@ -1,0 +1,21 @@
+dataset:
+- archive_r56_Portuguese
+- compass
+- thyroid-dis
+- wine
+- yeast
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+model_type:
+- tab
+model_path: results_model/tab
+seed: 2025
+seed_num: 15
+gpu: 0
+tune: true
+tune_transform: false
+load_tune_config: false
+n_trials: 100

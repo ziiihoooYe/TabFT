@@ -1,0 +1,32 @@
+dataset:
+- Waterstress
+- htru
+- ibm-employee-performance
+- internet_firewall
+- jungle_chess_2pcs_raw_endgame_complete
+- kc1
+- led24
+- okcupid_stem
+- optdigits
+- page-blocks
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+- norm:
+    policy: power
+model_type:
+- mlp
+- ftt
+- resnet
+- realmlp
+- mlp_plr
+model_path: /data/user_data/zihaoye/TabFT/results_model/yeo_johnson
+seed: 2025
+seed_num: 15
+gpu: 0
+tune: true
+tune_transform: false
+load_tune_config: true
+n_trials: 100

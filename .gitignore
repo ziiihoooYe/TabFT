@@ -22,7 +22,6 @@ data/
 
 # yaml file
 yaml/
-yaml_config/
 
 # sbatch files
 sbatch/

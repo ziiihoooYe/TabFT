@@ -1,0 +1,67 @@
+dataset:
+  - ASP-POTASSCO-classification
+  - Ailerons
+  - Bias_correction_r_2
+  - Click_prediction_small
+  - electricity
+  - estimation_of_obesity_levels
+  - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
+  - Diamonds
+  - E-CommereShippingData
+  - FOREX_audjpy-day-High
+  - FOREX_audsgd-hour-High
+  - Fitness_Club_c
+  - IEEE80211aa-GATS
+  - Intersectional-Bias-Assessment
+  - Job_Profitability
+  - Kaggle_bike_sharing_demand_challange
+  - Mobile_Price_Classification
+  - NHANES_age_prediction
+  - Shop_Customer_Data
+  - VulNoneVul
+  - Waterstress
+  - htru
+  - ibm-employee-performance
+  - internet_firewall
+  - jungle_chess_2pcs_raw_endgame_complete
+  - kc1
+  - led24
+  - okcupid_stem
+  - optdigits
+  - page-blocks
+  - pol
+  - pol_reg
+  - pole
+  - socmob
+  - splice
+  - archive_r56_Portuguese
+  - compass
+  - thyroid-dis
+  - wine
+  - yeast
+
+
+transform_list:
+  - nan:
+      policy: mean # mean, median
+  - label: {}
+  - cat_indice: {}
+  - adaptive_cdf: {}
+  - norm:
+      policy: standard
+
+model_type: 
+  - mlp
+  - ftt
+  - resnet
+  - realmlp
+  - mlp_plr
+
+model_path: /data/user_data/zihaoye/TabFT/results_model/adaptive_cdf_tune
+seed: 2025
+seed_num: 15
+gpu: 0
+tune: true
+tune_transform: true
+load_tune_config: true
+n_trials: 100

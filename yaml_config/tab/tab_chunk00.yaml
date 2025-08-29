@@ -1,0 +1,22 @@
+dataset:
+- ASP-POTASSCO-classification
+- Amazon_employee_access
+- Ailerons
+- BNG(tic-tac-toe)
+- Bias_correction_r_2
+- Click_prediction_small
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+model_type:
+- tab
+model_path: results_model/tab
+seed: 2025
+seed_num: 15
+gpu: 0
+tune: true
+tune_transform: false
+load_tune_config: false
+n_trials: 100
