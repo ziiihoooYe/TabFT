@@ -14,7 +14,7 @@ import os.path as osp
 from argparse import Namespace
 import os.path as osp
 from typing import Dict, Any, Tuple
-import copy
+
 import torch
 import optuna
 

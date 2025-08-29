@@ -13,8 +13,6 @@ from torch.utils.data import DataLoader, TensorDataset
 from model.lib.num_embeddings import (
     PiecewiseLinearEncoding, UnaryEncoding, BinsEncoding, JohnsonEncoding, _check_bins
 )
-# ----------- added for cache support -----------
-import os, json, hashlib
 
 
 class BinningTransform(BaseTransform):
@@ -685,99 +683,6 @@ class SmoothClipTransform:
 ##########################################################################
 import numpy as np
 from typing import Dict, List
-
-class PLETransform(BaseTransform):
-    def __init__(self, args: Dict, dataset=None):
-        super().__init__()
-        self.n_bins: int = int(args.get("n_bins", 10))
-        self.dataset = dataset
-
-        # learned state
-        self.bin_edges_: List[np.ndarray] = []    # per-column edges (size: K+1)
-        self.feature_map_: List[Dict] = []        # [{orig_idx, new_start, size}, ...]
-
-    # ---------------- fit ----------------
-    def fit(self, N_data, C_data, y_data=None, shared_state=None):
-        if not N_data or "train" not in N_data:
-            return self
-        shared_state = shared_state or {}
-
-        X = N_data["train"]
-        n, d = X.shape
-        self.bin_edges_.clear()
-        self.feature_map_.clear()
-
-        for j in range(d):
-            col = X[:, j].astype(float)
-            edges = self._quantile_edges(col, self.n_bins)
-            self.bin_edges_.append(edges)
-
-            size = len(edges) - 1
-            self.feature_map_.append({"orig_idx": j, "new_start": None, "size": size})
-
-        offset = 0
-        for meta in self.feature_map_:
-            meta["new_start"] = offset
-            offset += meta["size"]
-        shared_state["feature_map_"] = self.feature_map_
-        return self
-
-    # --------------- transform ---------------
-    def transform(self, N_data, C_data, y_data=None, shared_state=None):
-        if not self.feature_map_:
-            return N_data, C_data, y_data
-
-        for part, arr in N_data.items():
-            X = arr.astype(float)
-            cols_out = []
-            for j, meta in enumerate(self.feature_map_):
-                v = X[:, meta["orig_idx"]]
-                edges = self.bin_edges_[j]  # shape: (K+1,)
-                widths = edges[1:] - edges[:-1]
-                widths = np.where(widths == 0, 1.0, widths)
-                out = np.clip((v[:, None] - edges[:-1]) / widths, 0.0, 1.0).astype(np.float32)
-                cols_out.append(out)
-            N_data[part] = np.hstack(cols_out)
-        return N_data, C_data, y_data
-
-    # -------- helper: safe quantile edges --------
-    @staticmethod
-    def _quantile_edges(x: np.ndarray, n_bins: int) -> np.ndarray:
-        x = x.ravel()
-        if np.all(~np.isfinite(x)):
-            return np.array([0.0, 1e-6], dtype=float)
-
-        x = x[np.isfinite(x)]
-        if x.size == 0:
-            return np.array([0.0, 1e-6], dtype=float)
-
-        xmin, xmax = float(np.min(x)), float(np.max(x))
-        if not np.isfinite(xmin) or not np.isfinite(xmax):
-            xmin, xmax = 0.0, 1e-6
-        if xmax - xmin == 0.0:
-            eps = 1e-6 if xmin == 0.0 else abs(xmin) * 1e-6
-            return np.array([xmin - eps, xmin + eps], dtype=float)
-
-        q = np.linspace(0, 100, n_bins + 1)
-        edges = np.percentile(x, q, interpolation="linear").astype(float)
-
-        uniq = np.unique(edges)
-        if uniq.size < 2:
-            eps = max(1e-6, (xmax - xmin) * 1e-9)
-            return np.array([xmin, xmin + eps], dtype=float)
-
-        diffs = np.diff(edges)
-        if np.any(diffs <= 0):
-            eps = max(1e-9, (xmax - xmin) * 1e-12)
-            for k in range(1, len(edges)):
-                if edges[k] <= edges[k - 1]:
-                    edges[k] = edges[k - 1] + eps
-            diffs = np.diff(edges)
-            if np.any(diffs <= 0):
-                edges = np.linspace(edges[0], edges[-1] + 1e-9, len(edges))
-
-        return edges
-
 
 class PLEUNITransform(BaseTransform):
     def __init__(self, args):

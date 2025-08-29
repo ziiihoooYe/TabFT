@@ -1,5 +1,5 @@
 {
-    "num_cdf": {
+    "num_binning": {
         "n_bins": [
             "int",
             2,

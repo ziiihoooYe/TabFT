@@ -140,7 +140,7 @@ def _write_sbatch_simple_array(jobs: List[Tuple[Path, Path]],
     sbatch_lines.append("#SBATCH --ntasks=1")
     sbatch_lines.append("#SBATCH --nodes=1")
     if gpus_per_task and gpus_per_task > 0:
-        sbatch_lines.append(f"#SBATCH --gres=gpu:{gpus_per_task}")
+        sbatch_lines.append(f"#SBATCH --gres=gpu:L40S:{gpus_per_task}")
     # Always capture a minimal slurm wrapper log; main logs go to LOGS array.
     sbatch_lines.append(f"#SBATCH --output={logs_root}/slurm_%A_%a.out")
     sbatch_lines.append(f"#SBATCH --error={logs_root}/slurm_%A_%a.err")

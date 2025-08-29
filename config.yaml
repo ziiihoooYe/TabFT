@@ -53,7 +53,7 @@ dataset:
   # - NHANES_age_prediction
   # - Shop_Customer_Data
   # - VulNoneVul
-  # - Waterstress
+  - Waterstress
   # - htru
   # - ibm-employee-performance
   # - internet_firewall
@@ -106,19 +106,15 @@ transform_list:
 
   # - uniple:
   #     n_bins: 4
-  - ple: 
-      n_bins: 32
-  # - stretch: {}
+  # - num_binning:
+  #     n_bins: 32
+  # - num_ple: {}
+  # - ple: 
+  #     n_bins: 32
   # - adaptive_cdf: 
   #     k: 1
-  # - stretch_con:
-  #     viz_enable: true
-  #     oof_n_splits: 10
-  #     lowpass_tau: 0.2
-  # - stretch_oof:
-  #     oof_n_splits: 10
-  #     n_bins: 32
-      # viz_enable: true
+  - stretch_oof:
+      norm: l2
 
 
   - norm:
@@ -136,11 +132,11 @@ model_type:
   # - tabtransformer
   # - xgboost
   # - lightgbm
-  # - mlp
+  - mlp
   # - tabicl
   # - modernNCA
   # - resnet
-  - mlp_plr
+  # - mlp_plr
   # - realmlp
   # - xgboost
   # - catboost
@@ -155,6 +151,6 @@ seed: 2025
 seed_num: 15
 gpu: 0
 tune: true
-tune_transform: true
+tune_transform: false
 load_tune_config: false
 n_trials: 100
