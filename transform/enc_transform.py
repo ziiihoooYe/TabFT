@@ -868,7 +868,7 @@ class OofSampleStretchTransform(BaseTransform):
         self.oof_n_splits = int(args.get("oof_n_splits", 10))
         self.adaptive_k = int(args.get("k", 10))
         self.min_h = float(args.get("min_h", 1e-6))
-        self.norm = str(args.get("norm", "l2")).lower()
+        self.norm = str(args.get("norm", "l2")).lower() # "l2", "l1", "quad"
         self.n_bins = int(args.get("n_bins", 1))
         self.min_unique = int(args.get("min_unique", 3))
         self.eps = float(args.get("eps", 1e-9))
@@ -916,6 +916,54 @@ class OofSampleStretchTransform(BaseTransform):
         num = K @ Ys
         out = num / W
         return out[:, 0] if out.shape[1] == 1 else out
+
+    def _bin_scores(self, x_sorted: np.ndarray, m_sorted: np.ndarray, edges: np.ndarray) -> np.ndarray:
+        S_list = []
+        for b in range(edges.size - 1):
+            l, r = edges[b], edges[b + 1]
+            if b < edges.size - 2:
+                mask = (x_sorted >= l) & (x_sorted < r)
+            else:
+                mask = (x_sorted >= l) & (x_sorted <= r)
+            idxs = np.nonzero(mask)[0]
+            if idxs.size < 2:
+                S_list.append(0.0)
+                continue
+
+            xm = x_sorted[idxs]
+            mm = m_sorted[idxs]
+            dx = np.diff(xm)  # (k-1,)
+            if mm.ndim == 1:
+                D = np.diff(mm)[:, None]  # (k-1,1)
+            else:
+                D = np.diff(mm, axis=0)   # (k-1,C)
+
+            eps = self.eps
+
+            if self.norm == "l2":
+                # sum ||Δm||_2
+                d_norm = np.sqrt((D * D).sum(axis=1))  # (k-1,)
+                S = float(d_norm.sum())
+
+            elif self.norm == "quad":
+                # sqrt( (sum ||Δm||^2 / Δx) * Δx_b )
+                num = (D * D).sum(axis=1)             # ||Δm||_2^2
+                denom = np.maximum(dx, eps)
+                Eb = (num / denom).sum()              # ≈ ∫_bin ||m'||^2 dx
+                dx_b = xm[-1] - xm[0]
+                S = float(np.sqrt(max(dx_b, eps) * Eb))
+
+            elif self.norm == "l1":
+                # sum ||Δm||_1
+                d_l1 = np.abs(D).sum(axis=1)
+                S = float(d_l1.sum())
+            else:
+                d_norm = np.sqrt((D * D).sum(axis=1))
+                S = float(d_norm.sum())
+
+            S_list.append(S)
+
+        return np.asarray(S_list, dtype=float)
 
     def _row_diffs(self, A: np.ndarray) -> np.ndarray:
         if A.ndim == 1:
@@ -1007,20 +1055,8 @@ class OofSampleStretchTransform(BaseTransform):
                 })
                 continue
 
-            # per-bin variation S_b over x
-            S_list = []
-            for b in range(edges.size - 1):
-                l, r = edges[b], edges[b + 1]
-                if b < edges.size - 2:
-                    mask = (x_sorted >= l) & (x_sorted < r)
-                else:
-                    mask = (x_sorted >= l) & (x_sorted <= r)
-                idxs = np.nonzero(mask)[0]
-                if idxs.size < 2:
-                    S_list.append(0.0)
-                else:
-                    S_list.append(self._row_diffs(m_sorted[idxs]).sum())
-            S = np.asarray(S_list, dtype=float)
+            # per-bin scores
+            S = self._bin_scores(x_sorted, m_sorted, edges)
 
             # allocate bin lengths
             if S.sum() <= self.eps:

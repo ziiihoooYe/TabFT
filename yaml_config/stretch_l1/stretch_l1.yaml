@@ -45,7 +45,8 @@ transform_list:
       policy: mean
   - label: {}
   - cat_indice: {}
-  - uniple: {}
+  - stretch_oof:
+      norm: l1
   - norm:
       policy: standard
 
@@ -57,11 +58,11 @@ model_type:
   - realmlp
   - ftt
 
-model_path: /data/user_data/zihaoye/TabFT/results_model/pleuni
+model_path: /data/user_data/zihaoye/TabFT/results_model/stretch_l1
 seed: 2025
 seed_num: 15
 gpu: 0
 tune: true
 tune_transform: true
 n_trials: 100
-load_tune_config: false
+load_tune_config: true

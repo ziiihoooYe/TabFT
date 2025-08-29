@@ -151,6 +151,6 @@ seed: 2025
 seed_num: 15
 gpu: 0
 tune: true
-tune_transform: false
+tune_transform: true
 load_tune_config: false
 n_trials: 100
