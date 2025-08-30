@@ -18,6 +18,9 @@ import sys
 import datetime
 expand_keys = ['dataset', 'model_type']
 
+
+import torch
+
 def main():
     
     ### ----------- Load Config/Prepare Logger ------------
@@ -32,6 +35,8 @@ def main():
 
     recipes = load_recipes_from_yaml(config_file, expand_keys)
     all_results_summary = {}  # e.g., {dataset_name: {model_name: mean_metrics, ...}, ...}
+    
+    print(f"{torch.cuda.is_available()}")
     
     for recipe in recipes:
 
@@ -113,7 +118,7 @@ def main():
                 all_results_summary[args.dataset] = {}
             all_results_summary[args.dataset][args.model_type] = mean_metrics
             
-            #### ------- Save Metrics ---------------
+            # #### ------- Save Metrics ---------------
             results = {
                 'mean_metrics': mean_metrics,
                 'std_metrics': std_metrics, 
@@ -124,9 +129,12 @@ def main():
             with open(os.path.join(args.save_path, 'metrics.json'), 'w') as f:
                     json.dump(results, f, indent=2)
                     
-            ### And also log the optuna opt space (for reproducibility)
+            # ### And also log the optuna opt space (for reproducibility)   
+            args_copy = args.__dict__.copy()
+            args_copy.pop('device', None)
+                    
             opt_space = {
-                'namespace': args.__dict__,
+                'namespace': args_copy,
                 'defaults': default_para,
                 'opt_space': opt_space
             }
