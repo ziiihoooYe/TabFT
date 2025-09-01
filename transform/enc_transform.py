@@ -870,7 +870,7 @@ class OofSampleStretchTransform(BaseTransform):
         self.min_h = float(args.get("min_h", 1e-6))
         self.norm = str(args.get("norm", "l2")).lower() # "l2", "l1", "quad"
         self.n_bins = int(args.get("n_bins", 1))
-        self.min_unique = int(args.get("min_unique", 3))
+        self.min_unique = int(args.get("min_unique", 10))
         self.eps = float(args.get("eps", 1e-9))
 
         self.is_regression = bool(is_regression) if is_regression is not None else False

@@ -58,7 +58,7 @@ model_type:
   - realmlp
   - ftt
 
-model_path: /data/user_data/zihaoye/TabFT/results_model/stretch_l1
+model_path: /data/user_data/zihaoye/TabFT/results_model/stretch_l1_10
 seed: 2025
 seed_num: 15
 gpu: 0

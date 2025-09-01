@@ -114,14 +114,13 @@ transform_list:
   # - adaptive_cdf: 
   #     k: 1
   - stretch_oof:
-      norm: l2
+      norm: quad
 
 
   - norm:
       policy: standard
   # - norm:
   #     policy: power
-
 
 
 model_type: 
