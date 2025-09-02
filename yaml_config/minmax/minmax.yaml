@@ -45,8 +45,6 @@ transform_list:
       policy: mean
   - label: {}
   - cat_indice: {}
-  - stretch_oof:
-      norm: l2
   - norm:
       policy: minmax
 

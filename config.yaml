@@ -31,7 +31,7 @@
 # --------------------------------------------------------------------------------
 
 dataset:
-  - ASP-POTASSCO-classification
+  # - ASP-POTASSCO-classification
   # - Amazon_employee_access
   # - Ailerons
   # - BNG(tic-tac-toe)
@@ -39,7 +39,7 @@ dataset:
   # - Click_prediction_small
   # - electricity
   # - estimation_of_obesity_levels
-  # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
+  - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   # - Diamonds
   # - E-CommereShippingData
   # - FOREX_audjpy-day-High
@@ -114,7 +114,8 @@ transform_list:
   # - adaptive_cdf: 
   #     k: 1
   - stretch_oof:
-      norm: quad
+      norm: l2
+      min_unique: 20
 
 
   - norm:
@@ -144,8 +145,8 @@ model_type:
   # - tabm
   # - tab
 
-# model_path: /data/user_data/zihaoye/TabFT/results_model/default_path
-model_path: results_model/default_path
+model_path: /data/user_data/zihaoye/TabFT/results_model/default_path
+# model_path: results_model/default_path
 seed: 2025
 seed_num: 15
 gpu: 0

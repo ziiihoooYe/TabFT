@@ -1,0 +1,31 @@
+dataset:
+  - Diamonds
+  - E-CommereShippingData
+  - FOREX_audjpy-day-High
+
+transform_list:
+  - nan:
+      policy: mean
+  - label: {}
+  - cat_indice: {}
+  - stretch_oof:
+      norm: l2
+  - norm:
+      policy: standard
+
+   
+model_type: 
+  - mlp
+  - resnet
+  - mlp_plr
+  - realmlp
+  - ftt
+
+model_path: /data/user_data/zihaoye/TabFT/results_model/stretch_l2_10
+seed: 2025
+seed_num: 15
+gpu: 0
+tune: true
+tune_transform: true
+n_trials: 100
+load_tune_config: true

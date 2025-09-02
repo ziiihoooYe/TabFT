@@ -1,14 +1,5 @@
 dataset:
-- pol
-- pol_reg
-- pole
-- socmob
-- splice
-- archive_r56_Portuguese
-- compass
-- thyroid-dis
-- wine
-- yeast
+- Diamonds
 transform_list:
 - nan:
     policy: mean
@@ -24,7 +15,7 @@ model_type:
 - mlp_plr
 - realmlp
 - ftt
-model_path: /data/user_data/zihaoye/TabFT/results_model/stretch_l2
+model_path: /data/user_data/zihaoye/TabFT/results_model/stretch_l2_10
 seed: 2025
 seed_num: 15
 gpu: 0
