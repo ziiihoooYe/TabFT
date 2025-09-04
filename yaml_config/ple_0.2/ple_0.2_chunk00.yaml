@@ -1,0 +1,35 @@
+dataset:
+- ASP-POTASSCO-classification
+- Ailerons
+- Bias_correction_r_2
+- Click_prediction_small
+- electricity
+- estimation_of_obesity_levels
+- Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
+- Diamonds
+- E-CommereShippingData
+- FOREX_audjpy-day-High
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+- num_binning: {}
+- num_ple: {}
+- norm:
+    policy: standard
+model_type:
+- mlp
+- resnet
+- mlp_plr
+- realmlp
+- ftt
+model_path: /data/user_data/zihaoye/TabFT/results_model/ple_0.2
+seed: 2025
+seed_num: 15
+gpu: 0
+tune: true
+tune_transform: true
+n_trials: 100
+load_tune_config: false
+downsample_ratio: 0.2

@@ -1,0 +1,32 @@
+dataset:
+- Waterstress
+- htru
+- ibm-employee-performance
+- internet_firewall
+- jungle_chess_2pcs_raw_endgame_complete
+- kc1
+- led24
+- okcupid_stem
+- optdigits
+- page-blocks
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+- quantile: {}
+model_type:
+- mlp
+- ftt
+- resnet
+- realmlp
+- mlp_plr
+model_path: /data/user_data/zihaoye/TabFT/results_model/quantile_0.2
+seed: 2025
+seed_num: 15
+gpu: 0
+tune: true
+tune_transform: false
+n_trials: 100
+load_tune_config: true
+downsample_ratio: 0.2

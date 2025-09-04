@@ -1,5 +1,14 @@
 dataset:
-- FOREX_audjpy-day-High
+- pol
+- pol_reg
+- pole
+- socmob
+- splice
+- archive_r56_Portuguese
+- compass
+- thyroid-dis
+- wine
+- yeast
 transform_list:
 - nan:
     policy: mean
@@ -15,7 +24,7 @@ model_type:
 - mlp_plr
 - realmlp
 - ftt
-model_path: /data/user_data/zihaoye/TabFT/results_model/stretch_l2_10
+model_path: /data/user_data/zihaoye/TabFT/results_model/stretch_l2_0.2
 seed: 2025
 seed_num: 15
 gpu: 0
@@ -23,3 +32,4 @@ tune: true
 tune_transform: true
 n_trials: 100
 load_tune_config: true
+downsample_ratio: 0.2

@@ -5,7 +5,7 @@ from tqdm import tqdm
 import copy
 from model.utils import (load_recipes_from_yaml, tune_hyper_parameters, get_logger,
                          set_seeds, get_method, show_results, show_cross_dataset_results,
-                         load_tuned_config)
+                         load_tuned_config, downsample_training_data)
 import logging
 from model.lib.data import get_dataset
 from transform.transform_pipeline import DataTransformPipeline
@@ -46,6 +46,13 @@ def main():
             
             # get dataset
             train_val_data,test_data,info = get_dataset(args.dataset,args.dataset_path)
+            
+            # downsample training set if specified
+            if hasattr(args, 'downsample_ratio') and args.downsample_ratio is not None:
+                original_train_size = train_val_data[2]['train'].shape[0]
+                train_val_data = downsample_training_data(train_val_data, args.downsample_ratio)
+                new_train_size = train_val_data[2]['train'].shape[0]
+                logger.info(f"Downsampled training set from {original_train_size} to {new_train_size} samples (ratio: {args.downsample_ratio})")
 
             # ---------- Pre‑process the dataset once ----------
             need_pretransform = not (getattr(args, "tune_transform", False) and args.tune) # only if tuning transform, do not pre-transform

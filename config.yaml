@@ -39,7 +39,7 @@ dataset:
   # - Click_prediction_small
   # - electricity
   # - estimation_of_obesity_levels
-  - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
+  # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   # - Diamonds
   # - E-CommereShippingData
   # - FOREX_audjpy-day-High
@@ -88,7 +88,7 @@ transform_list:
   #     cache_path: fit_cache
   #     n_components: 32
   #     binning_method: quantile # quantile, hdbscan, hierarchical
-  
+
   # ----------------------------------------------------------------
   # categorical encoding process
   # - cat_onehot: {}
@@ -113,9 +113,8 @@ transform_list:
   #     n_bins: 32
   # - adaptive_cdf: 
   #     k: 1
-  - stretch_oof:
-      norm: l2
-      min_unique: 20
+  # - stretch_oof:
+  #     norm: l2
 
 
   - norm:
@@ -154,3 +153,4 @@ tune: true
 tune_transform: true
 load_tune_config: false
 n_trials: 100
+# downsample_ratio: 0.01  # Optional: downsample training set (e.g., 0.8 for 80%). If not set, no downsampling.

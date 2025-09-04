@@ -159,6 +159,43 @@ def set_seeds(base_seed: int, one_cuda_seed: bool = False) -> None:
             default_generator.manual_seed(cuda_seed + i)
 
 
+def downsample_training_data(train_val_data, downsample_ratio):
+    """
+    Downsample training set while keeping validation set unchanged.
+    Uses current numpy random state (set by set_seeds).
+    
+    Args:
+        train_val_data: tuple of (N_trainval, C_trainval, y_trainval)
+        downsample_ratio: float, ratio of training samples to keep (0.0-1.0)
+    
+    Returns:
+        tuple: downsampled (N_trainval, C_trainval, y_trainval)
+    """
+    if downsample_ratio >= 1.0:
+        return train_val_data
+    
+    N_trainval, C_trainval, y_trainval = train_val_data
+    
+    # Get training set size and calculate sample size
+    train_size = y_trainval['train'].shape[0]
+    sample_size = int(train_size * downsample_ratio)
+    
+    if sample_size <= 0:
+        raise ValueError(f"Downsample ratio {downsample_ratio} results in 0 samples")
+    
+    # Use current numpy random state (already set by set_seeds)
+    indices = np.random.choice(train_size, sample_size, replace=False)
+    
+    # Downsample training set (keep validation set unchanged)
+    if N_trainval is not None:
+        N_trainval['train'] = N_trainval['train'][indices]
+    if C_trainval is not None:
+        C_trainval['train'] = C_trainval['train'][indices]
+    y_trainval['train'] = y_trainval['train'][indices]
+    
+    return (N_trainval, C_trainval, y_trainval)
+
+
 def get_device() -> torch.device:
     return torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
