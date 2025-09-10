@@ -82,6 +82,10 @@ class DataTransformPipeline:
                 pipeline.append(AdaptiveBandwidthCdfTransform(transform_config))
             elif transform_name == 'stretch_oof':
                 pipeline.append(OofSampleStretchTransform(transform_config, self.is_regression))
+            elif transform_name == 'robustscale_smoothclip':
+                pipeline.append(RobustScaleSmoothClipTransform(transform_config))
+            elif transform_name == 'cdfadaptive':
+                pipeline.append(AdaptiveCDFSmoother(transform_config))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline

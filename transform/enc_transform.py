@@ -6,8 +6,10 @@ from transform.base import BaseTransform
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from scipy.stats import norm
+from scipy.stats import norm, t
 from typing import Dict, List, Any, Optional
+
+import copy
 
 from torch.utils.data import DataLoader, TensorDataset
 from model.lib.num_embeddings import (
@@ -736,7 +738,7 @@ class PLEUNITransform(BaseTransform):
             assert n_features == len(self.bin_edges_), (
                 f"Feature mismatch: expected {len(self.bin_edges_)}, got {n_features}"
             )
-
+            
             X_out = np.empty_like(X, dtype=np.float32)
 
             for j, edges in enumerate(self.bin_edges_):
@@ -749,7 +751,7 @@ class PLEUNITransform(BaseTransform):
 
                 frac = (col - edges[idx]) / denom
                 X_out[:, j] = (idx + frac) / (edges.size - 1)
-
+                
             N_data[part] = X_out
 
         return N_data, C_data, y_data
@@ -932,34 +934,47 @@ class OofSampleStretchTransform(BaseTransform):
 
             xm = x_sorted[idxs]
             mm = m_sorted[idxs]
-            dx = np.diff(xm)  # (k-1,)
-            if mm.ndim == 1:
-                D = np.diff(mm)[:, None]  # (k-1,1)
-            else:
-                D = np.diff(mm, axis=0)   # (k-1,C)
+            
+            if self.is_regression:
+                dx = np.diff(xm)  # (k-1,)
+                if mm.ndim == 1:
+                    D = np.diff(mm)[:, None]  # (k-1,1)
+                else:
+                    D = np.diff(mm, axis=0)   # (k-1,C)
 
-            eps = self.eps
+                eps = self.eps
 
-            if self.norm == "l2":
-                # sum ||Δm||_2
-                d_norm = np.sqrt((D * D).sum(axis=1))  # (k-1,)
-                S = float(d_norm.sum())
+                if self.norm == "l2":
+                    # sum ||Δm||_2
+                    d_norm = np.sqrt((D * D).sum(axis=1))  # (k-1,)
+                    S = float(d_norm.sum())
 
-            elif self.norm == "quad":
-                # sqrt( (sum ||Δm||^2 / Δx) * Δx_b )
-                num = (D * D).sum(axis=1)             # ||Δm||_2^2
-                denom = np.maximum(dx, eps)
-                Eb = (num / denom).sum()              # ≈ ∫_bin ||m'||^2 dx
-                dx_b = xm[-1] - xm[0]
-                S = float(np.sqrt(max(dx_b, eps) * Eb))
+                elif self.norm == "quad":
+                    # sqrt( (sum ||Δm||^2 / Δx) * Δx_b )
+                    num = (D * D).sum(axis=1)             # ||Δm||_2^2
+                    denom = np.maximum(dx, eps)
+                    Eb = (num / denom).sum()              # ≈ ∫_bin ||m'||^2 dx
+                    dx_b = xm[-1] - xm[0]
+                    S = float(np.sqrt(max(dx_b, eps) * Eb))
 
-            elif self.norm == "l1":
-                # sum ||Δm||_1
-                d_l1 = np.abs(D).sum(axis=1)
-                S = float(d_l1.sum())
-            else:
-                d_norm = np.sqrt((D * D).sum(axis=1))
-                S = float(d_norm.sum())
+                elif self.norm == "l1":
+                    # sum ||Δm||_1
+                    d_l1 = np.abs(D).sum(axis=1)
+                    S = float(d_l1.sum())
+                else:
+                    d_norm = np.sqrt((D * D).sum(axis=1))
+                    S = float(d_norm.sum())
+                    
+            else: 
+                
+                entropies = []
+                for prob_vector in mm:
+                    entropy = 0.0
+                    for p in prob_vector:
+                        if p > 0:
+                            entropy -= p * np.log(p)
+                    entropies.append(entropy)
+                S = np.mean(entropies)
 
             S_list.append(S)
 
@@ -1091,3 +1106,235 @@ class OofSampleStretchTransform(BaseTransform):
                 X_out[:, j] = np.interp(xcol, st['x_knots'], st['t_knots']).astype(np.float32)
             N_data[part] = X_out.astype(np.float32)
         return N_data, C_data, y_data
+    
+    
+class RobustScaleSmoothClipTransform(BaseTransform):
+    def __init__(self, args): pass
+    """ from https://github.com/dholzmueller/realmlp-td-s_standalone/blob/main/preprocessing.py"""
+    
+    def fit(self, N_data, C_data, y_data=None, shared_state=None):
+        # don't deal with dataframes for simplicity
+        assert isinstance(N_data['train'], np.ndarray)
+        self._median = np.median(N_data['train'], axis=-2)
+        quant_diff = np.quantile(N_data['train'], 0.75, axis=-2) - np.quantile(N_data['train'], 0.25, axis=-2)
+        max = np.max(N_data['train'], axis=-2)
+        min = np.min(N_data['train'], axis=-2)
+        idxs = quant_diff == 0.0
+        # on indexes where the quantile difference is zero, do min-max scaling instead
+        quant_diff[idxs] = 0.5 * (max[idxs] - min[idxs])
+        factors = 1.0 / (quant_diff + 1e-30)
+        # if feature is constant on the training data,
+        # set factor to zero so that it is also constant at prediction time
+        factors[quant_diff == 0.0] = 0.0
+        self._factors = factors
+        return self
+
+    def transform(self, N_data, C_data, y_data=None, shared_state=None):
+        for part, X in N_data.items():
+            x_scaled = self._factors[None, :] * (N_data[part] - self._median[None, :])
+            N_data[part] = x_scaled / np.sqrt(1 + (x_scaled / 3) ** 2)
+        return N_data, C_data, y_data
+    
+class AdaptiveCDFSmoother(BaseTransform):
+    
+    def __init__(self, args):
+        super().__init__()
+        # kmethod is either autocv or integer
+        self.kmethod = args.get("kmethod", 'autocv')
+        self.batch_size = args.get("batch_size", 5000)
+        self.data = None
+        self.n_features_in_ = None
+        self.eps = 1e-12
+        self.k = {}
+        self.risk = args.get('risk', 'l2')
+        self.norm = args.get('norm', True)
+        
+    def _local_bandwidth(self, ref_points, k: int) -> np.ndarray:
+        
+        from sklearn.neighbors import KDTree
+        
+        # only use unique points
+        unique_points = np.unique(ref_points)[:,None]
+        unique_points, counts = np.unique(ref_points, return_counts=True)
+        unique_points = unique_points[:,None]
+        
+        kdt = KDTree(unique_points, metric='euclidean')
+        # querying on the same set fit to the tree will always return the point itself as the 
+        # 0th index position, so add one to k to exclude self
+        unique_bws = kdt.query(unique_points, 
+                               k=min(k + 1, len(unique_points)), return_distance=True)[0][:,-1]
+                
+        bandwidth_lookup = dict(zip(unique_points.flatten(), unique_bws))
+        h = np.array([bandwidth_lookup[p] for p in ref_points.squeeze(-1)])
+                
+        return h, bandwidth_lookup
+    
+
+    def _empirical_risk(self, cdf_est, queries):
+        """ Calculate the empirical risk on the validation set using the empirical cdf"""
+        from scipy.stats import ecdf
+                
+        em_cdf = ecdf(queries.squeeze(1))
+        quantiles = em_cdf.cdf.quantiles
+        probabilities = em_cdf.cdf.probabilities
+        emcdf_map = dict(zip(quantiles, probabilities))
+        em_cdf = [emcdf_map[x] for x in queries.squeeze(1)]
+        
+        if self.risk == 'l2':
+            return np.mean((em_cdf - cdf_est)**2)
+        elif self.risk == 'l1':
+            return np.mean(abs(em_cdf - cdf_est))
+        else:
+            raise ValueError("invalid risk specified, must be l1 or l2")
+                
+    def _find_best_k(self, ref_points, queries):                
+
+        results = []
+                                
+        for k in range(1, min(len(np.unique(ref_points)), self.max_k+1)):
+                                    
+            n_queries = len(queries)
+            cdf_ests = np.zeros(n_queries)
+            
+            h, _ = self._local_bandwidth(ref_points, k)
+        
+            for i in range(0, n_queries, self.batch_size):
+                                
+                query = queries[i : i + self.batch_size]
+                
+                distances = (query.ravel()[:,None] - ref_points.ravel()[None,:]) / h
+                cdf_ests[i:i + self.batch_size] = norm.cdf(distances).mean(axis = 1)
+                
+                # transformed_values[i : i + self.batch_size] = norm.ppf(smoothed_cdf)
+                
+            # evaluate result
+            results.append(self._empirical_risk(cdf_ests, queries))
+
+        # return best index (+1 to account for python zero-indexing)            
+        return  np.argmin(results) + 1
+    
+    def _find_best_k_cv(self, ref_points):          
+        
+        from sklearn.model_selection import KFold      
+
+        results = []
+        
+        # generate splits
+        kf = KFold(n_splits=10, shuffle=True, random_state=1)
+        splits = list(kf.split(ref_points.squeeze(1)))
+                                
+        for k in range(1, min(len(np.unique(ref_points)), self.max_k+1)):
+            
+            _, bws = self._local_bandwidth(ref_points, k)
+            
+            k_res = []
+                                    
+            for idx, split in enumerate(splits):
+                
+                ref = ref_points[split[0]]
+                queries = ref_points[split[1]]
+                
+                n_queries = len(queries)
+                cdf_ests = np.zeros(n_queries)
+                                
+                h = np.array([bws[p] for p in ref.squeeze(-1)])
+        
+                for i in range(0, len(queries), self.batch_size):
+                                    
+                    query = queries[i : i + self.batch_size]
+                    
+                    distances = (query.ravel()[:,None] - ref.ravel()[None,:]) / h
+                    cdf_ests[i:i + self.batch_size] = norm.cdf(distances).mean(axis = 1)
+                    # transformed_values[i : i + self.batch_size] = norm.ppf(smoothed_cdf)
+                    
+                k_res.append(self._empirical_risk(cdf_ests, queries))
+                
+            # evaluate result
+            results.append(np.mean(k_res))
+
+        # return best index (+1 to account for python zero-indexing)            
+        return  np.argmin(results) + 1
+            
+
+    def fit(self, N_data, C_Data = None, y_data=None, shared_state=None):
+        
+        # store data for transform and ensure dtype is float
+        self.data = copy.deepcopy(N_data['train'].astype('float64'))
+        self.n_features_in_ = N_data['train'].shape[1]
+                
+        self.max_k = 100 #min(int(np.sqrt(len(self.data))), 100)
+                
+        # # compute k for each column using cv
+        if self.kmethod == 'autocv':
+            for col in range(self.n_features_in_):
+                
+                ref_points = self.data[:,col:col+1].astype('float64')
+                unique_points = np.unique(ref_points)
+                
+                if len(unique_points) > 1:
+                                        
+                    #queries = N_data['val'][:, col:col+1].astype('float64')
+                    #self.k[col] = self._find_best_k(ref_points, queries)
+                    self.k[col] = self._find_best_k_cv(ref_points)
+                    print(f"best k is {self.k[col]} for col {col}")
+                
+                else:
+                    # for degenerate columns set k to missing
+                    self.k[col] = np.nan
+                    
+        elif (type(self.kmethod) == float or type(self.kmethod) == int):
+            for col in range(self.n_features_in_): self.k[col] = self.kmethod
+        else:
+            raise ValueError("kmethod must be int or autocv")
+                       
+    def transform(self, N_data, C_data = None, y_data=None, context=None):
+
+        for part_k in N_data:
+                        
+            X = N_data[part_k]
+            
+            if X.shape[1] != self.n_features_in_: raise ValueError("Mismatched feature count.")
+            
+            X_transformed = np.zeros_like(X).astype('float64')
+
+            for j in range(self.n_features_in_):
+                
+                k = self.k[j]
+                
+                if k > 0: 
+                
+                    ref_points = self.data[:,j:j + 1]
+                                                        
+                    # select column and make sure it is float
+                    queries = X[:,j:j + 1].astype('float64')
+                    
+                    # batch queries to avoid oom
+                    n_queries = len(queries)
+                    transformed_values = np.zeros(n_queries)
+                    
+                    # compute bandwidths
+                    h, _ = self._local_bandwidth(ref_points, k)
+
+                    for i in range(0, n_queries, self.batch_size):
+                        
+                        query = queries[i : i + self.batch_size]
+                        
+                        distances = (query.ravel()[:,None] - ref_points.ravel()[None,:])/h
+
+                        smoothed_cdf = norm.cdf(distances).mean(axis = 1)     
+                        
+                        # clip extreme values
+                        smoothed_cdf = np.clip(smoothed_cdf, self.eps, 1 - self.eps)
+                                        
+                        transformed_values[i : i + self.batch_size] = norm.ppf(smoothed_cdf)
+                                                            
+                    X_transformed[:, j] = transformed_values
+                    
+                else:
+                    
+                    X_transformed[:,j] = np.ones_like(X[:,j])
+                              
+            N_data[part_k] = X_transformed
+        
+        return N_data, C_data, y_data        
+       
