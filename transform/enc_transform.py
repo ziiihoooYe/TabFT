@@ -868,7 +868,7 @@ class OofSampleStretchTransform(BaseTransform):
         self.oof_n_splits = int(args.get("oof_n_splits", 10))
         self.adaptive_k = int(args.get("k", 10))
         self.min_h = float(args.get("min_h", 1e-6))
-        self.norm = str(args.get("norm", "l2")).lower() # "l2", "l1", "quad"
+        self.norm = str(args.get("norm", "l2")).lower()
         self.n_bins = int(args.get("n_bins", 1))
         self.min_unique = int(args.get("min_unique", 10))
         self.eps = float(args.get("eps", 1e-9))
@@ -945,18 +945,6 @@ class OofSampleStretchTransform(BaseTransform):
                 d_norm = np.sqrt((D * D).sum(axis=1))  # (k-1,)
                 S = float(d_norm.sum())
 
-            elif self.norm == "quad":
-                # sqrt( (sum ||Δm||^2 / Δx) * Δx_b )
-                num = (D * D).sum(axis=1)             # ||Δm||_2^2
-                denom = np.maximum(dx, eps)
-                Eb = (num / denom).sum()              # ≈ ∫_bin ||m'||^2 dx
-                dx_b = xm[-1] - xm[0]
-                S = float(np.sqrt(max(dx_b, eps) * Eb))
-
-            elif self.norm == "l1":
-                # sum ||Δm||_1
-                d_l1 = np.abs(D).sum(axis=1)
-                S = float(d_l1.sum())
             else:
                 d_norm = np.sqrt((D * D).sum(axis=1))
                 S = float(d_norm.sum())

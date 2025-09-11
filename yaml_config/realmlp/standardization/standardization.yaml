@@ -25,7 +25,6 @@ dataset:
   - internet_firewall
   - jungle_chess_2pcs_raw_endgame_complete
   - kc1
-  - led24
   - okcupid_stem
   - optdigits
   - page-blocks
@@ -33,7 +32,6 @@ dataset:
   - pol_reg
   - pole
   - socmob
-  - splice
   - archive_r56_Portuguese
   - compass
   - thyroid-dis
@@ -46,20 +44,17 @@ transform_list:
       policy: mean # mean, median
   - label: {}
   - cat_indice: {}
-  - quantile: {}
+  - norm:
+      policy: standard
 
 model_type: 
-  - mlp
-  - ftt
-  - resnet
   - realmlp
-  - mlp_plr
 
-model_path: /data/user_data/zihaoye/TabFT/results_model/quantile
+model_path: /data/user_data/zihaoye/TabFT/results_model/no_transform
 seed: 2025
 seed_num: 15
 gpu: 0
 tune: true
 tune_transform: false
-n_trials: 100
 load_tune_config: false
+n_trials: 100

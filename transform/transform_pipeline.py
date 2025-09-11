@@ -54,9 +54,9 @@ class DataTransformPipeline:
                 pipeline.append(JohnsonTransform(transform_config))
             elif transform_name == 'quantile':
                 pipeline.append(QuantileTransform(transform_config))
-            elif transform_name == 'num_robustscale':
+            elif transform_name == 'robustscale':
                 pipeline.append(RobustScaleTransform(transform_config))
-            elif transform_name == 'num_smoothclip':
+            elif transform_name == 'smoothclip':
                 pipeline.append(SmoothClipTransform(transform_config))
             elif transform_name == 'cat_ordinal':
                 pipeline.append(OrdinalTransform(transform_config))

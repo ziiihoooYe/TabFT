@@ -106,9 +106,10 @@ transform_list:
 
   # - uniple:
   #     n_bins: 4
-  # - num_binning:
-  #     n_bins: 32
-  # - num_ple: {}
+  - num_binning:
+      method: T
+      n_bins: 32
+  - num_ple: {}
   # - ple: 
   #     n_bins: 32
   # - adaptive_cdf: 
@@ -116,9 +117,10 @@ transform_list:
   # - stretch_oof:
   #     norm: l2
 
-
-  - norm:
-      policy: standard
+  # - robustscale: {}
+  # - smoothclip: {}
+  # - norm:
+  #     policy: standard
   # - norm:
   #     policy: power
 
@@ -131,12 +133,12 @@ model_type:
   # - tabtransformer
   # - xgboost
   # - lightgbm
-  - mlp
+  # - mlp
   # - tabicl
   # - modernNCA
   # - resnet
   # - mlp_plr
-  # - realmlp
+  - realmlp
   # - xgboost
   # - catboost
   # - tabpfn

@@ -12,7 +12,8 @@ class DefaultParams:
         use_ls=True, ls_eps=0.1,
         num_emb_type='pbld', plr_sigma=0.1, plr_hidden_1=16, plr_hidden_2=4, plr_lr_factor=0.1,
         lr=4e-2,
-        tfms=['one_hot', 'median_center', 'robust_scale', 'smooth_clip', 'embedding'],
+        tfms=['one_hot', 'embedding'],
+        # tfms=['one_hot', 'median_center', 'robust_scale', 'smooth_clip', 'embedding'],
         n_epochs=256, lr_sched='coslog4', opt='adam', sq_mom=0.95
     )
 
@@ -25,7 +26,8 @@ class DefaultParams:
         bias_init_mode='normal', weight_init_mode='normal',
         last_layer_config=dict(bias_init_mode='zeros', weight_init_mode='zeros'),
         use_ls=True, ls_eps=0.1,
-        tfms=['one_hot', 'median_center', 'robust_scale', 'smooth_clip'],
+        tfms=['one_hot'],
+        # tfms=['one_hot', 'median_center', 'robust_scale', 'smooth_clip'],
         n_epochs=256, lr=4e-2, lr_sched='coslog4', opt='adam', sq_mom=0.95
     )
 
@@ -38,7 +40,8 @@ class DefaultParams:
         wd=2e-2, wd_sched='flat_cos', bias_wd_factor=0.0,
         block_str='w-b-a-d', p_drop=0.15, p_drop_sched='flat_cos',
         add_front_scale=True, scale_lr_factor=6.0,
-        tfms=['one_hot', 'median_center', 'robust_scale', 'smooth_clip', 'embedding'],
+        tfms=['one_hot', 'embedding'],
+        # tfms=['one_hot', 'median_center', 'robust_scale', 'smooth_clip', 'embedding'],
         num_emb_type='pbld', plr_sigma=0.1, plr_hidden_1=16, plr_hidden_2=4, plr_lr_factor=0.1,
         clamp_output=True, normalize_output=True,
         lr=0.2,
@@ -53,7 +56,8 @@ class DefaultParams:
         act='mish', normalize_output=True,
         block_str='w-b-a',
         add_front_scale=True, scale_lr_factor=6.0,
-        tfms=['one_hot', 'median_center', 'robust_scale', 'smooth_clip'],
+        tfms=['one_hot'],
+        # tfms=['one_hot', 'median_center', 'robust_scale', 'smooth_clip'],
         n_epochs=256, lr=7e-2, lr_sched='coslog4', opt='adam', sq_mom=0.95
     )
 
