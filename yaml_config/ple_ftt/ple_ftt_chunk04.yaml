@@ -1,0 +1,25 @@
+dataset:
+- Waterstress
+- htru
+- ibm-employee-performance
+- internet_firewall
+- jungle_chess_2pcs_raw_endgame_complete
+transform_list:
+- nan:
+    policy: mean
+- label: {}
+- cat_indice: {}
+- num_binning: {}
+- num_ple: {}
+- norm:
+    policy: standard
+model_type:
+- ftt
+model_path: /data/user_data/zihaoye/TabFT/results_model/ple
+seed: 2025
+seed_num: 15
+gpu: 0
+tune: true
+tune_transform: true
+n_trials: 100
+load_tune_config: false

@@ -49,8 +49,24 @@ class Tokenizer(nn.Module):
         categories: ty.Optional[ty.List[int]],
         d_token: int,
         bias: bool,
+        ple_mapping: ty.Optional[ty.Dict] = None,
     ) -> None:
         super().__init__()
+        
+        self.ple_mapping = ple_mapping
+        
+        if ple_mapping is not None:
+            self.feature_projections = nn.ModuleList()
+            for i, ple_dim in enumerate(ple_mapping['ple_dims']):
+                projection = nn.Linear(ple_dim, d_token)
+                nn_init.kaiming_uniform_(projection.weight, a=math.sqrt(5))
+                nn_init.zeros_(projection.bias)
+                self.feature_projections.append(projection)
+            
+            d_numerical = ple_mapping['original_feat_dim']
+        else:
+            self.feature_projections = None
+        
         if categories is None:
             d_bias = d_numerical
             self.category_offsets = None
@@ -79,12 +95,34 @@ class Tokenizer(nn.Module):
     def forward(self, x_num: Tensor, x_cat: ty.Optional[Tensor]) -> Tensor:
         x_some = x_num if x_cat is None else x_cat
         assert x_some is not None
-        x_num = torch.cat(
-            [torch.ones(len(x_some), 1, device=x_some.device)]  # [CLS]
-            + ([] if x_num is None else [x_num]),
-            dim=1,
-        )
-        x = self.weight[None] * x_num[:, :, None]
+        
+        if self.ple_mapping is not None:
+            batch_size = len(x_some)
+            
+            cls_embedding = self.weight[0:1][None].expand(batch_size, 1, -1)  # (batch, 1, d_token)
+            
+            feature_embeddings = []
+            start_idx = 0
+            
+            for feat_idx, ple_dim in enumerate(self.ple_mapping['ple_dims']):
+                end_idx = start_idx + ple_dim
+                feat_vector = x_num[:, start_idx:end_idx]  # (batch, ple_dim)
+                
+                feat_embedding = self.feature_projections[feat_idx](feat_vector)  # (batch, d_token)
+                feature_embeddings.append(feat_embedding.unsqueeze(1))  # (batch, 1, d_token)
+                
+                start_idx = end_idx
+            
+            x = torch.cat([cls_embedding] + feature_embeddings, dim=1)  # (batch, 1+n_features, d_token)
+            
+        else:
+            x_num = torch.cat(
+                [torch.ones(len(x_some), 1, device=x_some.device)]  # [CLS]
+                + ([] if x_num is None else [x_num]),
+                dim=1,
+            )
+            x = self.weight[None] * x_num[:, :, None]
+        
         if x_cat is not None:
             x = torch.cat(
                 [x, self.category_embeddings(x_cat + self.category_offsets[None])],
@@ -204,11 +242,13 @@ class Transformer(nn.Module):
         kv_compression_sharing: ty.Optional[str],
         #
         d_out: int,
+        # PLE mapping
+        ple_mapping: ty.Optional[ty.Dict] = None,
     ) -> None:
         assert (kv_compression is None) ^ (kv_compression_sharing is not None)
 
         super().__init__()
-        self.tokenizer = Tokenizer(d_numerical, categories, d_token, token_bias)
+        self.tokenizer = Tokenizer(d_numerical, categories, d_token, token_bias, ple_mapping)
         n_tokens = self.tokenizer.n_tokens
 
         def make_kv_compression():

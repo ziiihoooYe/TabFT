@@ -37,7 +37,7 @@ dataset:
   # - BNG(tic-tac-toe)
   # - Bias_correction_r_2
   # - Click_prediction_small
-  # - electricity
+  - electricity
   # - estimation_of_obesity_levels
   # - Contaminant-detection-in-packaged-cocoa-hazelnut-spread-jars-using-Microwaves-Sensing-and-Machine-Learning-11.0GHz(Urbinati)
   # - Diamonds
@@ -53,7 +53,7 @@ dataset:
   # - NHANES_age_prediction
   # - Shop_Customer_Data
   # - VulNoneVul
-  - Waterstress
+  # - Waterstress
   # - htru
   # - ibm-employee-performance
   # - internet_firewall
@@ -108,7 +108,6 @@ transform_list:
   #     n_bins: 4
   - num_binning:
       method: T
-      n_bins: 32
   - num_ple: {}
   # - ple: 
   #     n_bins: 32
@@ -126,7 +125,7 @@ transform_list:
 
 
 model_type: 
-  # - ftt
+  - ftt
   # - saint
   # - realmlp
   # - tabnet
@@ -138,7 +137,7 @@ model_type:
   # - modernNCA
   # - resnet
   # - mlp_plr
-  - realmlp
+  # - realmlp
   # - xgboost
   # - catboost
   # - tabpfn

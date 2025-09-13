@@ -38,7 +38,6 @@ class BinningTransform(BaseTransform):
                     bins_ = []
                     for col_idx, nb in enumerate(self.n_bins):
                         col_t = train_t[:, col_idx : col_idx + 1]          # (N,1)
-                        # compute_bins 返回 [edges]；取第 0 个
                         col_edges = compute_bins(col_t,
                                                  n_bins=int(nb),
                                                  tree_kwargs=None,
@@ -78,17 +77,28 @@ class PLETransform(BaseTransform):
         super().__init__()
         self.encoder_ = None
 
-    def fit(self, N_data, C_data, y_data=None, context=None):
+    def fit(self, N_data, C_data, y_data=None, shared_state=None):
         # We might want to create the encoder once we know the bins.
         from model.lib.num_embeddings import PiecewiseLinearEncoding
-        if context is None:
-            context = {}
-        bins_ = context.get('bins_')
+        if shared_state is None:
+            shared_state = {}
+        bins_ = shared_state.get('bins_')
         if bins_ is not None:
             self.encoder_ = PiecewiseLinearEncoding(bins_)
+            
+            if isinstance(bins_, list):
+                ple_dims = [len(bin_edges) - 1 for bin_edges in bins_]
+            else:
+                ple_dims = [len(bins_) - 1] * shared_state.get('feat_dim', 1)
+            
+            shared_state['ple_mapping'] = {
+                'original_feat_dim': shared_state.get('feat_dim'),
+                'ple_dims': ple_dims,  # [dim1, dim2, dim3, ...]
+                'total_expanded_dim': sum(ple_dims)
+            }
         return self
 
-    def transform(self, N_data, C_data, y_data=None, context=None):
+    def transform(self, N_data, C_data, y_data=None, shared_state=None):
         import torch
         if self.encoder_ is None:
             # If we have no encoder, do nothing

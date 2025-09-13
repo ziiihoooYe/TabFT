@@ -8,10 +8,14 @@ class FTTMethod(Method):
         from model.models.ftt import Transformer
         if model_config is None:
             model_config = self.args.config['model']
+        
+        ple_mapping = getattr(self, 'shared_state', {}).get('ple_mapping', None)
+        
         self.model = Transformer(
                 d_numerical=self.d_in,
                 categories=self.categories,
                 d_out=self.d_out,
+                ple_mapping=ple_mapping,
                 **model_config
                 ).to(self.args.device) 
         if self.args.use_float:
