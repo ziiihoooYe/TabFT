@@ -694,7 +694,7 @@ class SmoothClipTransform:
 import numpy as np
 from typing import Dict, List
 
-class PLEUNITransform(BaseTransform):
+class UnsupervisedStretchTransform(BaseTransform):
     def __init__(self, args):
         super().__init__()
         self.n_bins = args.get("n_bins", 10)
@@ -765,114 +765,7 @@ class PLEUNITransform(BaseTransform):
         return N_data, C_data, y_data
 
 
-# Inserted: AdaptiveBandwidthCdfTransform
-class AdaptiveBandwidthCdfTransform(BaseTransform):
-    def __init__(self, args):
-        super().__init__()
-        self.k = int(args.get("k", 5))
-        self.n_ref = int(args.get("n_ref", 2048))
-        self.min_sigma = float(args.get("min_sigma", 1e-6))
-        self.random_state = int(args.get("random_state", 0))
-
-        # Per-feature references: list of dicts with keys {'v': np.ndarray, 'sigma': np.ndarray}
-        self.refs_ = []
-
-    @staticmethod
-    def _knn_sigma_sorted(xs: np.ndarray, k: int, min_sigma: float) -> np.ndarray:
-        """
-        Given a sorted 1D array xs, return per-point radius to the k-th neighbor
-        (on either side), as a robust local bandwidth. Boundary points use the
-        farthest available neighbor within k steps.
-        """
-        n = xs.size
-        if n == 1:
-            return np.array([1.0], dtype=float)
-        idx = np.arange(n)
-        left_idx  = np.maximum(idx - k, 0)
-        right_idx = np.minimum(idx + k, n - 1)
-
-        left_dist  = xs - xs[left_idx]
-        right_dist = xs[right_idx] - xs
-        radius = np.maximum(left_dist, right_dist)
-        # Numerical floor
-        radius = np.maximum(radius, min_sigma)
-        return radius
-
-    def fit(self, N_data, C_data, y_data=None, shared_state=None):
-        if not N_data or "train" not in N_data:
-            return self
-
-        X = N_data["train"]
-        if X.ndim != 2:
-            raise ValueError("Expected 2D numeric array for N_data['train'].")
-
-        rng = np.random.RandomState(self.random_state)
-        n, d = X.shape
-        self.refs_ = []
-
-        for j in range(d):
-            col = X[:, j].astype(np.float64)
-            # Handle degenerate/constant columns
-            uniq = np.unique(col)
-            if uniq.size <= 1:
-                v_ref = np.array([uniq[0] if uniq.size == 1 else 0.0], dtype=np.float64)
-                s_ref = np.array([1.0], dtype=np.float64)  # arbitrary nonzero
-                self.refs_.append({"v": v_ref, "sigma": s_ref})
-                continue
-
-            # Sort and compute kNN bandwidths on the 1D axis
-            order = np.argsort(col)
-            xs = col[order]
-            sig_all = self._knn_sigma_sorted(xs, self.k, self.min_sigma)
-            sig_all = sig_all
-
-            # Subsample reference pairs (value, sigma) to cap compute
-            m = min(self.n_ref, xs.size)
-            if m == xs.size:
-                ref_idx = np.arange(xs.size)
-            else:
-                # Evenly spaced quantile subsampling to preserve coverage
-                ref_idx = np.linspace(0, xs.size - 1, num=m).astype(int)
-
-            v_ref = xs[ref_idx].astype(np.float64)
-            s_ref = sig_all[ref_idx].astype(np.float64)
-
-            self.refs_.append({"v": v_ref, "sigma": s_ref})
-
-        return self
-
-    def transform(self, N_data, C_data, y_data=None, shared_state=None):
-        # If not fitted or no numeric data, no-op
-        if not self.refs_ or not N_data:
-            return N_data, C_data, y_data
-
-        for part, arr in N_data.items():
-            if arr.ndim != 2:
-                raise ValueError(f"N_data[{part}] must be a 2D array.")
-            n, d = arr.shape
-            if d != len(self.refs_):
-                raise ValueError(f"Feature dimension mismatch: data has {d}, refs has {len(self.refs_)}.")
-
-            cols_out = []
-            for j in range(d):
-                ref = self.refs_[j]
-                v = ref["v"]      # (M,)
-                s = ref["sigma"]  # (M,)
-                x = arr[:, j].astype(np.float64)  # (n,)
-
-                # Evaluate variable-bandwidth mixture CDF: mean_r Phi((x - v_r)/s_r)
-                # Broadcasting: (n,1) - (1,M) divided by (1,M) -> (n,M)
-                z = (x[:, None] - v[None, :]) / s[None, :]
-                out = norm.cdf(z).mean(axis=1)  # (n,)
-
-                cols_out.append(out.astype(np.float32)[:, None])
-
-            N_data[part] = np.hstack(cols_out)
-
-        return N_data, C_data, y_data
-
-
-class OofSampleStretchTransform(BaseTransform):
+class SupervisedStretchTransform(BaseTransform):
     def __init__(self, args, is_regression: bool | None = None):
         super().__init__()
         self.oof_n_splits = int(args.get("oof_n_splits", 10))

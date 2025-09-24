@@ -76,12 +76,10 @@ class DataTransformPipeline:
                 pipeline.append(CatBoostTransform(transform_config))
             elif transform_name == 'cat_targetindice':
                 pipeline.append(TargetRankingIndiceTransform(transform_config))
-            elif transform_name == 'uniple':
-                pipeline.append(PLEUNITransform(transform_config))
-            elif transform_name == 'adaptive_cdf':
-                pipeline.append(AdaptiveBandwidthCdfTransform(transform_config))
-            elif transform_name == 'stretch_oof':
-                pipeline.append(OofSampleStretchTransform(transform_config, self.is_regression))
+            elif transform_name == 'stretch_unsupervised':
+                pipeline.append(UnsupervisedStretchTransform(transform_config))
+            elif transform_name == 'stretch_supervised':
+                pipeline.append(SupervisedStretchTransform(transform_config, self.is_regression))
             else:
                 raise ValueError(f"Unknown transform name: {transform_name}")
         return pipeline
